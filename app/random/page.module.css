@@ -1,0 +1,235 @@
+@import url("https://fonts.googleapis.com/css2?family=Miriam+Libre:wght@400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300..900&family=Miriam+Libre:wght@400;700&display=swap");
+
+#randomApp {
+  --color-primary: #f8d15b;
+  --color-secondary: #eb1313;
+  --color-accent: #52a3f3;
+  --color-background: #1d1d1d;
+
+  --font-main: "Frank Ruhl Libre", serif;
+  --font-label: "Miriam Libre", sans-serif;
+
+  color: var(--color-primary);
+  font-family: var(--font-main);
+  font-weight: 500;
+  font-size: 2rem;
+  direction: rtl;
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-background);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: scroll;
+  flex-direction: column;
+}
+
+#actions {
+  width: 100%;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  height: 150px;
+}
+
+#actionElements {
+  width: 100%;
+  height: 150px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.mainTitle {
+  position: relative;
+  width: 42rem;
+  height: 15rem;
+  margin-bottom: 4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mainTitle span {
+  display: block;
+  background-color: var(--color-background);
+  padding: 0 0.5rem;
+  letter-spacing: 0.2rem;
+  box-shadow: 0 0 5px 12px var(--color-background);
+  transition: text-shadow 0.3s ease, color 0.3s ease;
+  animation: glow1 1s 0s infinite alternate ease-out;
+}
+
+.mainTitle::before {
+  animation: glow2 1s -1s infinite alternate ease-out;
+}
+
+.mainTitle img {
+  transition: filter 0.3s ease;
+  filter: brightness(4) drop-shadow(0 0 5px var(--color-secondary))
+    drop-shadow(0 0 2px var(--color-secondary));
+}
+
+@keyframes glow1 {
+  to {
+    color: white;
+    text-shadow: 0 0 8px var(--color-accent), 0 0 6px var(--color-accent),
+      0 0 2px var(--color-accent);
+  }
+}
+
+@keyframes glow2 {
+  to {
+    border-color: white;
+    filter: drop-shadow(0 0 5px var(--color-primary))
+      drop-shadow(0 0 2px var(--color-primary));
+  }
+}
+
+.actionButton::before,
+.mainTitle::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0.8rem;
+  border-radius: 50px;
+  border: 0.35rem dotted var(--color-primary);
+  filter: drop-shadow(0 0 0 var(--color-primary));
+  transition: filter 0.3s ease, border 0.3s ease;
+}
+
+.actionButton:hover::before {
+  border-color: white;
+  filter: drop-shadow(0 0 5px var(--color-primary))
+    drop-shadow(0 0 2px var(--color-primary));
+}
+
+.actionButton {
+  margin-top: 0;
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+  font-size: 1.3rem;
+  padding: 1.5rem 3rem;
+  color: var(--color-secondary);
+  background-color: transparent;
+  font-family: var(--font-label);
+  cursor: pointer;
+  position: relative;
+  border: none;
+  transition: text-shadow 0.3s ease, color 0.3s ease;
+}
+
+.actionButton:hover {
+  color: white;
+  text-shadow: 0 0 8px var(--color-secondary), 0 0 6px var(--color-secondary),
+    0 0 2px var(--color-secondary);
+}
+
+.studentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding-bottom: 3rem;
+  gap: 2rem;
+  text-align: center;
+  max-height: 80vh;
+  max-width: 80rem;
+}
+
+.studentList,
+.studentTeamList {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+.studentList .studentItem {
+  width: 50%;
+}
+
+.studentTeamList .studentItem {
+  width: 100%;
+}
+
+.studentItem.animate {
+  opacity: 0;
+  animation: fadeIn 1s ease-in-out;
+  animation-fill-mode: both;
+}
+
+.studentItem:nth-child(1) {
+  animation-delay: 1s;
+}
+
+.studentItem:nth-child(2) {
+  animation-delay: 3s;
+}
+
+.studentItem:nth-child(3) {
+  animation-delay: 5s;
+}
+
+.studentItem:nth-child(4) {
+  animation-delay: 7s;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+    color: white;
+    text-shadow: 0 0 8px var(--color-primary), 0 0 6px var(--color-primary),
+      0 0 2px var(--color-primary);
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.teamGrid {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  max-width: 80rem;
+}
+
+.teamGrid > div {
+  width: 40%;
+  margin-bottom: 1rem;
+}
+
+.label {
+  font-family: var(--font-label);
+  font-weight: 500;
+  font-size: 1.3rem;
+  color: var(--color-accent);
+}
+
+.label strong {
+  color: white;
+}
+
+.concept {
+  text-align: center;
+}
+
+.hide {
+  display: none;
+}
+
+.currentTeamMember {
+  color: var(--color-primary);
+}
+
+.assignedStudent {
+  color: #555;
+}

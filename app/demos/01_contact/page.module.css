@@ -1,0 +1,16 @@
+.contactForm {
+  width: 100%;
+  margin: auto;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contactForm button {
+  padding: 0.5rem;
+  background-color: var(--color-accent);
+  color: white;
+  border: none;
+  cursor: pointer;
+}

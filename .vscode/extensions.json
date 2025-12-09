@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "VisualStudioExptTeam.vscodeintellicode",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "ecmel.vscode-html-css",
+    "GitHub.copilot",
+    "GitHub.copilot-chat",
+    "yoavbls.pretty-ts-errors",
+    "christian-kohler.path-intellisense",
+    "clinyong.vscode-css-modules",
+    "MylesMurphy.prettify-ts",
+    "vunguyentuan.vscode-css-variables"
+  ]
+}
