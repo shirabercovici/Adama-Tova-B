@@ -1,3 +1,17 @@
+import "@/styles/global.css";
+
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import Navbar from "@/lib/components/Navbar";
+import Footer from "@/lib/components/Footer";
+import Script from "next/script";
+
+export const metadata: Metadata = {
+  title: "Digital Product Jam Starter Kit",
+  description:
+    "A starter kit for writing code in the Digital Product Jam course.",
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -13,6 +27,11 @@ export default function RootLayout({
         fontFamily: 'sans-serif',
         direction: 'rtl' 
       }}>
+        {/* The Script component goes inside body, usually at the top */}
+        <Script 
+          src="https://accounts.google.com/gsi/client" 
+          strategy="beforeInteractive" 
+        />
         <header style={{ width: '100%', backgroundColor: '#f5f7f2', paddingTop: '20px' }}>
           <div style={{ maxWidth: '400px', margin: '0 auto', textAlign: 'center', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '10px' }}>
             אדממי
@@ -23,6 +42,7 @@ export default function RootLayout({
         <main style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
           {children}
         </main>
+        <Navbar />
       </body>
     </html>
   );
