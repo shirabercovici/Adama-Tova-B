@@ -9,6 +9,7 @@ export default function Navbar() {
       </h1>
       <nav>
         <Link href="/">Home</Link>
+        <Link href="/participants">משתתפים</Link>
         <Link href={COURSE_GITHUB} target="_blank">
           GitHub
         </Link>

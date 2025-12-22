@@ -1,0 +1,188 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  margin-bottom: 1rem;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 8px;
+}
+
+.searchRow {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.searchRow input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.filtersRow {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filterGroup label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.filterGroup select {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  min-width: 150px;
+}
+
+.participantsTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.participantsTable thead {
+  background: var(--bg-primary, #333);
+  color: white;
+}
+
+.participantsTable th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.participantsTable td {
+  padding: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.participantsTable tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.attendanceButton {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.attendanceButton.present {
+  background: #4caf50;
+  color: white;
+}
+
+.attendanceButton.present:hover {
+  background: #45a049;
+}
+
+.attendanceButton.notPresent {
+  background: #f44336;
+  color: white;
+}
+
+.attendanceButton.notPresent:hover {
+  background: #da190b;
+}
+
+.attendanceButton.mark {
+  background: #2196f3;
+  color: white;
+}
+
+.attendanceButton.mark:hover {
+  background: #0b7dda;
+}
+
+.lastAttendance {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.archived {
+  opacity: 0.6;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.1rem;
+}
+
+.error {
+  text-align: center;
+  padding: 2rem;
+  color: #f44336;
+  background: #ffebee;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.empty {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .controls {
+    padding: 1rem;
+  }
+
+  .searchRow,
+  .filtersRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filterGroup {
+    width: 100%;
+  }
+
+  .filterGroup select {
+    width: 100%;
+  }
+
+  .participantsTable {
+    font-size: 0.9rem;
+  }
+
+  .participantsTable th,
+  .participantsTable td {
+    padding: 0.5rem;
+  }
+}
+
