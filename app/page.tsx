@@ -25,7 +25,7 @@ export default function Home() {
           priority
         />
         <div>
-          <h2>Lorem Ipsum</h2>
+          <h2>היי</h2>
           <p>
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec
             faucibus sit amet nunc nec vehicula. Fusce ornare nec nulla non
