@@ -1,0 +1,127 @@
+"use client"; 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import BackButton from '../../components/BackButton';
+
+export default function NewParticipantPage() {
+  const router = useRouter();
+  const [name, setName] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [circle, setCircle] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [description, setDescription] = useState('');
+  const [showPopup, setShowPopup] = useState(false);
+
+  const goToProfile = () => {
+    const params = new URLSearchParams({ name, fullName, circle: circle || '', email, phone, description });
+    router.push(`/participant-card?${params.toString()}`);
+  };
+
+  // משתני עזר לעיצוב כדי שהקוד למטה יהיה נקי
+  const labelStyle = { display: 'block', fontWeight: 'bold' as const, marginBottom: '5px' };
+  const inputStyle = { 
+    width: '100%', 
+    padding: '8px 0', 
+    border: 'none', 
+    borderBottom: '1px solid #ccc', 
+    backgroundColor: 'transparent',
+    outline: 'none',
+    marginBottom: '20px'
+  };
+
+  return (
+    <div style={{ textAlign: 'right' }}>
+      {/* כותרת העמוד עם חץ בימין */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '15px', 
+        marginBottom: '20px', 
+        marginTop: '10px',
+        borderBottom: '1.5px solid #333',
+        paddingBottom: '10px'
+      }}>
+        <BackButton />
+        <h2 style={{ fontSize: '1.8rem', margin: 0 }}>הוספת פונה חדש</h2>
+      </div>
+
+      {/* גוף הטופס - שם וכינוי */}
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '10px' }}>
+        <div style={{ flex: 1 }}>
+          <label style={labelStyle}>שם מלא</label>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={labelStyle}>כינוי</label>
+          <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} style={inputStyle} />
+        </div>
+      </div>
+
+      {/* בחירת מעגל */}
+      <div style={{ marginBottom: '25px' }}>
+        <label style={labelStyle}>מעגל</label>
+        <div style={{ display: 'flex', border: '1px solid #ccc', borderRadius: '2px', overflow: 'hidden' }}>
+          {['ראשון', 'שני', 'שלישי', 'רביעי'].map((c) => (
+            <button 
+              key={c} 
+              type="button" 
+              onClick={() => setCircle(c)} 
+              style={{ 
+                flex: 1, 
+                padding: '10px', 
+                border: 'none', 
+                borderLeft: c !== 'רביעי' ? '1px solid #ccc' : 'none',
+                backgroundColor: circle === c ? '#e0e0e0' : 'transparent',
+                cursor: 'pointer'
+              }}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <label style={labelStyle}>מייל</label>
+      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
+      
+      <label style={labelStyle}>מספר פלאפון</label>
+      <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
+      
+      <label style={labelStyle}>הערות</label>
+      <textarea 
+        value={description} 
+        onChange={(e) => setDescription(e.target.value)} 
+        style={{ ...inputStyle, height: '80px', border: '1px solid #ccc', backgroundColor: '#f9f9f9', padding: '10px' }} 
+      />
+
+      {/* כפתור שמירה */}
+      <button 
+        onClick={() => setShowPopup(true)} 
+        style={{ 
+          width: '100%', 
+          padding: '15px', 
+          backgroundColor: 'transparent', 
+          border: '1.5px solid #333', 
+          borderRadius: '4px', 
+          fontSize: '1rem', 
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          marginTop: '10px'
+        }}
+      >
+        שמירה
+      </button>
+
+      {/* פופ-אפ אישור */}
+      {showPopup && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', textAlign: 'center', width: '80%', maxWidth: '350px' }}>
+            <p style={{ fontWeight: 'bold', marginBottom: '20px' }}>כרטיסיית פונה חדשה נוצרה בהצלחה!</p>
+            <button onClick={goToProfile} style={{ padding: '10px 20px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', width: '100%' }}>צפייה בתיק הפונה</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
