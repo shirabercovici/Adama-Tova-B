@@ -1,42 +1,28 @@
-import "@/styles/global.css";
-
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
-import Navbar from "@/lib/components/Navbar";
-import Footer from "@/lib/components/Footer";
-
-export const metadata: Metadata = {
-  title: "Digital Product Jam Starter Kit",
-  description:
-    "A starter kit for wiritng code in the Digital Product Jam course.",
-};
-
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html>
-      <head>
-        {/* Browser Favicon */}
-        <link rel="icon" href="/icons/favicon.png" />
-        {/* Apple Icon */}
-        <link
-          rel="apple-touch-icon"
-          sizes="180x180"
-          href="/icons/icon-180.png"
-        />
-        {/* Android Icon */}
-        <link
-          rel="icon"
-          type="image/png"
-          sizes="192x192"
-          href="/icons/icon-192.png"
-        />
-        <link rel="manifest" href="/manifest.json" />
-        <script src="https://accounts.google.com/gsi/client" async></script>
-      </head>
-      <body>
-        <Navbar />
-        <div>{children}</div>
-        <Footer />
+    <html lang="he" dir="rtl">
+      <body style={{ 
+        margin: 0, 
+        padding: 0, 
+        backgroundColor: '#f5f7f2', 
+        minHeight: '100vh',
+        fontFamily: 'sans-serif',
+        direction: 'rtl' 
+      }}>
+        <header style={{ width: '100%', backgroundColor: '#f5f7f2', paddingTop: '20px' }}>
+          <div style={{ maxWidth: '400px', margin: '0 auto', textAlign: 'center', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '10px' }}>
+            אדממי
+          </div>
+          <hr style={{ border: '0', borderTop: '0.5px solid #ccc', width: '100%', margin: 0 }} />
+        </header>
+
+        <main style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
+          {children}
+        </main>
       </body>
     </html>
   );
