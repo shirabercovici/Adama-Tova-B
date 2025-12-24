@@ -6,10 +6,15 @@ import Navbar from "@/lib/components/Navbar";
 import Footer from "@/lib/components/Footer";
 import Script from "next/script";
 
-export const metadata: Metadata = {
-  title: "Digital Product Jam Starter Kit",
-  description:
-    "A starter kit for writing code in the Digital Product Jam course.",
+export const metadata = {
+  title: "אדממי",
+  description: "אפליקציה למעקב אחר צוות אדמה טובה",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "אדממי",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({
@@ -33,9 +38,6 @@ export default function RootLayout({
           strategy="beforeInteractive" 
         />
         <header style={{ width: '100%', backgroundColor: '#f5f7f2', paddingTop: '20px' }}>
-          {/* <div style={{ maxWidth: '400px', margin: '0 auto', textAlign: 'center', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '10px' }}>
-            אדממי
-          </div> */}
           <Navbar />
           <hr style={{ border: '0', borderTop: '0.5px solid #ccc', width: '100%', margin: 0 }} />
         </header>

@@ -41,7 +41,6 @@ export default function Dashboard() {
     return <div className="p-10 text-center">Loading...</div>;
 
   }
-  console.log(user)
 
   return (
     <main className="min-h-screen p-24">
@@ -49,12 +48,6 @@ export default function Dashboard() {
         <div>
           <span className="block sm:inline">היי {user.first_name}! טוב לראות אותך</span>
         </div>
-
-        <button 
-          onClick={handleLogout}
-        >
-          Sign Out
-        </button>
       </div>
     </main>
   );

@@ -8,9 +8,9 @@ export default function Navbar() {
         <Link href="/">{APP_NAME}</Link>
       </h1>
       <nav>
-        <Link href="/homepage">Home</Link>
-        <Link href="/new-participant">New Participant</Link>
-        <Link href="/profile">Profile</Link>
+        <Link href="/homepage">דף הבית</Link>
+        <Link href="/new-participant">פונה חדש</Link>
+        <Link href="/profile">פרופיל</Link>
       </nav>
     </header>
   );
