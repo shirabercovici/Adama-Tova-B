@@ -49,12 +49,6 @@ export default function Dashboard() {
         <div>
           <span className="block sm:inline">היי {user.first_name}! טוב לראות אותך</span>
         </div>
-
-        <button 
-          onClick={handleLogout}
-        >
-          Sign Out
-        </button>
       </div>
     </main>
   );

@@ -82,14 +82,16 @@ export default function ProfilePage() {
           </section>
 
           {/* Section: Management */}
-          <section>
-            <h3 className="text-gray-400 text-sm mb-2 px-2">ניהול מתנדבים</h3>
-            <div className="border-y border-gray-300 divide-y divide-gray-300">
-              <button className="w-full text-right p-3 font-bold hover:bg-white/40 transition-colors">הוספת מתנדב.ת</button>
-              <br></br>
-              <button className="w-full text-right p-3 font-bold hover:bg-white/40 transition-colors">עריכה/הסר מתנדב.ת</button>
-            </div>
-          </section>
+          {userData?.role === "מנהל.ת" && (
+            <section>
+              <h3 className="text-gray-400 text-sm mb-2 px-2">ניהול מתנדבים</h3>
+              <div className="border-y border-gray-300 divide-y divide-gray-300">
+                <button className="w-full text-right p-3 font-bold hover:bg-white/40 transition-colors">הוספת מתנדב.ת</button>
+                <br></br>
+                <button className="w-full text-right p-3 font-bold hover:bg-white/40 transition-colors">עריכה/הסר מתנדב.ת</button>
+              </div>
+            </section>
+          )}
 
           {/* Sign Out Button */}
           <div className="pt-10 pb-20 text-center">
