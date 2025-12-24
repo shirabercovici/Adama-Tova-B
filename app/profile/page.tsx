@@ -3,49 +3,103 @@
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import BackButton from "@/components/BackButton";
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+    const getProfile = async () => {
+      // 1. Get the authenticated user from Supabase Auth
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
         router.push("/");
-      } else {
-        setUser(user);
+        return;
       }
+
+      // 2. Fetch details from the 'users' table using the email (matching homepage logic)
+      const { data: dbUser, error } = await supabase
+        .from("users")
+        .select("*") // Selecting all columns like the homepage
+        .eq("email", authUser.email)
+        .single();
+
+      if (!error && dbUser) {
+        // Set state to the database user data
+        setUserData(dbUser);
+      } else {
+        // Fallback to auth data if the database record isn't found
+        setUserData(authUser);
+      }
+      
+      setLoading(false);
     };
-    getUser();
+
+    getProfile();
   }, [router, supabase]);
 
-  if (!user) {
-    return <div className="p-10 text-center">Loading...</div>;
-  }
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#f7faf3]">טוען...</div>;
 
   return (
-    <main className="min-h-screen p-24">
-      <div className="max-w-2xl mx-auto border p-8 rounded-lg shadow-lg bg-white">
-        <h1 className="text-3xl font-bold mb-6">User Profile</h1>
-        
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email Address</label>
-            <div className="mt-1 text-lg">{user.email}</div>
-          </div>
+    <main className="min-h-screen bg-[#f7faf3] font-sans" dir="rtl">
+      <div className="max-w-md mx-auto bg-[#f7faf3] min-h-screen border-x border-gray-200 relative">
+        <BackButton />
+        <div className="flex justify-center pt-4">
+          <div className="w-24 h-6 bg-black rounded-full"></div>
+        </div>
 
+        {/* User Greeting */}
+        <div className="flex justify-between items-center px-6 py-8">
           <div>
-            <label className="block text-sm font-medium text-gray-700">User ID</label>
-            <div className="mt-1 text-sm font-mono bg-gray-100 p-2 rounded">{user.id}</div>
+            <h3 className="text-xl font-bold text-gray-800">היי {userData?.first_name || "לא הוזן"}</h3>
+            <p className="text-gray-600">{userData?.role || "לא הוזן"}</p>
           </div>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Last Sign In</label>
-            <div className="mt-1 text-sm text-gray-600">
-              {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'N/A'}
+        <div className="px-4 space-y-8">
+          {/* Section: Personal Details */}
+          <section>
+            <h3 className="text-gray-400 text-sm mb-2 px-2">פרטים אישיים</h3>
+            <div className="border-t border-gray-800">
+              <div className="flex items-center justify-between p-3 border-b border-gray-300">
+                <span className="text-gray-600">טלפון:</span>
+                <span className="font-medium">{userData?.phone_number || "לא הוזן"}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 border-b border-gray-300">
+                <span className="text-gray-600">דואל:</span>
+                <span className="font-medium">{userData?.email || "לא הוזן"}</span>
+              </div>
             </div>
+          </section>
+
+          {/* Section: Management */}
+          <section>
+            <h3 className="text-gray-400 text-sm mb-2 px-2">ניהול מתנדבים</h3>
+            <div className="border-y border-gray-300 divide-y divide-gray-300">
+              <button className="w-full text-right p-3 font-bold hover:bg-white/40 transition-colors">הוספת מתנדב.ת</button>
+              <br></br>
+              <button className="w-full text-right p-3 font-bold hover:bg-white/40 transition-colors">עריכה/הסר מתנדב.ת</button>
+            </div>
+          </section>
+
+          {/* Sign Out Button */}
+          <div className="pt-10 pb-20 text-center">
+            <br></br>
+            <button 
+              onClick={handleSignOut}
+              className="text-lg font-medium border-t border-gray-300 pt-4 w-full text-red-600"
+            >
+              התנתקות
+            </button>
           </div>
         </div>
       </div>
