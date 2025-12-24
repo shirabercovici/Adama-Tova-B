@@ -1,15 +1,24 @@
 {
-  "name": "Product Jam Kit",
-  "short_name": "Jam Kit",
+  "name": "אדממי",
+  "short_name": "אדממי",
+  "description": "אפליקציה למעקב עבור צוות אדמה טובה",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#2b2d40",
+  "background_color": "#ffffff",
   "icons": [
     {
-      "src": "/icons/logo-192.png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-180.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
-  ],
-  "display": "standalone",
-  "theme_color": "#2b2d40",
-  "background_color": "#ffffff"
+  ]
 }
