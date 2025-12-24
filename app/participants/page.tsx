@@ -11,6 +11,7 @@ export default function ParticipantsPage() {
   const [search, setSearch] = useState("");
   const [filterArchived, setFilterArchived] = useState("all");
   const [filterCircle, setFilterCircle] = useState("all");
+  const [filterLastAttendance, setFilterLastAttendance] = useState("all");
   const [uniqueCircles, setUniqueCircles] = useState<string[]>([]);
 
   const fetchParticipants = useCallback(async () => {
@@ -21,6 +22,7 @@ export default function ParticipantsPage() {
       if (search) params.append("search", search);
       if (filterArchived !== "all") params.append("filterArchived", filterArchived);
       if (filterCircle !== "all") params.append("filterCircle", filterCircle);
+      if (filterLastAttendance !== "all") params.append("filterLastAttendance", filterLastAttendance);
 
       const response = await fetch(`/participants/api?${params.toString()}`);
       if (!response.ok) {
@@ -45,15 +47,21 @@ export default function ParticipantsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, filterArchived, filterCircle]);
+  }, [search, filterArchived, filterCircle, filterLastAttendance]);
 
   useEffect(() => {
     fetchParticipants();
   }, [fetchParticipants]);
 
-  const handleMarkAttendance = async (participantId: string) => {
+  const handleMarkAttendance = async (participantId: string, currentAttendance: string | null) => {
     try {
       const today = new Date().toISOString().split("T")[0];
+      const attendedToday = currentAttendance && currentAttendance === today;
+      
+      // If already attended today, remove attendance (set to null)
+      // Otherwise, mark as attended today
+      const newAttendance = attendedToday ? null : today;
+      
       const response = await fetch("/participants/api", {
         method: "PATCH",
         headers: {
@@ -61,7 +69,7 @@ export default function ParticipantsPage() {
         },
         body: JSON.stringify({
           id: participantId,
-          last_attendance: today,
+          last_attendance: newAttendance,
         }),
       });
 
@@ -89,126 +97,168 @@ export default function ParticipantsPage() {
     return dateString === today;
   };
 
+  const hasRecentCall = (participant: Participant) => {
+    if (!participant.last_phone_call) return false;
+    const callDate = new Date(participant.last_phone_call);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return callDate > thirtyDaysAgo;
+  };
+
   return (
     <main className={styles.container}>
-      <div className={styles.header}>
-        <h1>רשימת משתתפים</h1>
-      </div>
-
-      <div className={styles.controls}>
-        <div className={styles.searchRow}>
+      {/* Search Bar */}
+      <div className={styles.searchBar}>
+        <div className={styles.searchInputWrapper}>
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className={styles.clearButton}
+              aria-label="נקה חיפוש"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          )}
           <input
             type="text"
-            placeholder="חיפוש לפי שם, אימייל או טלפון..."
+            placeholder="חיפוש..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className={styles.searchInput}
           />
-        </div>
-
-        <div className={styles.filtersRow}>
-          <div className={styles.filterGroup}>
-            <label htmlFor="filterArchived">סטטוס:</label>
-            <select
-              id="filterArchived"
-              value={filterArchived}
-              onChange={(e) => setFilterArchived(e.target.value)}
-            >
-              <option value="all">הכל</option>
-              <option value="active">פעיל</option>
-              <option value="archived">בארכיון</option>
-            </select>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <label htmlFor="filterCircle">מעגל שכול:</label>
-            <select
-              id="filterCircle"
-              value={filterCircle}
-              onChange={(e) => setFilterCircle(e.target.value)}
-            >
-              <option value="all">הכל</option>
-              {uniqueCircles.map((circle) => (
-                <option key={circle} value={circle}>
-                  {circle}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
       </div>
 
+      {/* Filters */}
+      <div className={styles.filtersBar}>
+        <div className={styles.filterDropdown}>
+          <select
+            value={filterLastAttendance}
+            onChange={(e) => setFilterLastAttendance(e.target.value)}
+            className={styles.filterSelect}
+          >
+            <option value="all">נראה לאחרונה</option>
+            <option value="today">היום</option>
+            <option value="week">שבוע האחרון</option>
+            <option value="month">חודש האחרון</option>
+            <option value="never">לעולם לא</option>
+          </select>
+        </div>
+        <div className={styles.filterDropdown}>
+          <select
+            value={filterCircle}
+            onChange={(e) => setFilterCircle(e.target.value)}
+            className={styles.filterSelect}
+          >
+            <option value="all">מעגל</option>
+            {uniqueCircles.map((circle) => (
+              <option key={circle} value={circle}>
+                {circle}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          className={`${styles.filterTab} ${filterArchived === "archived" ? styles.active : ""}`}
+          onClick={() => setFilterArchived(filterArchived === "archived" ? "all" : "archived")}
+        >
+          חיפוש בארכיון
+        </button>
+      </div>
+
+
+      {/* Loading */}
       {loading && <div className={styles.loading}>טוען...</div>}
 
+      {/* Error */}
       {error && (
         <div className={styles.error}>
           <div>שגיאה: {error}</div>
-          <details style={{ marginTop: "1rem", fontSize: "0.9rem" }}>
-            <summary>פרטים נוספים</summary>
-            <pre style={{ marginTop: "0.5rem", whiteSpace: "pre-wrap" }}>
-              {JSON.stringify(error, null, 2)}
-            </pre>
-          </details>
         </div>
       )}
 
+      {/* Empty */}
       {!loading && !error && participants.length === 0 && (
-        <div className={styles.empty}>לא נמצאו משתתפים</div>
+        <div className={styles.empty}>לא נמצאו פונים</div>
       )}
 
+      {/* Participants List */}
       {!loading && !error && participants.length > 0 && (
-        <div style={{ overflowX: "auto" }}>
-          <table className={styles.participantsTable}>
-            <thead>
-              <tr>
-                <th>שם מלא</th>
-                <th>טלפון</th>
-                <th>אימייל</th>
-                <th>מעגל שכול</th>
-                <th>נוכחות אחרונה</th>
-                <th>פעולות</th>
-              </tr>
-            </thead>
-            <tbody>
-              {participants.map((participant) => {
-                const attendedToday = isToday(participant.last_attendance);
-                return (
-                  <tr
-                    key={participant.id}
-                    className={participant.is_archived ? styles.archived : ""}
+        <div className={styles.participantsList}>
+          {/* List Header */}
+          <div className={styles.listHeader}>
+            <div className={styles.headerPhoneSpace}></div>
+            <div className={styles.headerCell}>
+              <div className={styles.headerName}>שם</div>
+            </div>
+            <div className={styles.headerCellLast}>
+              <div className={styles.headerAttendance}>נוכחות</div>
+            </div>
+          </div>
+          
+          {participants.map((participant) => {
+            const attendedToday = isToday(participant.last_attendance);
+            const hasCall = hasRecentCall(participant);
+            
+            return (
+              <div
+                key={participant.id}
+                className={`${styles.participantCard} ${participant.is_archived ? styles.archived : ""}`}
+              >
+                {/* Phone Icon */}
+                <div className={styles.phoneIcon}>
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={hasCall ? styles.phoneIconActive : styles.phoneIconInactive}
                   >
-                    <td>{participant.full_name}</td>
-                    <td>{participant.phone || "-"}</td>
-                    <td>{participant.email || "-"}</td>
-                    <td>{participant.bereavement_circle || "-"}</td>
-                    <td>
-                      <span className={styles.lastAttendance}>
-                        {formatDate(participant.last_attendance)}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        className={`${styles.attendanceButton} ${
-                          attendedToday
-                            ? styles.present
-                            : participant.last_attendance
-                            ? styles.notPresent
-                            : styles.mark
-                        }`}
-                        onClick={() => handleMarkAttendance(participant.id)}
-                        disabled={attendedToday}
-                      >
-                        {attendedToday
-                          ? "נוכח היום"
-                          : participant.last_attendance
-                          ? "סמן נוכחות"
-                          : "סמן נוכחות"}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    <path
+                      d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </div>
+
+                {/* Name, Bereavement Detail and Phone */}
+                <div className={styles.participantInfo}>
+                  <div className={styles.participantName}>{participant.full_name}</div>
+                  {participant.bereavement_detail && (
+                    <div className={styles.bereavementDetail}>{participant.bereavement_detail}</div>
+                  )}
+                  {participant.phone && (
+                    <div className={styles.participantPhone}>{participant.phone}</div>
+                  )}
+                </div>
+
+                {/* Attendance Checkbox */}
+                <div className={styles.attendanceCheckbox}>
+                  <input
+                    type="checkbox"
+                    checked={attendedToday}
+                    onChange={() => {
+                      handleMarkAttendance(participant.id, participant.last_attendance);
+                    }}
+                    className={styles.checkbox}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </main>

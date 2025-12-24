@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const filterArchived = searchParams.get("filterArchived") || "all";
     const filterCircle = searchParams.get("filterCircle") || "all";
+    const filterLastAttendance = searchParams.get("filterLastAttendance") || "all";
 
     let query = databaseClient
       .from("participants")
@@ -70,10 +71,33 @@ export async function GET(request: NextRequest) {
       query = query.eq("bereavement_circle", filterCircle);
     }
 
+    // Filter by last attendance
+    if (filterLastAttendance !== "all") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (filterLastAttendance === "today") {
+        const todayStr = today.toISOString().split("T")[0];
+        query = query.eq("last_attendance", todayStr);
+      } else if (filterLastAttendance === "week") {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const weekAgoStr = weekAgo.toISOString().split("T")[0];
+        query = query.gte("last_attendance", weekAgoStr);
+      } else if (filterLastAttendance === "month") {
+        const monthAgo = new Date(today);
+        monthAgo.setDate(monthAgo.getDate() - 30);
+        const monthAgoStr = monthAgo.toISOString().split("T")[0];
+        query = query.gte("last_attendance", monthAgoStr);
+      } else if (filterLastAttendance === "never") {
+        query = query.is("last_attendance", null);
+      }
+    }
+
     // Search filter
     if (search) {
       query = query.or(
-        `full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`
+        `full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%,bereavement_detail.ilike.%${search}%,general_notes.ilike.%${search}%`
       );
     }
 
