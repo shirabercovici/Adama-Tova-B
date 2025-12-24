@@ -41,7 +41,6 @@ export default function Dashboard() {
     return <div className="p-10 text-center">Loading...</div>;
 
   }
-  console.log(user)
 
   return (
     <main className="min-h-screen p-24">
