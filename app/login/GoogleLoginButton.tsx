@@ -2,7 +2,8 @@
 
 import { NEXT_PUBLIC_GOOGLE_CLIENT_ID } from "@/lib/config";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 declare global {
   interface Window {
@@ -20,15 +21,47 @@ declare global {
 const GoogleLoginButton = () => {
   const buttonRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
+  const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const handleSignInWithGoogle = async (response: any) => {
-      console.log("handleSignInWithGoogle", response);
-      const { data, error } = await supabase.auth.signInWithIdToken({
+      setErrorMessage(null);
+      
+      // 1. Authenticate with Google to get the user session
+      const { data, error: authError } = await supabase.auth.signInWithIdToken({
         provider: "google",
         token: response.credential,
       });
-      location.reload();
+
+      if (authError) {
+        console.error("Login error:", authError);
+        setErrorMessage("Authentication failed.");
+        return;
+      }
+
+      const userEmail = data.user?.email;
+
+      // 2. CHECK: Does this email exist in your 'users' table?
+      const { data: existingUser, error: dbError } = await supabase
+        .from("users") // Ensure this matches your table name exactly
+        .select("email")
+        .eq("email", userEmail)
+        .single();
+
+      if (dbError || !existingUser) {
+        // 3. REJECT: User not in allowed list
+        console.warn("Access denied: Email not found in approved users table.");
+        
+        // Sign out of Supabase immediately so the session isn't kept
+        await supabase.auth.signOut();
+        
+        setErrorMessage("Access Denied: Your account is not authorized for this system.");
+        return;
+      }
+
+      // 4. ALLOW: User is authorized
+      router.push("/homepage");
     };
 
     const initializeGoogle = () => {
@@ -49,11 +82,9 @@ const GoogleLoginButton = () => {
       }
     };
 
-    // Initialize if Google script is already loaded
     if (window.google) {
       initializeGoogle();
     } else {
-      // Wait for the script to load
       const checkGoogle = setInterval(() => {
         if (window.google) {
           clearInterval(checkGoogle);
@@ -62,11 +93,18 @@ const GoogleLoginButton = () => {
       }, 100);
       return () => clearInterval(checkGoogle);
     }
-  }, [supabase.auth]);
+  }, [supabase, router]);
 
-  // You can customize the button here:
-  // https://developers.google.com/identity/gsi/web/tools/configurator
-  return <div ref={buttonRef} />;
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div ref={buttonRef} />
+      {errorMessage && (
+        <p className="text-red-500 text-xs font-bold max-w-[290px]">
+          {errorMessage}
+        </p>
+      )}
+    </div>
+  );
 };
 
 export default GoogleLoginButton;
