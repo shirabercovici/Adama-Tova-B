@@ -38,21 +38,12 @@ export default function Dashboard() {
   return (
     <main className="min-h-screen p-24">
       <div className="max-w-2xl mx-auto border p-8 rounded-lg shadow-lg">
-        <h1 className="text-3xl font-bold mb-4">Internal Dashboard</h1>
-        
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6">
-          <strong className="font-bold">Success! </strong>
-          <span className="block sm:inline">You are logged in.</span>
-        </div>
-
-        <div className="space-y-4">
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>User ID:</strong> <span className="text-sm font-mono bg-gray-100 p-1 rounded">{user.id}</span></p>
+        <div>
+          <span className="block sm:inline">היי {user.email}! טוב שאתה איתנו</span>
         </div>
 
         <button 
           onClick={handleLogout}
-          className="mt-8 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
         >
           Sign Out
         </button>
