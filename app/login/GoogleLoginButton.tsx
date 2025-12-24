@@ -61,7 +61,7 @@ const GoogleLoginButton = () => {
       }
 
       // 4. ALLOW: User is authorized
-      router.push("/dashboard");
+      router.push("/homepage");
     };
 
     const initializeGoogle = () => {
