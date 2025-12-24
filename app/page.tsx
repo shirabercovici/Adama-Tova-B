@@ -8,16 +8,12 @@ export default function Home() {
       <div className="z-10 w-full max-w-5xl items-center justify-center font-mono text-sm flex flex-col gap-8">
         
         {/* Title / Header */}
-        <h1 className="text-4xl font-bold">
-          Adama Tova
-        </h1>
+        <p className="text-4xl font-bold">
+          ברוכים.ות הבאים.ות
+        </p>
         
         <p className="text-lg mb-8">
-          Internal Team System
-          <br />
-          <span className="text-sm opacity-70">
-            Please log in with your approved Google account.
-          </span>
+          נא להתחבר באמצעות חשבון גוגל
         </p>
 
         {/* The Login Button */}
