@@ -1,0 +1,282 @@
+.container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background: #f5f7f2;
+  min-height: 100vh;
+}
+
+/* Search Bar */
+.searchBar {
+  width: 100%;
+  padding: 1rem;
+  background: #e8e8e8;
+  border-bottom: 1px solid #ddd;
+}
+
+.searchInputWrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  padding-left: 2.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+}
+
+.clearButton {
+  position: absolute;
+  left: 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  transition: color 0.2s;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  z-index: 1;
+}
+
+.clearButton:hover {
+  color: #666;
+  background: #f0f0f0;
+}
+
+.clearButton:active {
+  background: #e0e0e0;
+}
+
+/* Filters Bar */
+.filtersBar {
+  display: flex;
+  width: 100%;
+  background: #e8e8e8;
+  border-bottom: 1px solid #ddd;
+  padding: 0.5rem 1rem;
+  gap: 1rem;
+  align-items: center;
+}
+
+.filterTab {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #666;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.filterTab.active {
+  color: #4caf50;
+  border-bottom-color: #4caf50;
+  font-weight: 600;
+}
+
+.filterDropdown {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.filterSelect {
+  padding: 0.5rem;
+  border: none;
+  background: transparent;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #666;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left center;
+  padding-left: 1.5rem;
+}
+
+/* List Header */
+.listHeader {
+  display: grid;
+  grid-template-columns: 40px 1fr 100px;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #4caf50;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-bottom: 2px solid #4caf50;
+  align-items: center;
+  gap: 1rem;
+}
+
+.headerCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.headerPhoneSpace {
+  flex: 0 0 40px;
+}
+
+.headerCell:first-of-type {
+  flex: 1;
+  justify-content: flex-end;
+  padding-right: 0;
+}
+
+.headerCellLast {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.headerAttendance {
+  text-align: right;
+}
+
+.headerName {
+  text-align: right;
+  width: 100%;
+}
+
+/* Participants List */
+.participantsList {
+  width: 100%;
+}
+
+.participantCard {
+  display: grid;
+  grid-template-columns: 40px 1fr 100px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 1rem;
+  background: #e8f5e9;
+  border-bottom: 1px solid #4caf50;
+  gap: 1rem;
+  transition: background-color 0.2s;
+}
+
+.participantCard.archived {
+  opacity: 0.6;
+}
+
+/* Phone Icon */
+.phoneIcon {
+  flex: 0 0 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.phoneIconActive {
+  color: #4caf50;
+}
+
+.phoneIconInactive {
+  color: #999;
+}
+
+/* Participant Info */
+.participantInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.participantName {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.bereavementDetail {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.participantPhone {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+/* Attendance Checkbox */
+.attendanceCheckbox {
+  flex: 0 0 100px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.checkbox {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  accent-color: #4caf50;
+}
+
+.checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Loading, Error, Empty */
+.loading {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1rem;
+  color: #666;
+}
+
+.error {
+  text-align: center;
+  padding: 2rem;
+  color: #f44336;
+  background: #ffebee;
+  margin: 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #666;
+  font-size: 1rem;
+}
+
+/* Desktop adjustments */
+@media (min-width: 768px) {
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
