@@ -1,7 +1,8 @@
-"use client"; 
+"use client";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BackButton from '../../components/BackButton';
+import { createClient } from '@/lib/supabase/client';
 
 export default function NewParticipantPage() {
   const router = useRouter();
@@ -12,19 +13,70 @@ export default function NewParticipantPage() {
   const [phone, setPhone] = useState('');
   const [description, setDescription] = useState('');
   const [showPopup, setShowPopup] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
+
+  const supabase = createClient();
+
+  const handleSave = async () => {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      // Basic validation
+      if (!name || !circle) {
+        throw new Error('שם ומעגל הם שדות חובה');
+      }
+
+      const { data, error: insertError } = await supabase
+        .from('participants')
+        .insert([
+          {
+            full_name: name,
+            bereavement_detail: fullName, // Mapping 'Nickname' field to bereavement_detail based on usage
+            bereavement_circle: circle,
+            email: email,
+            phone: phone,
+            general_notes: description,
+            is_archived: false,
+            updates: JSON.stringify([]),
+          },
+        ])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      if (data) {
+        setCreatedId(data.id);
+        setShowPopup(true);
+      }
+    } catch (err: any) {
+      console.error('Error saving participant:', err);
+      setError(err.message || 'אירעה שגיאה בשמירת הנתונים');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const goToProfile = () => {
-    const params = new URLSearchParams({ name, fullName, circle: circle || '', email, phone, description });
-    router.push(`/participant-card?${params.toString()}`);
+    if (createdId) {
+      router.push(`/participant-card?id=${createdId}`);
+    } else {
+      // Fallback
+      const params = new URLSearchParams({ name, fullName, circle: circle || '', email, phone, description });
+      router.push(`/participant-card?${params.toString()}`);
+    }
   };
 
   // משתני עזר לעיצוב כדי שהקוד למטה יהיה נקי
   const labelStyle = { display: 'block', fontWeight: 'bold' as const, marginBottom: '5px' };
-  const inputStyle = { 
-    width: '100%', 
-    padding: '8px 0', 
-    border: 'none', 
-    borderBottom: '1px solid #ccc', 
+  const inputStyle = {
+    width: '100%',
+    padding: '8px 0',
+    border: 'none',
+    borderBottom: '1px solid #ccc',
     backgroundColor: 'transparent',
     outline: 'none',
     marginBottom: '20px'
@@ -32,12 +84,12 @@ export default function NewParticipantPage() {
 
   return (
     <div style={{ textAlign: 'right' }}>
-      {/* כותרת העמוד עם חץ בימין */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '15px', 
-        marginBottom: '20px', 
+      {/* כותרת הכרטיס עם כפתור החזור המשותף */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '15px',
+        marginBottom: '20px',
         marginTop: '10px',
         borderBottom: '1.5px solid #333',
         paddingBottom: '10px'
@@ -46,14 +98,20 @@ export default function NewParticipantPage() {
         <h2 style={{ fontSize: '1.8rem', margin: 0 }}>הוספת פונה חדש</h2>
       </div>
 
-      {/* גוף הטופס - שם וכינוי */}
+      {error && (
+        <div style={{ color: 'red', marginBottom: '15px' }}>
+          {error}
+        </div>
+      )}
+
+      {/* גוף הטופס - שם ופרטי הקשר */}
       <div style={{ display: 'flex', gap: '15px', marginBottom: '10px' }}>
         <div style={{ flex: 1 }}>
           <label style={labelStyle}>שם מלא</label>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
         </div>
         <div style={{ flex: 1 }}>
-          <label style={labelStyle}>כינוי</label>
+          <label style={labelStyle}>קשר</label>
           <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} style={inputStyle} />
         </div>
       </div>
@@ -62,16 +120,16 @@ export default function NewParticipantPage() {
       <div style={{ marginBottom: '25px' }}>
         <label style={labelStyle}>מעגל</label>
         <div style={{ display: 'flex', border: '1px solid #ccc', borderRadius: '2px', overflow: 'hidden' }}>
-          {['ראשון', 'שני', 'שלישי', 'רביעי'].map((c) => (
-            <button 
-              key={c} 
-              type="button" 
-              onClick={() => setCircle(c)} 
-              style={{ 
-                flex: 1, 
-                padding: '10px', 
-                border: 'none', 
-                borderLeft: c !== 'רביעי' ? '1px solid #ccc' : 'none',
+          {['מעגל 1', 'מעגל 2', 'מעגל 3', 'מעגל 4'].map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCircle(c)}
+              style={{
+                flex: 1,
+                padding: '10px',
+                border: 'none',
+                borderLeft: c !== 'מעגל 4' ? '1px solid #ccc' : 'none',
                 backgroundColor: circle === c ? '#e0e0e0' : 'transparent',
                 cursor: 'pointer'
               }}
@@ -84,33 +142,34 @@ export default function NewParticipantPage() {
 
       <label style={labelStyle}>מייל</label>
       <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
-      
+
       <label style={labelStyle}>מספר פלאפון</label>
       <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
-      
+
       <label style={labelStyle}>הערות</label>
-      <textarea 
-        value={description} 
-        onChange={(e) => setDescription(e.target.value)} 
-        style={{ ...inputStyle, height: '80px', border: '1px solid #ccc', backgroundColor: '#f9f9f9', padding: '10px' }} 
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        style={{ ...inputStyle, height: '80px', border: '1px solid #ccc', backgroundColor: '#f9f9f9', padding: '10px' }}
       />
 
       {/* כפתור שמירה */}
-      <button 
-        onClick={() => setShowPopup(true)} 
-        style={{ 
-          width: '100%', 
-          padding: '15px', 
-          backgroundColor: 'transparent', 
-          border: '1.5px solid #333', 
-          borderRadius: '4px', 
-          fontSize: '1rem', 
+      <button
+        onClick={handleSave}
+        disabled={isSubmitting}
+        style={{
+          width: '100%',
+          padding: '15px',
+          backgroundColor: isSubmitting ? '#ccc' : 'transparent',
+          border: '1.5px solid #333',
+          borderRadius: '4px',
+          fontSize: '1rem',
           fontWeight: 'bold',
-          cursor: 'pointer',
+          cursor: isSubmitting ? 'not-allowed' : 'pointer',
           marginTop: '10px'
         }}
       >
-        שמירה
+        {isSubmitting ? 'שומר...' : 'שמירה'}
       </button>
 
       {/* פופ-אפ אישור */}

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse } from "./types";
 
 export default function ParticipantsPage() {
+  const router = useRouter();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,11 +59,11 @@ export default function ParticipantsPage() {
     try {
       const today = new Date().toISOString().split("T")[0];
       const attendedToday = currentAttendance && currentAttendance === today;
-      
+
       // If already attended today, remove attendance (set to null)
       // Otherwise, mark as attended today
       const newAttendance = attendedToday ? null : today;
-      
+
       const response = await fetch("/participants/api", {
         method: "PATCH",
         headers: {
@@ -207,11 +209,11 @@ export default function ParticipantsPage() {
               <div className={styles.headerAttendance}>נוכחות</div>
             </div>
           </div>
-          
+
           {participants.map((participant) => {
             const attendedToday = isToday(participant.last_attendance);
             const hasCall = hasRecentCall(participant);
-            
+
             return (
               <div
                 key={participant.id}
@@ -235,7 +237,11 @@ export default function ParticipantsPage() {
                 </div>
 
                 {/* Name, Bereavement Detail and Phone */}
-                <div className={styles.participantInfo}>
+                <div
+                  className={styles.participantInfo}
+                  onClick={() => router.push(`/participant-card?id=${participant.id}`)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className={styles.participantName}>{participant.full_name}</div>
                   {participant.bereavement_detail && (
                     <div className={styles.bereavementDetail}>{participant.bereavement_detail}</div>
@@ -250,7 +256,10 @@ export default function ParticipantsPage() {
                   <input
                     type="checkbox"
                     checked={attendedToday}
-                    onChange={() => {
+                    onChange={(e) => {
+                      // Prevent navigation when clicking checkbox if the parent had the click handler
+                      // But here the click handler is on the sibling .participantInfo, so this might not be strictly necessary unless layout changes
+                      // But if we moved the click to the whole card, we would need e.stopPropagation()
                       handleMarkAttendance(participant.id, participant.last_attendance);
                     }}
                     className={styles.checkbox}
