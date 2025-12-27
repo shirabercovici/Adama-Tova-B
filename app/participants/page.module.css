@@ -3,16 +3,17 @@
   max-width: 100%;
   margin: 0;
   padding: 0;
-  background: #f5f7f2;
+  background: #FFFCE5;
   min-height: 100vh;
 }
 
 /* Purple Header */
 .purpleHeader {
   width: 100%;
-  background: #7C3AED;
+  background: #4D58D8;
   padding: 1rem;
   color: white;
+  position: relative;
 }
 
 .headerTop {
@@ -47,20 +48,36 @@
   flex-direction: column;
   align-items: center;
   margin-bottom: 1rem;
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  min-height: 120px;
+  overflow: hidden;
 }
 
 .headerNumber {
-  font-size: 4rem;
-  font-weight: 700;
+  font-family: 'EditorSans_PRO', sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 96px;
+  line-height: 100%;
+  letter-spacing: -0.04em;
+  text-align: center;
   color: white;
-  line-height: 1;
   margin-bottom: 0.5rem;
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  overflow: visible;
+  white-space: nowrap;
 }
 
 .headerSubtitle {
-  font-size: 1rem;
-  color: white;
+  font-family: 'EditorSans_PRO', sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 30px;
+  line-height: 34px;
+  letter-spacing: -0.04em;
   text-align: center;
+  color: white;
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
 }
 
 .headerSearchBar {
@@ -76,12 +93,14 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 0.25rem;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
+  width: 35.5px;
+  height: 29.2px;
 }
 
 .addPersonButton:hover {
@@ -106,24 +125,35 @@
   border: none;
   background: transparent;
   color: white;
-  font-size: 1rem;
+  font-family: 'EditorSans_PRO', sans-serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 30px;
+  line-height: 100%;
+  letter-spacing: 0;
+  text-align: right;
   outline: none;
 }
 
 .headerSearchInput::placeholder {
   color: rgba(255, 255, 255, 0.7);
+  font-family: 'EditorSans_PRO', sans-serif;
+  font-weight: 300;
+  font-style: italic;
 }
 
 .searchIconButton {
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 0.25rem;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
+  width: 27.5px;
+  height: 27.5px;
 }
 
 .searchIconButton:hover {
