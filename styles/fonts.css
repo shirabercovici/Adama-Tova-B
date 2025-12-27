@@ -1,0 +1,130 @@
+/* EditorSans_PRO Font Family */
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-LightItalic.otf') format('opentype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-Normal.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-NormalItalic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-Book.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-BookItalic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-MediumItalic.otf') format('opentype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-Semibold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-SemiboldItalic.otf') format('opentype');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-Ultra.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-UltraItalic.otf') format('opentype');
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-Black.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EditorSans_PRO';
+  src: url('/fonts/EditorSans_PRO-BlackItalic.otf') format('opentype');
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+

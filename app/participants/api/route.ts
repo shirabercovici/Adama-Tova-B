@@ -73,8 +73,9 @@ export async function GET(request: NextRequest) {
 
     // Filter by last attendance
     if (filterLastAttendance !== "all") {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Use UTC date to avoid timezone issues
+      const now = new Date();
+      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
       
       if (filterLastAttendance === "today") {
         const todayStr = today.toISOString().split("T")[0];
