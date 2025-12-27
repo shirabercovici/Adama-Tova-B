@@ -76,14 +76,18 @@ export default function ParticipantsPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update attendance");
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        const errorMessage = errorData.error || `Failed to update attendance: ${response.status}`;
+        console.error("API error:", errorMessage, errorData);
+        throw new Error(errorMessage);
       }
 
       // Refresh the list
       fetchParticipants();
     } catch (err) {
       console.error("Error marking attendance:", err);
-      alert("שגיאה בעדכון נוכחות. נסה שוב.");
+      const errorMessage = err instanceof Error ? err.message : "שגיאה בעדכון נוכחות";
+      alert(`${errorMessage}. נסה שוב.`);
     }
   };
 
@@ -107,39 +111,74 @@ export default function ParticipantsPage() {
     return callDate > thirtyDaysAgo;
   };
 
+  // Count participants marked as present today (from the current list)
+  const presentTodayCount = participants.filter((p) => isToday(p.last_attendance)).length;
+
+
   return (
     <main className={styles.container}>
-      {/* Search Bar */}
-      <div className={styles.searchBar}>
-        <div className={styles.searchInputWrapper}>
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch("")}
-              className={styles.clearButton}
-              aria-label="נקה חיפוש"
+      {/* Purple Header */}
+      <div className={styles.purpleHeader}>
+        <div className={styles.headerTop}>
+          <div className={styles.headerTitle}>אדממי</div>
+          <div className={styles.headerButton}>אד</div>
+        </div>
+        <div className={styles.headerCenter}>
+          <div className={styles.headerNumber}>{presentTodayCount}</div>
+          <div className={styles.headerSubtitle}>פונים נוכחים במתחם</div>
+        </div>
+        <div className={styles.headerSearchBar}>
+          <button
+            type="button"
+            className={styles.searchIconButton}
+            aria-label="חיפוש"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
             >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-                  fill="currentColor"
-                />
-              </svg>
-            </button>
-          )}
-          <input
-            type="text"
-            placeholder="חיפוש..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={styles.searchInput}
-          />
+              <path
+                d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+          <div className={styles.searchDivider}></div>
+          <div className={styles.searchInputContainer}>
+            <input
+              type="text"
+              placeholder="חיפוש פונה"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={styles.headerSearchInput}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/new-participant")}
+            className={styles.addPersonButton}
+            aria-label="הוסף פונה חדש"
+          >
+            <svg
+              width="32"
+              height="24"
+              viewBox="0 0 32 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                fill="currentColor"
+              />
+              <path
+                d="M20 4h2v2h2v2h-2v2h-2V8h-2V6h2V4z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
         </div>
       </div>
 
