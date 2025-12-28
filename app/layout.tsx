@@ -24,22 +24,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="he" dir="rtl">
-      <body style={{ 
-        margin: 0, 
-        padding: 0, 
-        backgroundColor: '#f5f7f2', 
-        minHeight: '100vh',
-        fontFamily: 'sans-serif',
-        direction: 'rtl' 
-      }}>
+      <body>
         {/* The Script component goes inside body, usually at the top */}
-        <Script 
-          src="https://accounts.google.com/gsi/client" 
-          strategy="beforeInteractive" 
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="beforeInteractive"
         />
-        <header style={{ width: '100%', backgroundColor: '#f5f7f2', paddingTop: '20px' }}>
+        <header>
           <Navbar />
-          <hr style={{ border: '0', borderTop: '0.5px solid #ccc', width: '100%', margin: 0 }} />
         </header>
 
         <main style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>

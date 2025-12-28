@@ -17,3 +17,13 @@ export interface ParticipantsResponse {
   participants: Participant[];
 }
 
+export interface Task {
+  id: string;
+  title: string;
+  status: 'open' | 'done'; // Assuming 'done' is the other status
+  due_date: string | null;
+  participant_id: string | null;
+  done_at: string | null;
+  done_by: string | null;
+}
+

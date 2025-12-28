@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
-import type { Participant, ParticipantsResponse } from "./types";
+import type { Participant, ParticipantsResponse, Task } from "./types";
 
 export default function ParticipantsPage() {
   const router = useRouter();
@@ -12,6 +12,9 @@ export default function ParticipantsPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [presentTodayCount, setPresentTodayCount] = useState<number>(0);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isTasksOpen, setIsTasksOpen] = useState(false);
+  const [isDoneTasksOpen, setIsDoneTasksOpen] = useState(false);
 
   const fetchParticipants = useCallback(async () => {
     // Only fetch if there's a search query
@@ -65,17 +68,17 @@ export default function ParticipantsPage() {
       const now = new Date();
       const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
       const todayStr = today.toISOString().split("T")[0];
-      
+
       const params = new URLSearchParams();
       params.append("filterLastAttendance", "today");
       params.append("filterArchived", "active");
-      
+
       // Add cache busting to ensure fresh data
       const url = `/participants/api?${params.toString()}&_t=${Date.now()}`;
       const response = await fetch(url, {
         cache: 'no-store'
       });
-      
+
       if (response.ok) {
         const data: ParticipantsResponse = await response.json();
         const count = (data.participants || []).length;
@@ -89,13 +92,59 @@ export default function ParticipantsPage() {
     }
   };
 
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch("/tasks/api");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.tasks) {
+          setTasks(data.tasks);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+    }
+  };
+
   useEffect(() => {
     fetchParticipants();
   }, [fetchParticipants]);
 
   useEffect(() => {
     fetchPresentTodayCount();
+    fetchTasks();
   }, []);
+
+  const handleTaskToggle = async (task: Task) => {
+    try {
+      // Optimistic update
+      const newStatus: "open" | "done" = task.status === 'done' ? 'open' : 'done';
+      const updatedTasks = tasks.map((t) =>
+        t.id === task.id ? { ...t, status: newStatus } : t
+      );
+      setTasks(updatedTasks);
+
+      const response = await fetch("/tasks/api", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: task.id,
+          status: newStatus,
+          participant_id: task.participant_id
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update task");
+      }
+
+      fetchTasks();
+    } catch (err) {
+      console.error("Error toggling task:", err);
+      // Revert optimistic update by re-fetching
+      fetchTasks();
+    }
+  };
 
   const handleMarkAttendance = async (participantId: string, currentAttendance: string | null) => {
     try {
@@ -128,7 +177,7 @@ export default function ParticipantsPage() {
       setTimeout(async () => {
         await fetchPresentTodayCount();
       }, 300);
-      
+
       // Refresh participants list if there's a search query
       if (search && search.trim() !== "") {
         fetchParticipants();
@@ -164,7 +213,7 @@ export default function ParticipantsPage() {
           <div className={styles.headerButton}>אד</div>
         </div>
         <div className={styles.headerCenter}>
-          {!search && (
+          {!search && !isTasksOpen && (
             <>
               <div className={styles.headerNumber}>{presentTodayCount}</div>
               <div className={styles.headerSubtitle}>פונים נוכחים במתחם</div>
@@ -186,8 +235,8 @@ export default function ParticipantsPage() {
               strokeWidth="3"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <circle cx="11" cy="11" r="8" stroke="currentColor" fill="none" strokeWidth="3"/>
-              <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+              <circle cx="11" cy="11" r="8" stroke="currentColor" fill="none" strokeWidth="3" />
+              <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
             </svg>
           </button>
           <div className={styles.searchDivider}></div>
@@ -218,10 +267,10 @@ export default function ParticipantsPage() {
               xmlns="http://www.w3.org/2000/svg"
             >
               {/* Person silhouette */}
-              <circle cx="9" cy="7" r="4" stroke="currentColor" fill="none" strokeWidth="3"/>
-              <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="currentColor" fill="none" strokeWidth="3"/>
+              <circle cx="9" cy="7" r="4" stroke="currentColor" fill="none" strokeWidth="3" />
+              <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="currentColor" fill="none" strokeWidth="3" />
               {/* Plus sign */}
-              <path d="M18 9v6M15 12h6" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+              <path d="M18 9v6M15 12h6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
             </svg>
           </button>
         </div>
@@ -305,6 +354,87 @@ export default function ParticipantsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Tasks Drawer - Show only when NOT searching */}
+      {!search && (
+        <div className={`${styles.tasksDrawer} ${isTasksOpen ? styles.open : styles.closed}`}>
+          <div className={styles.tasksHandle} onClick={() => setIsTasksOpen(!isTasksOpen)}>
+            <div className={styles.tasksTitle}>
+              <span>יש לך זמן לדבר?</span>
+              <svg
+                className={`${styles.chevron} ${isTasksOpen ? styles.open : ''}`}
+                width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div className={styles.tasksContent}>
+            <ul className={styles.taskList}>
+              {tasks.filter(t => t.status !== 'done').map(task => (
+                <li key={task.id} className={styles.taskItem}>
+                  <div className={styles.taskItemContent}>
+                    <input
+                      type="checkbox"
+                      className={styles.taskCheckbox}
+                      checked={task.status === 'done'}
+                      onChange={() => handleTaskToggle(task)}
+                    />
+                    <span className={styles.taskText}>{task.title}</span>
+                  </div>
+                  <div className={styles.taskItemAction}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {/* Done Section Header */}
+            <div className={styles.doneSection}>
+              <div className={styles.doneHeader} onClick={() => setIsDoneTasksOpen(!isDoneTasksOpen)}>
+                <span>בוצע</span>
+                <svg
+                  className={`${styles.chevron} ${isDoneTasksOpen ? styles.open : ''}`}
+                  width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+              {/* Done tasks list */}
+              {isDoneTasksOpen && (
+                <ul className={styles.taskList}>
+                  {tasks.filter(t => t.status === 'done').map(task => (
+                    <li key={task.id} className={styles.taskItem} style={{ opacity: 0.7 }}>
+                      <div className={styles.taskItemContent}>
+                        <input
+                          type="checkbox"
+                          className={styles.taskCheckbox}
+                          checked={task.status === 'done'}
+                          onChange={() => handleTaskToggle(task)}
+                        />
+                        <span className={styles.taskText} style={{ textDecoration: 'line-through' }}>{task.title}</span>
+                      </div>
+                      <div className={styles.taskItemAction}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                        </svg>
+                      </div>
+                    </li>
+                  ))}
+                  {tasks.filter(t => t.status === 'done').length === 0 && (
+                    <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
+                      <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין משימות שבוצעו</span>
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </main>

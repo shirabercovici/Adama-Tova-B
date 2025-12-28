@@ -199,10 +199,10 @@ export default function ParticipantCardPage() {
             type="text"
             value={editForm.full_name}
             onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
-            style={{ fontSize: '1.8rem', margin: 0, paddingBottom: '5px', flex: 1, textAlign: 'right', border: 'none', borderBottom: '2px solid #333', outline: 'none', background: 'transparent' }}
+            style={{ fontSize: '1.8rem', margin: 0, paddingBottom: '5px', flex: 1, textAlign: 'right', border: 'none', borderBottom: '2px solid #4D58D8', outline: 'none', background: 'transparent', color: '#4D58D8' }}
           />
         ) : (
-          <h2 style={{ fontSize: '1.8rem', margin: 0, borderBottom: '2px solid #333', paddingBottom: '5px', flex: 1, textAlign: 'right' }}>
+          <h2 style={{ fontSize: '1.8rem', margin: 0, borderBottom: '2px solid #4D58D8', paddingBottom: '5px', flex: 1, textAlign: 'right', color: '#4D58D8' }}>
             {displayName}
           </h2>
         )}
@@ -211,7 +211,7 @@ export default function ParticipantCardPage() {
         {participant && !isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            style={{ padding: '5px 15px', backgroundColor: 'transparent', border: '1px solid #333', cursor: 'pointer', borderRadius: '4px' }}
+            style={{ padding: '5px 15px', backgroundColor: 'transparent', border: '1px solid #4D58D8', color: '#4D58D8', cursor: 'pointer', borderRadius: '4px' }}
           >
             עריכה
           </button>
@@ -220,7 +220,7 @@ export default function ParticipantCardPage() {
           <div style={{ display: 'flex', gap: '5px' }}>
             <button
               onClick={handleSaveChanges}
-              style={{ padding: '5px 15px', backgroundColor: '#333', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '4px' }}
+              style={{ padding: '5px 15px', backgroundColor: '#4D58D8', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '4px' }}
             >
               שמור
             </button>
@@ -261,7 +261,7 @@ export default function ParticipantCardPage() {
               style={editInputStyle}
             />
           ) : (
-            <div style={{ backgroundColor: 'black', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', minHeight: '40px' }}>
+            <div style={{ backgroundColor: '#4D58D8', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', minHeight: '40px' }}>
               {participant?.bereavement_detail}
             </div>
           )}
@@ -280,7 +280,7 @@ export default function ParticipantCardPage() {
               <option value="מעגל 4">מעגל 4</option>
             </select>
           ) : (
-            <div style={{ backgroundColor: 'black', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', minHeight: '40px' }}>
+            <div style={{ backgroundColor: '#4D58D8', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', minHeight: '40px' }}>
               {participant?.bereavement_circle}
             </div>
           )}
@@ -295,7 +295,7 @@ export default function ParticipantCardPage() {
               style={editInputStyle}
             />
           ) : (
-            <div style={{ backgroundColor: 'black', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', fontSize: '0.8rem', minHeight: '40px', wordBreak: 'break-all' }}>
+            <div style={{ backgroundColor: '#4D58D8', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', fontSize: '0.8rem', minHeight: '40px', wordBreak: 'break-all' }}>
               {participant?.email}
             </div>
           )}
@@ -310,7 +310,7 @@ export default function ParticipantCardPage() {
               style={editInputStyle}
             />
           ) : (
-            <div style={{ backgroundColor: 'black', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', minHeight: '40px' }}>
+            <div style={{ backgroundColor: '#4D58D8', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', minHeight: '40px' }}>
               {participant?.phone}
             </div>
           )}
@@ -353,8 +353,8 @@ export default function ParticipantCardPage() {
       </div>
 
       {/* כפתורי פעולה */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', border: '1px solid #333', marginBottom: '20px' }}>
-        <button onClick={() => setIsPopupOpen(true)} style={{ padding: '10px', backgroundColor: '#eef2e8', border: 'none', borderLeft: '1px solid #333', cursor: 'pointer', fontWeight: 'bold' }}>+ הוספת עדכון</button>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', border: '1px solid #4D58D8', marginBottom: '20px' }}>
+        <button onClick={() => setIsPopupOpen(true)} style={{ padding: '10px', backgroundColor: '#eef2e8', border: 'none', borderLeft: '1px solid #4D58D8', cursor: 'pointer', fontWeight: 'bold' }}>+ הוספת עדכון</button>
         <button
           onClick={handleArchive}
           style={{ padding: '10px', backgroundColor: participant?.is_archived ? '#ccc' : '#eef2e8', border: 'none', cursor: 'pointer' }}
@@ -370,7 +370,7 @@ export default function ParticipantCardPage() {
             <h3 style={{ marginTop: 0 }}>הוספת עדכון חדש</h3>
             <textarea value={newUpdateText} onChange={(e) => setNewUpdateText(e.target.value)} placeholder="כתבי כאן..." style={{ width: '100%', height: '100px', marginBottom: '15px', padding: '10px' }} />
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={handleAddUpdate} style={{ flex: 1, padding: '10px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px' }}>סיים</button>
+              <button onClick={handleAddUpdate} style={{ flex: 1, padding: '10px', backgroundColor: '#4D58D8', color: 'white', border: 'none', borderRadius: '4px' }}>סיים</button>
               <button onClick={() => setIsPopupOpen(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#eee', border: 'none', borderRadius: '4px' }}>ביטול</button>
             </div>
           </div>
