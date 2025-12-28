@@ -6,15 +6,15 @@
 /* what is :root? https://developer.mozilla.org/en-US/docs/Web/CSS/:root */
 :root {
   /* Define design variables */
-  --color-primary: #2b2d42;
+  --color-primary: #4D58D8;
   --color-secondary: #bfc6d2;
-  --color-background: #f5f5f5;
+  --color-background: #FFFCE5;
   --color-accent: #535bf2;
 
   --border-radius: 0.5rem;
 
-  --font-titles: "Rubik", serif;
-  --font-body: system-ui, sans-serif; /* system-ui matches the user's system font */
+  --font-titles: "EditorSans_PRO", "Rubik", serif;
+  --font-body: "EditorSans_PRO", system-ui, sans-serif;
 }
 
 body {
@@ -128,6 +128,7 @@ a {
   color: var(--color-accent);
   text-decoration: underline;
 }
+
 a:hover {
   text-decoration: none;
 }
@@ -138,6 +139,7 @@ table {
   border-spacing: 0px;
   border-collapse: collapse;
 }
+
 table td,
 table th {
   padding: 0.5rem;
@@ -165,7 +167,8 @@ fieldset {
   height: 2rem;
   color: white;
   border: none;
-  border-radius: 1000px; /* Make the button round */
+  border-radius: 1000px;
+  /* Make the button round */
   cursor: pointer;
   font-weight: bold;
 

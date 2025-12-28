@@ -91,8 +91,9 @@ export default function NewParticipantPage() {
         gap: '15px',
         marginBottom: '20px',
         marginTop: '10px',
-        borderBottom: '1.5px solid #333',
-        paddingBottom: '10px'
+        borderBottom: '1.5px solid #4D58D8',
+        paddingBottom: '10px',
+        color: '#4D58D8'
       }}>
         <BackButton />
         <h2 style={{ fontSize: '1.8rem', margin: 0 }}>הוספת פונה חדש</h2>
@@ -161,7 +162,8 @@ export default function NewParticipantPage() {
           width: '100%',
           padding: '15px',
           backgroundColor: isSubmitting ? '#ccc' : 'transparent',
-          border: '1.5px solid #333',
+          border: '1.5px solid #4D58D8',
+          color: '#4D58D8',
           borderRadius: '4px',
           fontSize: '1rem',
           fontWeight: 'bold',
@@ -176,8 +178,8 @@ export default function NewParticipantPage() {
       {showPopup && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
           <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '8px', textAlign: 'center', width: '80%', maxWidth: '350px' }}>
-            <p style={{ fontWeight: 'bold', marginBottom: '20px' }}>כרטיסיית פונה חדשה נוצרה בהצלחה!</p>
-            <button onClick={goToProfile} style={{ padding: '10px 20px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', width: '100%' }}>צפייה בתיק הפונה</button>
+            <p style={{ fontWeight: 'bold', marginBottom: '20px', color: '#4D58D8' }}>כרטיסיית פונה חדשה נוצרה בהצלחה!</p>
+            <button onClick={goToProfile} style={{ padding: '10px 20px', backgroundColor: '#4D58D8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', width: '100%' }}>צפייה בתיק הפונה</button>
           </div>
         </div>
       )}
