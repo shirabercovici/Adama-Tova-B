@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/lib/components/Navbar";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
 
 export default function ParticipantsPage() {
   const router = useRouter();
+  const supabase = createClient();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +20,8 @@ export default function ParticipantsPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isTasksOpen, setIsTasksOpen] = useState(false);
   const [isDoneTasksOpen, setIsDoneTasksOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [userInitials, setUserInitials] = useState<string>("");
 
   // Add class to body to hide navbar and make full width
   useEffect(() => {
@@ -127,7 +132,30 @@ export default function ParticipantsPage() {
   useEffect(() => {
     fetchPresentTodayCount();
     fetchTasks();
-  }, []);
+    
+    // Fetch user data
+    const fetchUser = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        const { data: dbUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', authUser.email)
+          .single();
+        
+        const userData = dbUser || authUser;
+        setUser(userData);
+        
+        // Extract initials from first_name and last_name
+        const firstName = userData.first_name || '';
+        const lastName = userData.last_name || '';
+        const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'א';
+        setUserInitials(initials);
+      }
+    };
+    
+    fetchUser();
+  }, [supabase]);
 
   // Handle search input focus/blur
   const handleSearchFocus = () => {
@@ -253,8 +281,17 @@ export default function ParticipantsPage() {
       {/* Purple Header */}
       <div className={styles.purpleHeader}>
         <div className={styles.headerTop}>
-          <div className={styles.headerTitle}>אדממי</div>
-          <div className={styles.headerButton}>אד</div>
+          <div className={styles.headerButton}>{userInitials || "א"}</div>
+          <div className={styles.logo}>
+            <Image
+              src="/adami-logo.png"
+              alt="אדממי"
+              width={83}
+              height={19}
+              priority
+              className={styles.logoImage}
+            />
+          </div>
         </div>
         <div className={`${styles.headerCenter} ${isSearchActive ? styles.hidden : ''}`}>
           {!isSearchActive && !isTasksOpen && (
@@ -312,6 +349,7 @@ export default function ParticipantsPage() {
               className={styles.headerSearchInput}
             />
           </div>
+          <div className={styles.addPersonDivider}></div>
           <button
             type="button"
             onClick={() => router.push("/new-participant")}
@@ -359,12 +397,11 @@ export default function ParticipantsPage() {
         <div className={styles.participantsList}>
           {/* List Header */}
           <div className={styles.listHeader}>
-            <div className={styles.headerCellLast}>
-              <div className={styles.headerAttendance}>נוכחות</div>
-            </div>
-            <div className={styles.headerDivider}></div>
             <div className={styles.headerCell}>
               <div className={styles.headerName}>שם</div>
+            </div>
+            <div className={styles.headerCellLast}>
+              <div className={styles.headerAttendance}>נוכחות</div>
             </div>
           </div>
 
@@ -402,14 +439,14 @@ export default function ParticipantsPage() {
                   <div className={styles.participantName}>{participant.full_name}</div>
                   {(participant.phone || participant.bereavement_detail) && (
                     <div className={styles.participantDetails}>
-                      {participant.phone && (
+                      {participant.bereavement_detail && (
                         <>
-                          <span className={styles.participantPhone}>{participant.phone}</span>
-                          {participant.bereavement_detail && <span className={styles.detailSeparator}> | </span>}
+                          <span className={styles.bereavementDetail}>{participant.bereavement_detail}</span>
+                          {participant.phone && <span className={styles.detailSeparator}> | </span>}
                         </>
                       )}
-                      {participant.bereavement_detail && (
-                        <span className={styles.bereavementDetail}>{participant.bereavement_detail}</span>
+                      {participant.phone && (
+                        <span className={styles.participantPhone}>{participant.phone}</span>
                       )}
                     </div>
                   )}
@@ -421,7 +458,7 @@ export default function ParticipantsPage() {
       )}
 
       {/* Tasks Drawer - Show only when NOT searching */}
-      {!search && (
+      {!isSearchActive && (
         <div className={`${styles.tasksDrawer} ${isTasksOpen ? styles.open : styles.closed}`}>
           <div className={styles.tasksHandle} onClick={() => setIsTasksOpen(!isTasksOpen)}>
             <div className={styles.tasksTitle}>

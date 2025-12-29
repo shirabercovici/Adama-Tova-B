@@ -54,6 +54,20 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+  position: relative;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-right: 37px;
+}
+
+.logoImage {
+  width: 83px;
+  height: 19px;
+  object-fit: contain;
 }
 
 .headerTitle {
@@ -66,14 +80,15 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #60A5FA;
-  border: 2px solid white;
+  background: transparent;
+  border: 2px solid #FFFCE5;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.9rem;
   font-weight: 600;
-  color: white;
+  color: #FFFCE5;
+  font-family: 'EditorSans_PRO', sans-serif;
 }
 
 .headerCenter {
@@ -145,6 +160,13 @@
   flex-shrink: 0;
   width: 35.5px;
   height: 29.2px;
+}
+
+.addPersonDivider {
+  width: 1px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
 }
 
 .addPersonButton:hover {
@@ -317,7 +339,7 @@
 /* List Header */
 .listHeader {
   display: grid;
-  grid-template-columns: auto 1px 1fr;
+  grid-template-columns: 1fr auto; /* Name | Attendance */
   width: 100%;
   padding: 0.75rem 1rem;
   background: #FFFCE5;
@@ -329,16 +351,18 @@
 .headerCell {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-end; /* Align "שם" to the right */
   width: 100%;
+  text-align: right;
 }
 
 .headerCellLast {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start; /* Align "נוכחות" to the left */
   gap: 0.5rem;
+  text-align: left;
 }
 
 .headerDivider {
@@ -354,7 +378,7 @@
   font-size: 24px;
   line-height: 100%;
   letter-spacing: 0%;
-  text-align: center;
+  text-align: left;
   color: #4D58D8;
 }
 
@@ -379,7 +403,7 @@
 
 .participantCard {
   display: grid;
-  grid-template-columns: auto 1px 1fr;
+  grid-template-columns: auto 1px 1fr; /* Checkbox | Divider | Info */
   align-items: flex-start;
   width: 100%;
   padding: 1rem;
@@ -480,7 +504,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding-left: 0.5rem;
+  padding-right: 9px;
   gap: 0.5rem;
 }
 
@@ -492,10 +516,32 @@
 }
 
 .checkbox {
-  width: 24px;
-  height: 24px;
+  width: 27px;
+  height: 27px;
   cursor: pointer;
-  accent-color: #4D58D8;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: 2px solid #4D58D8;
+  border-radius: 9px;
+  background: transparent;
+  position: relative;
+  margin: 0;
+}
+
+.checkbox:checked {
+  background: #4D58D8;
+}
+
+.checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
 }
 
 .checkbox:disabled {
