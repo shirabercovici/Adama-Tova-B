@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Navbar from "@/lib/components/Navbar";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
 
@@ -11,14 +12,23 @@ export default function ParticipantsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [isSearchActive, setIsSearchActive] = useState(false);
   const [presentTodayCount, setPresentTodayCount] = useState<number>(0);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isTasksOpen, setIsTasksOpen] = useState(false);
   const [isDoneTasksOpen, setIsDoneTasksOpen] = useState(false);
 
+  // Add class to body to hide navbar and make full width
+  useEffect(() => {
+    document.body.classList.add('participants-page');
+    return () => {
+      document.body.classList.remove('participants-page');
+    };
+  }, []);
+
   const fetchParticipants = useCallback(async () => {
-    // Only fetch if there's a search query
-    if (!search || search.trim() === "") {
+    // Only fetch if search is active
+    if (!isSearchActive) {
       setParticipants([]);
       setLoading(false);
       setError(null);
@@ -29,9 +39,13 @@ export default function ParticipantsPage() {
     setError(null);
     try {
       const params = new URLSearchParams();
-      params.append("search", search.trim());
-      // Only show active participants in search
+      // Only show active participants
       params.append("filterArchived", "active");
+      
+      // If there's a search query, add it
+      if (search && search.trim() !== "") {
+        params.append("search", search.trim());
+      }
 
       const response = await fetch(`/participants/api?${params.toString()}`);
       if (!response.ok) {
@@ -59,7 +73,7 @@ export default function ParticipantsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [isSearchActive, search]);
 
   // Fetch count of participants present today (independent of search)
   const fetchPresentTodayCount = async () => {
@@ -114,6 +128,32 @@ export default function ParticipantsPage() {
     fetchPresentTodayCount();
     fetchTasks();
   }, []);
+
+  // Handle search input focus/blur
+  const handleSearchFocus = () => {
+    setIsSearchActive(true);
+  };
+
+  const handleSearchBlur = () => {
+    // Don't deactivate if there's text in the search or participants are shown
+    if (search.trim() === "" && participants.length === 0) {
+      setIsSearchActive(false);
+    }
+  };
+
+  // Handle close search (X button)
+  const handleCloseSearch = () => {
+    setIsSearchActive(false);
+    setSearch("");
+    setParticipants([]);
+  };
+
+  // Keep search active if there's text
+  useEffect(() => {
+    if (search.trim() !== "") {
+      setIsSearchActive(true);
+    }
+  }, [search]);
 
   const handleTaskToggle = async (task: Task) => {
     try {
@@ -206,14 +246,18 @@ export default function ParticipantsPage() {
 
   return (
     <main className={styles.container}>
+      {/* Navbar */}
+      <div className={styles.navbarWrapper}>
+        <Navbar />
+      </div>
       {/* Purple Header */}
       <div className={styles.purpleHeader}>
         <div className={styles.headerTop}>
           <div className={styles.headerTitle}>אדממי</div>
           <div className={styles.headerButton}>אד</div>
         </div>
-        <div className={styles.headerCenter}>
-          {!search && !isTasksOpen && (
+        <div className={`${styles.headerCenter} ${isSearchActive ? styles.hidden : ''}`}>
+          {!isSearchActive && !isTasksOpen && (
             <>
               <div className={styles.headerNumber}>{presentTodayCount}</div>
               <div className={styles.headerSubtitle}>פונים נוכחים במתחם</div>
@@ -223,21 +267,38 @@ export default function ParticipantsPage() {
         <div className={styles.headerSearchBar}>
           <button
             type="button"
+            onClick={isSearchActive ? handleCloseSearch : undefined}
             className={styles.searchIconButton}
-            aria-label="חיפוש"
+            aria-label={isSearchActive ? "סגור חיפוש" : "חיפוש"}
           >
-            <svg
-              width="27.5"
-              height="27.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle cx="11" cy="11" r="8" stroke="currentColor" fill="none" strokeWidth="3" />
-              <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            </svg>
+            {isSearchActive ? (
+              <svg
+                width="27.5"
+                height="27.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <polyline points="9 18 15 12 9 6" stroke="currentColor" strokeWidth="3" />
+              </svg>
+            ) : (
+              <svg
+                width="27.5"
+                height="27.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle cx="11" cy="11" r="8" stroke="currentColor" fill="none" strokeWidth="3" />
+                <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+            )}
           </button>
           <div className={styles.searchDivider}></div>
           <div className={styles.searchInputContainer}>
@@ -246,6 +307,8 @@ export default function ParticipantsPage() {
               placeholder="חיפוש פונה"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onFocus={handleSearchFocus}
+              onBlur={handleSearchBlur}
               className={styles.headerSearchInput}
             />
           </div>
@@ -287,12 +350,12 @@ export default function ParticipantsPage() {
       )}
 
       {/* Empty */}
-      {!loading && !error && search && participants.length === 0 && (
+      {!loading && !error && isSearchActive && participants.length === 0 && (
         <div className={styles.empty}>לא נמצאו פונים</div>
       )}
 
-      {/* Participants List - Show only when there's a search */}
-      {!loading && !error && search && participants.length > 0 && (
+      {/* Participants List - Show when search is active */}
+      {!loading && !error && isSearchActive && participants.length > 0 && (
         <div className={styles.participantsList}>
           {/* List Header */}
           <div className={styles.listHeader}>

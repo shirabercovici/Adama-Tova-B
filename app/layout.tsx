@@ -34,7 +34,7 @@ export default function RootLayout({
           <Navbar />
         </header>
 
-        <main style={{ maxWidth: '400px', margin: '0 auto', padding: '20px' }}>
+        <main className="main-layout">
           {children}
         </main>
       </body>

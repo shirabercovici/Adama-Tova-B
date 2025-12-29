@@ -1,19 +1,52 @@
 .container {
-  width: 100%;
-  max-width: 100%;
+  width: 100vw;
+  max-width: 100vw;
   margin: 0;
   padding: 0;
   background: #FFFCE5;
   min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* Navbar Wrapper */
+.navbarWrapper {
+  width: 100vw;
+  max-width: 100vw;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.navbarWrapper > header {
+  width: 100vw;
+  max-width: 100vw;
+  margin: 0;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.navbarWrapper > header#navbar {
+  width: 100vw;
+  max-width: 100vw;
+  margin: 0;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 /* Purple Header */
 .purpleHeader {
-  width: 100%;
+  width: 100vw;
+  max-width: 100vw;
   background: #4D58D8;
   padding: 1rem;
   color: white;
   position: relative;
+  box-sizing: border-box;
+  margin: 0;
+  left: 0;
+  right: 0;
 }
 
 .headerTop {
@@ -48,8 +81,19 @@
   flex-direction: column;
   align-items: center;
   margin-bottom: 1rem;
-  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out, height 0.3s ease-in-out, margin 0.3s ease-in-out;
   min-height: 120px;
+  overflow: hidden;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.headerCenter.hidden {
+  opacity: 0;
+  transform: translateY(-20px);
+  height: 0;
+  min-height: 0;
+  margin-bottom: 0;
   overflow: hidden;
 }
 
@@ -328,7 +372,9 @@
 
 /* Participants List */
 .participantsList {
-  width: 100%;
+  width: 100vw;
+  max-width: 100vw;
+  box-sizing: border-box;
 }
 
 .participantCard {
@@ -488,6 +534,10 @@
     max-width: 600px;
     margin: 0 auto;
   }
+  
+  .tasksDrawer {
+    max-width: 600px;
+  }
 }
 
 /* Tasks Drawer */
@@ -507,10 +557,10 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  max-width: 600px;
-  /* Match container max-width */
-  margin: 0 auto;
-  /* Center it */
+  width: 100vw;
+  max-width: 100vw;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .tasksDrawer.closed {
