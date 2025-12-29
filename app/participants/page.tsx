@@ -223,6 +223,15 @@ export default function ParticipantsPage() {
       // Otherwise, mark as attended today
       const newAttendance = attendedToday ? null : today;
 
+      // Optimistic update - update UI immediately
+      setParticipants(prevParticipants =>
+        prevParticipants.map(p =>
+          p.id === participantId
+            ? { ...p, last_attendance: newAttendance }
+            : p
+        )
+      );
+
       const response = await fetch("/participants/api", {
         method: "PATCH",
         headers: {
@@ -235,6 +244,14 @@ export default function ParticipantsPage() {
       });
 
       if (!response.ok) {
+        // Revert optimistic update on error
+        setParticipants(prevParticipants =>
+          prevParticipants.map(p =>
+            p.id === participantId
+              ? { ...p, last_attendance: currentAttendance }
+              : p
+          )
+        );
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
         const errorMessage = errorData.error || `Failed to update attendance: ${response.status}`;
         console.error("API error:", errorMessage, errorData);
@@ -246,7 +263,7 @@ export default function ParticipantsPage() {
         await fetchPresentTodayCount();
       }, 300);
 
-      // Refresh participants list if there's a search query
+      // Refresh participants list if there's a search query to ensure consistency
       if (search && search.trim() !== "") {
         fetchParticipants();
       }
