@@ -6,6 +6,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
+import { motion } from "framer-motion";
 
 export default function ParticipantsPage() {
   const router = useRouter();
@@ -272,7 +273,12 @@ export default function ParticipantsPage() {
 
 
   return (
-    <main className={styles.container}>
+      <motion.main 
+    className={styles.container}
+    initial={{ opacity: 0, x: 50 }} // מתחיל קצת מהצד ובשקיפות
+    animate={{ opacity: 1, x: 0 }}  // חוזר למרכז ונהיה גלוי
+    transition={{ duration: 0.6, ease: "easeOut" }} // תנועה חלקה
+      >
       {/* Navbar */}
       <div className={styles.navbarWrapper}>
         {/* <Navbar /> */}
@@ -546,6 +552,6 @@ export default function ParticipantsPage() {
           </div>
         </div>
       )}
-    </main>
+    </motion.main>
   );
 }
