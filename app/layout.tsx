@@ -2,7 +2,6 @@ import "@/styles/global.css";
 
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import Navbar from "@/lib/components/Navbar";
 import Footer from "@/lib/components/Footer";
 import Script from "next/script";
 
@@ -30,9 +29,6 @@ export default function RootLayout({
           src="https://accounts.google.com/gsi/client"
           strategy="beforeInteractive"
         />
-        <header>
-          <Navbar />
-        </header>
 
         <main className="main-layout">
           {children}
