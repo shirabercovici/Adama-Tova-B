@@ -312,6 +312,7 @@ export default function ParticipantsPage() {
             type="button"
             onClick={isSearchActive ? handleCloseSearch : undefined}
             className={styles.searchIconButton}
+            style={isSearchActive ? { background: 'transparent', border: 'none', boxShadow: 'none' } : undefined}
             aria-label={isSearchActive ? "סגור חיפוש" : "חיפוש"}
           >
             {isSearchActive ? (
