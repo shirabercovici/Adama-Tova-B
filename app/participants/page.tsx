@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import Navbar from "@/lib/components/Navbar";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
 import { motion } from "framer-motion";
@@ -282,13 +281,23 @@ export default function ParticipantsPage() {
       >
       {/* Navbar */}
       <div className={styles.navbarWrapper}>
-        <Navbar />
+        {/* <Navbar /> */}
       </div>
       {/* Purple Header */}
       <div className={styles.purpleHeader}>
         <div className={styles.headerTop}>
-          <div className={styles.headerButton}>{userInitials || "א"}</div>
-          <div className={styles.logo}>
+          <div 
+            className={styles.headerButton}
+            onClick={() => router.push('/profile')}
+            style={{ cursor: 'pointer' }}
+          >
+            {userInitials || "א"}
+          </div>
+          <div 
+            className={styles.logo}
+            onClick={() => router.push('/participants')}
+            style={{ cursor: 'pointer' }}
+          >
             <Image
               src="/adami-logo.png"
               alt="אדממי"
@@ -312,6 +321,7 @@ export default function ParticipantsPage() {
             type="button"
             onClick={isSearchActive ? handleCloseSearch : undefined}
             className={styles.searchIconButton}
+            style={isSearchActive ? { background: 'transparent', border: 'none', boxShadow: 'none' } : undefined}
             aria-label={isSearchActive ? "סגור חיפוש" : "חיפוש"}
           >
             {isSearchActive ? (
@@ -545,4 +555,3 @@ export default function ParticipantsPage() {
     </motion.main>
   );
 }
-
