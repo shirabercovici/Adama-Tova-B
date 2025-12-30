@@ -281,7 +281,13 @@ export default function ParticipantsPage() {
       {/* Purple Header */}
       <div className={styles.purpleHeader}>
         <div className={styles.headerTop}>
-          <div className={styles.headerButton}>{userInitials || "א"}</div>
+          <div 
+            className={styles.headerButton}
+            onClick={() => router.push('/profile')}
+            style={{ cursor: 'pointer' }}
+          >
+            {userInitials || "א"}
+          </div>
           <div className={styles.logo}>
             <Image
               src="/adami-logo.png"
@@ -539,4 +545,3 @@ export default function ParticipantsPage() {
     </main>
   );
 }
-
