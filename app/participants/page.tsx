@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import Navbar from "@/lib/components/Navbar";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
 
@@ -276,7 +275,7 @@ export default function ParticipantsPage() {
     <main className={styles.container}>
       {/* Navbar */}
       <div className={styles.navbarWrapper}>
-        <Navbar />
+        {/* <Navbar /> */}
       </div>
       {/* Purple Header */}
       <div className={styles.purpleHeader}>
@@ -288,7 +287,11 @@ export default function ParticipantsPage() {
           >
             {userInitials || "א"}
           </div>
-          <div className={styles.logo}>
+          <div 
+            className={styles.logo}
+            onClick={() => router.push('/participants')}
+            style={{ cursor: 'pointer' }}
+          >
             <Image
               src="/adami-logo.png"
               alt="אדממי"
