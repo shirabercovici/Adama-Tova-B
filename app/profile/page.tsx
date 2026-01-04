@@ -15,7 +15,7 @@ export default function ProfilePage() {
     const getProfile = async () => {
       // 1. Get the authenticated user from Supabase Auth
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      
+
       if (!authUser) {
         router.push("/");
         return;
@@ -35,7 +35,7 @@ export default function ProfilePage() {
         // Fallback to auth data if the database record isn't found
         setUserData(authUser);
       }
-      
+
       setLoading(false);
     };
 
@@ -84,11 +84,21 @@ export default function ProfilePage() {
           {/* Section: Management */}
           {userData?.role === "מנהל.ת" && (
             <section>
-              <h3 className="text-gray-400 text-sm mb-2 px-2">ניהול מתנדבים</h3>
+              <h3 className="text-gray-400 text-sm mb-2 px-2">ניהול אנשי צוות</h3>
               <div className="border-y border-gray-300 divide-y divide-gray-300">
-                <button className="w-full text-right p-3 font-bold hover:bg-white/40 transition-colors">הוספת מתנדב.ת</button>
+                <button
+                  onClick={() => router.push('/add-volunteer')}
+                  className="w-full text-right p-3 font-bold hover:bg-white/40 transition-colors"
+                >
+                  הוספת איש צוות
+                </button>
                 <br></br>
-                <button className="w-full text-right p-3 font-bold hover:bg-white/40 transition-colors">עריכה/הסר מתנדב.ת</button>
+                <button
+                  onClick={() => router.push('/manage-volunteers')}
+                  className="w-full text-right p-3 font-bold hover:bg-white/40 transition-colors"
+                >
+                  עריכה/הסר איש צוות
+                </button>
               </div>
             </section>
           )}
@@ -96,7 +106,7 @@ export default function ProfilePage() {
           {/* Sign Out Button */}
           <div className="pt-10 pb-20 text-center">
             <br></br>
-            <button 
+            <button
               onClick={handleSignOut}
               className="text-lg font-medium border-t border-gray-300 pt-4 w-full text-red-600"
             >
