@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 
 export default function ParticipantsPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +22,10 @@ export default function ParticipantsPage() {
   const [isDoneTasksOpen, setIsDoneTasksOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userInitials, setUserInitials] = useState<string>("");
+  const fetchCountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isFetchingTasksRef = useRef(false);
+  const isFetchingCountRef = useRef(false);
+  const hasFetchedInitialDataRef = useRef(false);
 
   // Add class to body to hide navbar and make full width
   useEffect(() => {
@@ -31,7 +35,91 @@ export default function ParticipantsPage() {
     };
   }, []);
 
-  const fetchParticipants = useCallback(async () => {
+  // Debounce search to avoid too many API calls
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const isFetchingParticipantsRef = useRef(false);
+
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300); // Wait 300ms after user stops typing
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [search]);
+
+  // Fetch count of participants present today (independent of search)
+  const fetchPresentTodayCount = useCallback(async () => {
+    // Prevent duplicate concurrent requests
+    if (isFetchingCountRef.current) {
+      return;
+    }
+
+    isFetchingCountRef.current = true;
+    try {
+      // Use same date calculation as API to avoid timezone issues
+      const now = new Date();
+      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      const todayStr = today.toISOString().split("T")[0];
+
+      const params = new URLSearchParams();
+      params.append("filterLastAttendance", "today");
+      params.append("filterArchived", "active");
+
+      const url = `/participants/api?${params.toString()}`;
+      const response = await fetch(url, {
+        cache: 'no-store'
+      });
+
+      if (response.ok) {
+        const data: ParticipantsResponse = await response.json();
+        const count = (data.participants || []).length;
+        setPresentTodayCount(count);
+      } else {
+        // Silently ignore 404 errors for count fetch
+        // The API route might not be loaded yet
+      }
+    } catch (err) {
+      // Silently ignore errors for count fetch
+    } finally {
+      isFetchingCountRef.current = false;
+    }
+  }, []);
+
+  const fetchTasks = useCallback(async () => {
+    // Prevent duplicate concurrent requests
+    if (isFetchingTasksRef.current) {
+      return;
+    }
+
+    isFetchingTasksRef.current = true;
+    try {
+      const response = await fetch("/tasks/api", {
+        cache: 'no-store'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.tasks) {
+          setTasks(data.tasks);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+    } finally {
+      isFetchingTasksRef.current = false;
+    }
+  }, []);
+
+  // Use debounced search for fetching participants
+  const fetchParticipantsDebounced = useCallback(async () => {
     // Only fetch if search is active
     if (!isSearchActive) {
       setParticipants([]);
@@ -40,6 +128,12 @@ export default function ParticipantsPage() {
       return;
     }
 
+    // Prevent duplicate concurrent requests
+    if (isFetchingParticipantsRef.current) {
+      return;
+    }
+
+    isFetchingParticipantsRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -47,12 +141,14 @@ export default function ParticipantsPage() {
       // Only show active participants
       params.append("filterArchived", "active");
       
-      // If there's a search query, add it
-      if (search && search.trim() !== "") {
-        params.append("search", search.trim());
+      // If there's a debounced search query, add it
+      if (debouncedSearch && debouncedSearch.trim() !== "") {
+        params.append("search", debouncedSearch.trim());
       }
 
-      const response = await fetch(`/participants/api?${params.toString()}`);
+      const response = await fetch(`/participants/api?${params.toString()}`, {
+        cache: 'no-store'
+      });
       if (!response.ok) {
         let errorMessage = `Failed to fetch: ${response.status}`;
         try {
@@ -77,85 +173,62 @@ export default function ParticipantsPage() {
       console.error("Error fetching participants:", err);
     } finally {
       setLoading(false);
+      isFetchingParticipantsRef.current = false;
     }
-  }, [isSearchActive, search]);
-
-  // Fetch count of participants present today (independent of search)
-  const fetchPresentTodayCount = async () => {
-    try {
-      // Use same date calculation as API to avoid timezone issues
-      const now = new Date();
-      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-      const todayStr = today.toISOString().split("T")[0];
-
-      const params = new URLSearchParams();
-      params.append("filterLastAttendance", "today");
-      params.append("filterArchived", "active");
-
-      // Add cache busting to ensure fresh data
-      const url = `/participants/api?${params.toString()}&_t=${Date.now()}`;
-      const response = await fetch(url, {
-        cache: 'no-store'
-      });
-
-      if (response.ok) {
-        const data: ParticipantsResponse = await response.json();
-        const count = (data.participants || []).length;
-        setPresentTodayCount(count);
-      } else {
-        // Silently ignore 404 errors for count fetch
-        // The API route might not be loaded yet
-      }
-    } catch (err) {
-      // Silently ignore errors for count fetch
-    }
-  };
-
-  const fetchTasks = async () => {
-    try {
-      const response = await fetch("/tasks/api");
-      if (response.ok) {
-        const data = await response.json();
-        if (data.tasks) {
-          setTasks(data.tasks);
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching tasks:", err);
-    }
-  };
+  }, [isSearchActive, debouncedSearch]);
 
   useEffect(() => {
-    fetchParticipants();
-  }, [fetchParticipants]);
+    fetchParticipantsDebounced();
+  }, [fetchParticipantsDebounced]);
 
+  // Fetch initial data only once on mount
   useEffect(() => {
-    fetchPresentTodayCount();
-    fetchTasks();
+    // Prevent multiple fetches even if effect runs multiple times (e.g., in Strict Mode)
+    if (hasFetchedInitialDataRef.current) {
+      return;
+    }
+    hasFetchedInitialDataRef.current = true;
     
-    // Fetch user data
-    const fetchUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        const { data: dbUser } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', authUser.email)
-          .single();
-        
-        const userData = dbUser || authUser;
-        setUser(userData);
-        
-        // Extract initials from first_name and last_name
-        const firstName = userData.first_name || '';
-        const lastName = userData.last_name || '';
-        const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'א';
-        setUserInitials(initials);
+    let isMounted = true;
+    
+    const fetchInitialData = async () => {
+      // Fetch count and tasks in parallel
+      await Promise.all([
+        fetchPresentTodayCount(),
+        fetchTasks()
+      ]);
+      
+      // Fetch user data
+      if (isMounted) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser && isMounted) {
+          const { data: dbUser } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', authUser.email)
+            .single();
+          
+          if (isMounted) {
+            const userData = dbUser || authUser;
+            setUser(userData);
+            
+            // Extract initials from first_name and last_name
+            const firstName = userData.first_name || '';
+            const lastName = userData.last_name || '';
+            const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'א';
+            setUserInitials(initials);
+          }
+        }
       }
     };
     
-    fetchUser();
-  }, [supabase]);
+    fetchInitialData();
+    
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run once on mount
 
   // Handle search input focus/blur
   const handleSearchFocus = () => {
@@ -259,13 +332,17 @@ export default function ParticipantsPage() {
       }
 
       // Refresh count after a delay to ensure DB is updated
-      setTimeout(async () => {
+      // Use debounce to prevent multiple rapid calls
+      if (fetchCountTimeoutRef.current) {
+        clearTimeout(fetchCountTimeoutRef.current);
+      }
+      fetchCountTimeoutRef.current = setTimeout(async () => {
         await fetchPresentTodayCount();
-      }, 300);
+      }, 500);
 
       // Refresh participants list if there's a search query to ensure consistency
       if (search && search.trim() !== "") {
-        fetchParticipants();
+        fetchParticipantsDebounced();
       }
     } catch (err) {
       console.error("Error marking attendance:", err);
@@ -410,8 +487,8 @@ export default function ParticipantsPage() {
         </div>
       </div>
 
-      {/* Loading */}
-      {loading && <div className={styles.loading}>טוען...</div>}
+      {/* Loading - only show when search is active */}
+      {loading && isSearchActive && <div className={styles.loading}>טוען...</div>}
 
       {/* Error */}
       {error && (
