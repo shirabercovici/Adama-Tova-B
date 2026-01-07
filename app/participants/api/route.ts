@@ -8,6 +8,17 @@ import { createClient as createDatabaseClient } from "@supabase/supabase-js";
 import { type NextRequest } from "next/server";
 
 function getDatabaseClient() {
+  if (!PUBLIC_SUPABASE_URL || !PRIVATE_SUPABASE_SERVICE_KEY) {
+    throw new Error(
+      `Missing Supabase configuration: URL=${!!PUBLIC_SUPABASE_URL}, SERVICE_KEY=${!!PRIVATE_SUPABASE_SERVICE_KEY}`
+    );
+  }
+  
+  // Verify SERVICE key is not the same as ANON key (common mistake)
+  if (PRIVATE_SUPABASE_SERVICE_KEY === PUBLIC_SUPABASE_ANON_KEY) {
+    console.warn("WARNING: SERVICE_KEY is the same as ANON_KEY. This may cause RLS issues.");
+  }
+  
   return createDatabaseClient(
     PUBLIC_SUPABASE_URL,
     PRIVATE_SUPABASE_SERVICE_KEY
@@ -39,10 +50,22 @@ export async function GET(request: NextRequest) {
     if (!PUBLIC_SUPABASE_ANON_KEY) missingVars.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
     if (!PRIVATE_SUPABASE_SERVICE_KEY) missingVars.push("PRIVATE_SUPABASE_SERVICE_KEY");
     
+    console.error("Supabase configuration error:", {
+      hasUrl: !!PUBLIC_SUPABASE_URL,
+      hasAnonKey: !!PUBLIC_SUPABASE_ANON_KEY,
+      hasServiceKey: !!PRIVATE_SUPABASE_SERVICE_KEY,
+      missingVars
+    });
+    
     return Response.json({ 
       error: "Supabase is not enabled.",
       details: `Missing environment variables: ${missingVars.join(", ")}`,
-      hint: "Please check your .env.local file and ensure all Supabase variables are set."
+      hint: "Please check your .env.local file and ensure all Supabase variables are set.",
+      debug: {
+        hasUrl: !!PUBLIC_SUPABASE_URL,
+        hasAnonKey: !!PUBLIC_SUPABASE_ANON_KEY,
+        hasServiceKey: !!PRIVATE_SUPABASE_SERVICE_KEY
+      }
     }, { status: 500 });
   }
 
@@ -105,7 +128,13 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      console.error("Error fetching participants:", error);
+      console.error("Error fetching participants:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        fullError: error
+      });
       return Response.json(
         { 
           error: error.message,
@@ -117,11 +146,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log(`Successfully fetched ${data?.length || 0} participants`);
     return Response.json({ participants: data || [] });
-  } catch (error) {
-    console.error("Error in GET /participants/api:", error);
+  } catch (error: any) {
+    console.error("Error in GET /participants/api:", {
+      message: error?.message,
+      stack: error?.stack,
+      fullError: error
+    });
     return Response.json(
-      { error: "Internal server error" },
+      { 
+        error: "Internal server error",
+        details: error?.message || "Unknown error"
+      },
       { status: 500 }
     );
   }
