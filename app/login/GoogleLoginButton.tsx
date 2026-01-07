@@ -69,6 +69,7 @@ const GoogleLoginButton = () => {
         window.google.accounts.id.initialize({
           client_id: NEXT_PUBLIC_GOOGLE_CLIENT_ID,
           callback: handleSignInWithGoogle,
+          itp_support: true,
         });
         window.google.accounts.id.renderButton(buttonRef.current, {
           type: "standard",
