@@ -7,18 +7,47 @@ import {
 import { createClient as createDatabaseClient } from "@supabase/supabase-js";
 import { type NextRequest } from "next/server";
 
+// Initialize database client at module load time to avoid cold start delays
+let cachedDatabaseClient: ReturnType<typeof createDatabaseClient> | null = null;
+
 function getDatabaseClient() {
+    // Return cached client if it exists
+    if (cachedDatabaseClient) {
+        return cachedDatabaseClient;
+    }
+
     if (!PUBLIC_SUPABASE_URL || !PRIVATE_SUPABASE_SERVICE_KEY) {
         throw new Error("Missing Supabase environment variables");
     }
-    return createDatabaseClient(
+    
+    // Create and cache the client with optimized settings
+    cachedDatabaseClient = createDatabaseClient(
         PUBLIC_SUPABASE_URL,
-        PRIVATE_SUPABASE_SERVICE_KEY
+        PRIVATE_SUPABASE_SERVICE_KEY,
+        {
+            db: {
+                schema: 'public',
+            },
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+            },
+            global: {
+                headers: {
+                    'x-client-info': 'supabase-js-nextjs',
+                },
+            },
+        }
     );
+    
+    return cachedDatabaseClient;
 }
+
+// Note: Client will be created on first request and then cached
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const maxDuration = 30; // Maximum execution time for the route
 
 export async function GET(request: NextRequest) {
     if (!SUPABASE_ENABLED) {
