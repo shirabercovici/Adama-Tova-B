@@ -10,17 +10,14 @@ export default function ParticipantCardPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Basic params from URL as fallback/initial
   const id = searchParams.get('id');
 
-  // State
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [newUpdateText, setNewUpdateText] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Edit Mode State
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     full_name: '',
@@ -31,13 +28,7 @@ export default function ParticipantCardPage() {
     general_notes: ''
   });
 
-  // URL params fallbacks (for display while loading or if no ID)
   const urlName = searchParams.get('name') || 'פונה חדש';
-  const urlFullName = searchParams.get('fullName') || '-';
-  const urlCircle = searchParams.get('circle') || '-';
-  const urlEmail = searchParams.get('email') || '-';
-  const urlPhone = searchParams.get('phone') || '-';
-  const urlDescription = searchParams.get('description') || '-';
 
   const fetchParticipant = useCallback(async () => {
     if (!id) return;
@@ -62,13 +53,11 @@ export default function ParticipantCardPage() {
           general_notes: data.general_notes || ''
         });
 
-        // Parse updates if it's a JSON string, otherwise init empty
         try {
           const parsedUpdates = data.updates ? JSON.parse(data.updates) : [];
           setActivities(Array.isArray(parsedUpdates) ? parsedUpdates : []);
         } catch (e) {
           setActivities([]);
-          console.error("Failed to parse updates", e);
         }
       }
     } catch (err) {
@@ -79,14 +68,11 @@ export default function ParticipantCardPage() {
   }, [id, supabase]);
 
   useEffect(() => {
-    if (id) {
-      fetchParticipant();
-    }
+    if (id) fetchParticipant();
   }, [id, fetchParticipant]);
 
   const handleAddUpdate = async () => {
     if (newUpdateText.trim() === '') return;
-
     const today = new Date();
     const formattedDate = `${today.getDate()}/${today.getMonth() + 1}`;
     const newEntry = { id: Date.now(), text: newUpdateText, date: formattedDate };
@@ -97,273 +83,167 @@ export default function ParticipantCardPage() {
     setIsPopupOpen(false);
 
     if (id) {
-      // Save to DB
-      try {
-        const { error } = await supabase
-          .from('participants')
-          .update({ updates: JSON.stringify(updatedActivities) })
-          .eq('id', id);
-
-        if (error) console.error('Error saving update:', error);
-      } catch (err) {
-        console.error('Error saving update:', err);
-      }
+      await supabase.from('participants').update({ updates: JSON.stringify(updatedActivities) }).eq('id', id);
     }
   };
 
   const handleArchive = async () => {
     if (!id || !participant) return;
-
     const newValue = !participant.is_archived;
-    // Optimistic update
     setParticipant({ ...participant, is_archived: newValue });
-
-    try {
-      const { error } = await supabase
-        .from('participants')
-        .update({ is_archived: newValue })
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error updating archive status:', error);
-        // Revert on error
-        setParticipant({ ...participant, is_archived: participant.is_archived });
-      } else {
-        // If archived, maybe go back to list? fallback to just showing status
-        if (newValue) {
-          router.push('/participants');
-        }
-      }
-    } catch (err) {
-      console.error('Error updating archive status:', err);
-    }
+    const { error } = await supabase.from('participants').update({ is_archived: newValue }).eq('id', id);
+    if (!error && newValue) router.push('/participants');
   };
 
   const handleSaveChanges = async () => {
     if (!id || !participant) return;
-
     try {
-      const { error } = await supabase
-        .from('participants')
-        .update({
-          full_name: editForm.full_name,
-          bereavement_detail: editForm.bereavement_detail,
-          bereavement_circle: editForm.bereavement_circle,
-          email: editForm.email,
-          phone: editForm.phone,
-          general_notes: editForm.general_notes
-        })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      // Update local state
-      setParticipant({
-        ...participant,
-        full_name: editForm.full_name,
-        bereavement_detail: editForm.bereavement_detail,
-        bereavement_circle: editForm.bereavement_circle,
-        email: editForm.email,
-        phone: editForm.phone,
-        general_notes: editForm.general_notes
-      });
-
+      await supabase.from('participants').update(editForm).eq('id', id);
+      setParticipant({ ...participant, ...editForm });
       setIsEditing(false);
     } catch (err) {
-      console.error('Error saving changes:', err);
-      alert('שגיאה בשמירת השינויים');
+      alert('שגיאה בשמירה');
     }
   };
 
-  // Derived values: prefer DB data, fallback to URL
-  const displayName = isEditing ? editForm.full_name : (participant ? participant.full_name : urlName);
-
-  // Styles for editable inputs
-  const editInputStyle = {
-    width: '100%',
-    padding: '8px',
-    backgroundColor: 'white',
-    color: 'black',
-    border: '1px solid #ccc',
-    borderRadius: '2px',
-    textAlign: 'center' as const
+  const handleMarkAttendance = async () => {
+    if (!id || !participant) return;
+    const today = new Date().toISOString().split("T")[0];
+    const newAttendance = participant.last_attendance === today ? null : today;
+    await fetch("/participants/api", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, last_attendance: newAttendance }),
+    });
+    setParticipant({ ...participant, last_attendance: newAttendance });
   };
 
+  const attendedToday = participant?.last_attendance === new Date().toISOString().split("T")[0];
+
+  const getLastPhoneCallText = () => {
+    if (!participant?.last_phone_call) return "לא נעשו שיחות טלפון בזמן האחרון";
+    const lastCallDate = new Date(participant.last_phone_call);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((today.getTime() - lastCallDate.setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return "היום";
+    if (diffDays === 1) return "אתמול";
+    if (diffDays < 7) return `לפני ${diffDays} ימים`;
+    return `לפני ${Math.floor(diffDays / 7)} שבועות`;
+  };
+
+  const getAllEvents = () => {
+    const events = [];
+    activities.forEach(act => {
+      const parts = act.date.split('/');
+      events.push({ type: 'status', text: act.text, date: act.date, originalDate: new Date(2024, parts[1]-1, parts[0]) });
+    });
+    if (participant?.last_attendance) {
+      const d = new Date(participant.last_attendance);
+      events.push({ type: 'attendance', text: 'נוכחות', date: `${d.getDate()}/${d.getMonth() + 1}`, originalDate: d });
+    }
+    if (participant?.last_phone_call) {
+      const d = new Date(participant.last_phone_call);
+      events.push({ type: 'phone', text: 'שיחת טלפון', date: `${d.getDate()}/${d.getMonth() + 1}`, originalDate: d });
+    }
+    return events.sort((a, b) => b.originalDate.getTime() - a.originalDate.getTime());
+  };
+
+  const allEvents = getAllEvents();
+  const displayName = isEditing ? editForm.full_name : (participant ? participant.full_name : urlName);
+
   return (
-    <div>
-      {/* כותרת הכרטיס עם כפתור החזור המשותף */}
+    <div style={{ direction: 'rtl' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px', marginTop: '10px' }}>
         <BackButton />
         {isEditing ? (
-          <input
-            type="text"
-            value={editForm.full_name}
-            onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
-            style={{ fontSize: '1.8rem', margin: 0, paddingBottom: '5px', flex: 1, textAlign: 'right', border: 'none', borderBottom: '2px solid #4D58D8', outline: 'none', background: 'transparent', color: '#4D58D8' }}
-          />
+          <input type="text" value={editForm.full_name} onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })} style={{ fontSize: '1.8rem', flex: 1, textAlign: 'right', border: 'none', borderBottom: '2px solid #4D58D8', outline: 'none', color: '#4D58D8', background: 'transparent' }} />
         ) : (
-          <h2 style={{ fontSize: '1.8rem', margin: 0, borderBottom: '2px solid #4D58D8', paddingBottom: '5px', flex: 1, textAlign: 'right', color: '#4D58D8' }}>
-            {displayName}
-          </h2>
+          <h2 style={{ fontSize: '1.8rem', margin: 0, borderBottom: '2px solid #4D58D8', paddingBottom: '5px', flex: 1, textAlign: 'right', color: '#4D58D8' }}>{displayName}</h2>
         )}
-
-        {/* כפתור כניסה למצב עריכה / שמירה */}
-        {participant && !isEditing && (
-          <button
-            onClick={() => setIsEditing(true)}
-            style={{ padding: '5px 15px', backgroundColor: 'transparent', border: '1px solid #4D58D8', color: '#4D58D8', cursor: 'pointer', borderRadius: '4px' }}
-          >
-            עריכה
-          </button>
+        {!isEditing && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+            <input type="checkbox" checked={attendedToday} onChange={handleMarkAttendance} style={{ width: '25px', height: '25px', cursor: 'pointer' }} />
+            <span style={{ fontSize: '0.7rem', color: '#4D58D8' }}>נוכחות</span>
+          </div>
         )}
         {isEditing && (
           <div style={{ display: 'flex', gap: '5px' }}>
-            <button
-              onClick={handleSaveChanges}
-              style={{ padding: '5px 15px', backgroundColor: '#4D58D8', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '4px' }}
-            >
-              שמור
-            </button>
-            <button
-              onClick={() => {
-                setIsEditing(false);
-                // Reset form to current participant data
-                if (participant) {
-                  setEditForm({
-                    full_name: participant.full_name,
-                    bereavement_detail: participant.bereavement_detail,
-                    bereavement_circle: participant.bereavement_circle,
-                    email: participant.email,
-                    phone: participant.phone,
-                    general_notes: participant.general_notes
-                  });
-                }
-              }}
-              style={{ padding: '5px 15px', backgroundColor: '#ccc', border: 'none', cursor: 'pointer', borderRadius: '4px' }}
-            >
-              ביטול
-            </button>
+            <button onClick={handleSaveChanges} style={{ padding: '5px 15px', backgroundColor: '#4D58D8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>שמור</button>
+            <button onClick={() => setIsEditing(false)} style={{ padding: '5px 15px', backgroundColor: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>ביטול</button>
           </div>
         )}
       </div>
 
-      {loading && <div>טוען נתונים...</div>}
-
-      {/* גריד נתונים בשחור-לבן (ממורכז) */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
-        <div>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>קשר</label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={editForm.bereavement_detail}
-              onChange={(e) => setEditForm({ ...editForm, bereavement_detail: e.target.value })}
-              style={editInputStyle}
-            />
-          ) : (
-            <div style={{ backgroundColor: '#4D58D8', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', minHeight: '40px' }}>
-              {participant?.bereavement_detail}
-            </div>
-          )}
-        </div>
-        <div>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>מעגל</label>
-          {isEditing ? (
-            <select
-              value={editForm.bereavement_circle}
-              onChange={(e) => setEditForm({ ...editForm, bereavement_circle: e.target.value })}
-              style={{ ...editInputStyle, textAlign: 'right' }}
-            >
-              <option value="מעגל 1">מעגל 1</option>
-              <option value="מעגל 2">מעגל 2</option>
-              <option value="מעגל 3">מעגל 3</option>
-              <option value="מעגל 4">מעגל 4</option>
-            </select>
-          ) : (
-            <div style={{ backgroundColor: '#4D58D8', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', minHeight: '40px' }}>
-              {participant?.bereavement_circle}
-            </div>
-          )}
-        </div>
-        <div>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>מייל</label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={editForm.email}
-              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-              style={editInputStyle}
-            />
-          ) : (
-            <div style={{ backgroundColor: '#4D58D8', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', fontSize: '0.8rem', minHeight: '40px', wordBreak: 'break-all' }}>
-              {participant?.email}
-            </div>
-          )}
-        </div>
-        <div>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>מספר פלאפון</label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={editForm.phone}
-              onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-              style={editInputStyle}
-            />
-          ) : (
-            <div style={{ backgroundColor: '#4D58D8', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', minHeight: '40px' }}>
-              {participant?.phone}
-            </div>
-          )}
-        </div>
+        {[ {label: 'קשר', field: 'bereavement_detail'}, {label: 'מעגל', field: 'bereavement_circle', isSelect: true}, {label: 'מייל', field: 'email'}, {label: 'פלאפון', field: 'phone'} ].map((f) => (
+          <div key={f.field}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>{f.label}</label>
+            {isEditing ? (
+              f.isSelect ? (
+                <select value={(editForm as any)[f.field]} onChange={(e) => setEditForm({ ...editForm, [f.field]: e.target.value })} style={{ width: '100%', padding: '8px', textAlign: 'right' }}>
+                  <option value="מעגל 1">מעגל 1</option><option value="מעגל 2">מעגל 2</option><option value="מעגל 3">מעגל 3</option><option value="מעגל 4">מעגל 4</option>
+                </select>
+              ) : (
+                <input type="text" value={(editForm as any)[f.field]} onChange={(e) => setEditForm({ ...editForm, [f.field]: e.target.value })} style={{ width: '100%', padding: '8px', textAlign: 'center' }} />
+              )
+            ) : (
+              <div style={{ backgroundColor: '#4D58D8', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', minHeight: '40px' }}>{(participant as any)?.[f.field]}</div>
+            )}
+          </div>
+        ))}
       </div>
 
-      {/* תיאור פונה */}
       <div style={{ marginBottom: '20px' }}>
         <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>תיאור</label>
         {isEditing ? (
-          <textarea
-            value={editForm.general_notes}
-            onChange={(e) => setEditForm({ ...editForm, general_notes: e.target.value })}
-            style={{ width: '100%', padding: '10px', minHeight: '80px', border: '1px solid #ccc' }}
-          />
+          <textarea value={editForm.general_notes} onChange={(e) => setEditForm({ ...editForm, general_notes: e.target.value })} style={{ width: '100%', padding: '10px', minHeight: '80px' }} />
         ) : (
-          <div style={{ border: '1px solid #ccc', padding: '15px', minHeight: '60px', backgroundColor: 'white', textAlign: 'right' }}>
-            {participant?.general_notes}
-          </div>
+          <div style={{ border: '1px solid #ccc', padding: '15px', minHeight: '60px', backgroundColor: 'white', textAlign: 'right' }}>{participant?.general_notes}</div>
         )}
       </div>
 
-      {/* פעילויות אחרונות */}
-      <div style={{ marginBottom: '30px' }}>
-        <h4 style={{ color: '#888', fontStyle: 'italic', marginBottom: '10px' }}>פעילויות אחרונות</h4>
-        {activities.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '20px', backgroundColor: 'white', border: '1px solid #eee', color: '#999' }}>אין עדכונים חדשים</div>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'white', border: '1px solid #ccc' }}>
-            <tbody>
-              {activities.map((item) => (
-                <tr key={item.id} style={{ borderBottom: '1px solid #ccc' }}>
-                  <td style={{ padding: '10px', borderLeft: '1px solid #ccc', textAlign: 'right' }}>{item.text}</td>
-                  <td style={{ padding: '10px', textAlign: 'center', width: '60px' }}>{item.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* כפתורי פעולה */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', border: '1px solid #4D58D8', marginBottom: '20px' }}>
         <button onClick={() => setIsPopupOpen(true)} style={{ padding: '10px', backgroundColor: '#eef2e8', border: 'none', borderLeft: '1px solid #4D58D8', cursor: 'pointer', fontWeight: 'bold' }}>+ הוספת עדכון</button>
-        <button
-          onClick={handleArchive}
-          style={{ padding: '10px', backgroundColor: participant?.is_archived ? '#ccc' : '#eef2e8', border: 'none', cursor: 'pointer' }}
-        >
-          {participant?.is_archived ? 'שחזר מארכיון' : 'העברה לארכיון'}
-        </button>
+        <button onClick={handleArchive} style={{ padding: '10px', backgroundColor: participant?.is_archived ? '#ccc' : '#eef2e8', border: 'none', cursor: 'pointer' }}>{participant?.is_archived ? 'שחזר מארכיון' : 'העברה לארכיון'}</button>
       </div>
 
-      {/* פופ-אפ עדכון */}
+      <div style={{ marginBottom: '30px' }}>
+        <h4 style={{ color: '#888', fontStyle: 'italic', marginBottom: '10px' }}>פעילויות אחרונות</h4>
+        <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f9f9f9', padding: '10px', borderRadius: '8px' }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#333' }}>שיחת טלפון אחרונה: <span style={{ fontWeight: 'normal', marginRight: '5px', color: '#4D58D8' }}>{getLastPhoneCallText()}</span></div>
+          {participant?.phone && (
+            <a href={`tel:${participant.phone}`} style={{ backgroundColor: '#4D58D8', color: 'white', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            </a>
+          )}
+        </div>
+
+        {/* ציר הזמן המעודכן עם קו חוצץ רציף */}
+        <div style={{ padding: '10px' }}>
+          {allEvents.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#999' }}>אין עדכונים חדשים</div>
+          ) : (
+            allEvents.map((event, index) => (
+              <div key={index} style={{ display: 'flex', alignItems: 'stretch' }}>
+                <div style={{ width: '50px', color: '#4D58D8', fontStyle: 'italic', fontSize: '0.85rem', textAlign: 'left', paddingLeft: '10px', paddingTop: '5px' }}>{event.date}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '20px' }}>
+                  <div style={{ color: '#4D58D8', backgroundColor: 'white', padding: '5px 0', zIndex: 1 }}>
+                    {event.type === 'phone' && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>}
+                    {event.type === 'attendance' && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                    {event.type === 'status' && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>}
+                  </div>
+                  {index !== allEvents.length - 1 && <div style={{ flex: 1, width: '2px', backgroundColor: '#4D58D8', opacity: 0.3 }}></div>}
+                </div>
+                <div style={{ flex: 1, textAlign: 'right', color: '#4D58D8', paddingRight: '15px', paddingBottom: '25px', paddingTop: '2px' }}>
+                   <div style={{ fontWeight: event.type !== 'status' ? 'bold' : 'normal' }}>{event.text}</div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
       {isPopupOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
           <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', width: '85%', maxWidth: '350px' }}>
@@ -374,6 +254,11 @@ export default function ParticipantCardPage() {
               <button onClick={() => setIsPopupOpen(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#eee', border: 'none', borderRadius: '4px' }}>ביטול</button>
             </div>
           </div>
+        </div>
+      )}
+      {participant && !isEditing && (
+        <div style={{ marginTop: '30px', marginBottom: '20px' }}>
+          <button onClick={() => setIsEditing(true)} style={{ width: '100%', padding: '12px', backgroundColor: 'transparent', border: '1px solid #4D58D8', color: '#4D58D8', cursor: 'pointer', borderRadius: '4px', fontWeight: 'bold' }}>עריכת פרטי פונה</button>
         </div>
       )}
     </div>
