@@ -99,7 +99,7 @@ export default function ManageVolunteersPage() {
                     {/* List */}
                     <div className="space-y-0 mt-6">
                         {loading ? (
-                            <div className="text-center py-4 text-gray-500">טוען...</div>
+                            <div className="text-center py-4 text-gray-500">טעינה...</div>
                         ) : (
                             <div className="border-t border-[#A2A988]">
                                 {filteredUsers.map((user) => (
