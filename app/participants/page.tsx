@@ -56,66 +56,121 @@ export default function ParticipantsPage() {
     };
   }, [search]);
 
+  // Track last fetch time to prevent too frequent calls
+  const lastCountFetchTimeRef = useRef<number>(0);
+  const lastCountFetchDateRef = useRef<string>("");
+  const countFetchPromiseRef = useRef<Promise<void> | null>(null);
+  const COUNT_FETCH_COOLDOWN = 3000; // Minimum 3 seconds between fetches
+
   // Fetch count of participants present today (independent of search)
   const fetchPresentTodayCount = useCallback(async () => {
+    const now = Date.now();
+    
+    // If there's already a fetch in progress, return the existing promise
+    if (countFetchPromiseRef.current) {
+      return countFetchPromiseRef.current;
+    }
+
     // Prevent duplicate concurrent requests
     if (isFetchingCountRef.current) {
       return;
     }
 
-    isFetchingCountRef.current = true;
-    try {
-      // Use same date calculation as API to avoid timezone issues
-      const now = new Date();
-      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-      const todayStr = today.toISOString().split("T")[0];
+    // Calculate today's date string
+    const nowDate = new Date();
+    const today = new Date(Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate()));
+    const todayStr = today.toISOString().split("T")[0];
 
-      const params = new URLSearchParams();
-      params.append("filterLastAttendance", "today");
-      params.append("filterArchived", "active");
-
-      const url = `/participants/api?${params.toString()}`;
-      const response = await fetch(url, {
-        cache: 'no-store'
-      });
-
-      if (response.ok) {
-        const data: ParticipantsResponse = await response.json();
-        const count = (data.participants || []).length;
-        setPresentTodayCount(count);
-      } else {
-        // Silently ignore 404 errors for count fetch
-        // The API route might not be loaded yet
-      }
-    } catch (err) {
-      // Silently ignore errors for count fetch
-    } finally {
-      isFetchingCountRef.current = false;
+    // If we already fetched for today and it's within cooldown, skip
+    if (
+      lastCountFetchDateRef.current === todayStr &&
+      now - lastCountFetchTimeRef.current < COUNT_FETCH_COOLDOWN
+    ) {
+      return Promise.resolve();
     }
+
+    isFetchingCountRef.current = true;
+    lastCountFetchTimeRef.current = now;
+    lastCountFetchDateRef.current = todayStr;
+    
+    // Create a promise and store it to prevent concurrent calls
+    countFetchPromiseRef.current = (async () => {
+      try {
+        const params = new URLSearchParams();
+        params.append("filterLastAttendance", "today");
+        params.append("filterArchived", "active");
+
+        const url = `/participants/api?${params.toString()}`;
+        const response = await fetch(url, {
+          cache: 'no-store'
+        });
+
+        if (response.ok) {
+          const data: ParticipantsResponse = await response.json();
+          const count = (data.participants || []).length;
+          setPresentTodayCount(count);
+        } else {
+          // Silently ignore 404 errors for count fetch
+          // The API route might not be loaded yet
+        }
+      } catch (err) {
+        // Silently ignore errors for count fetch
+      } finally {
+        isFetchingCountRef.current = false;
+        countFetchPromiseRef.current = null;
+      }
+    })();
+
+    return countFetchPromiseRef.current;
   }, []);
 
+  // Track last fetch time for tasks
+  const lastTasksFetchTimeRef = useRef<number>(0);
+  const tasksFetchPromiseRef = useRef<Promise<void> | null>(null);
+  const TASKS_FETCH_COOLDOWN = 3000; // Minimum 3 seconds between fetches
+
   const fetchTasks = useCallback(async () => {
+    const now = Date.now();
+    
+    // If there's already a fetch in progress, return the existing promise
+    if (tasksFetchPromiseRef.current) {
+      return tasksFetchPromiseRef.current;
+    }
+
     // Prevent duplicate concurrent requests
     if (isFetchingTasksRef.current) {
       return;
     }
 
-    isFetchingTasksRef.current = true;
-    try {
-      const response = await fetch("/tasks/api", {
-        cache: 'no-store'
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.tasks) {
-          setTasks(data.tasks);
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching tasks:", err);
-    } finally {
-      isFetchingTasksRef.current = false;
+    // Prevent too frequent calls (cooldown)
+    if (now - lastTasksFetchTimeRef.current < TASKS_FETCH_COOLDOWN) {
+      return Promise.resolve();
     }
+
+    isFetchingTasksRef.current = true;
+    lastTasksFetchTimeRef.current = now;
+    
+    // Create a promise and store it to prevent concurrent calls
+    tasksFetchPromiseRef.current = (async () => {
+      try {
+        const response = await fetch("/tasks/api", {
+          cache: 'no-store'
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.tasks) {
+            setTasks(data.tasks);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching tasks:", err);
+      } finally {
+        isFetchingTasksRef.current = false;
+        tasksFetchPromiseRef.current = null;
+      }
+    })();
+
+    return tasksFetchPromiseRef.current;
   }, []);
 
   // Use debounced search for fetching participants
@@ -177,9 +232,38 @@ export default function ParticipantsPage() {
     }
   }, [isSearchActive, debouncedSearch]);
 
+  // Track last fetched values to prevent unnecessary refetches
+  const lastFetchedSearchRef = useRef<string>("");
+  const lastFetchedIsSearchActiveRef = useRef<boolean>(false);
+  const fetchParticipantsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
-    fetchParticipantsDebounced();
-  }, [fetchParticipantsDebounced]);
+    // Clear any pending fetch
+    if (fetchParticipantsTimeoutRef.current) {
+      clearTimeout(fetchParticipantsTimeoutRef.current);
+    }
+
+    // Only fetch if search state actually changed
+    if (
+      debouncedSearch === lastFetchedSearchRef.current &&
+      isSearchActive === lastFetchedIsSearchActiveRef.current
+    ) {
+      return;
+    }
+
+    // Debounce the fetch call slightly to batch rapid changes
+    fetchParticipantsTimeoutRef.current = setTimeout(() => {
+      lastFetchedSearchRef.current = debouncedSearch;
+      lastFetchedIsSearchActiveRef.current = isSearchActive;
+      fetchParticipantsDebounced();
+    }, 50);
+
+    return () => {
+      if (fetchParticipantsTimeoutRef.current) {
+        clearTimeout(fetchParticipantsTimeoutRef.current);
+      }
+    };
+  }, [fetchParticipantsDebounced, debouncedSearch, isSearchActive]);
 
   // Fetch initial data only once on mount
   useEffect(() => {
@@ -190,36 +274,46 @@ export default function ParticipantsPage() {
     hasFetchedInitialDataRef.current = true;
     
     let isMounted = true;
+    let fetchPromise: Promise<void> | null = null;
     
     const fetchInitialData = async () => {
-      // Fetch count and tasks in parallel
-      await Promise.all([
-        fetchPresentTodayCount(),
-        fetchTasks()
-      ]);
+      // Prevent concurrent fetches
+      if (fetchPromise) {
+        return fetchPromise;
+      }
       
-      // Fetch user data
-      if (isMounted) {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser && isMounted) {
-          const { data: dbUser } = await supabase
-            .from('users')
-            .select('*')
-            .eq('email', authUser.email)
-            .single();
-          
-          if (isMounted) {
-            const userData = dbUser || authUser;
-            setUser(userData);
+      fetchPromise = (async () => {
+        // Fetch count and tasks in parallel
+        await Promise.all([
+          fetchPresentTodayCount(),
+          fetchTasks()
+        ]);
+        
+        // Fetch user data
+        if (isMounted) {
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser && isMounted) {
+            const { data: dbUser } = await supabase
+              .from('users')
+              .select('*')
+              .eq('email', authUser.email)
+              .single();
             
-            // Extract initials from first_name and last_name
-            const firstName = userData.first_name || '';
-            const lastName = userData.last_name || '';
-            const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'א';
-            setUserInitials(initials);
+            if (isMounted) {
+              const userData = dbUser || authUser;
+              setUser(userData);
+              
+              // Extract initials from first_name and last_name
+              const firstName = userData.first_name || '';
+              const lastName = userData.last_name || '';
+              const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'א';
+              setUserInitials(initials);
+            }
           }
         }
-      }
+      })();
+      
+      return fetchPromise;
     };
     
     fetchInitialData();
@@ -257,6 +351,11 @@ export default function ParticipantsPage() {
   }, [search]);
 
   const handleTaskToggle = async (task: Task) => {
+    // Prevent multiple simultaneous toggles
+    if (isFetchingTasksRef.current) {
+      return;
+    }
+
     try {
       // Optimistic update
       const newStatus: "open" | "done" = task.status === 'done' ? 'open' : 'done';
@@ -279,11 +378,16 @@ export default function ParticipantsPage() {
         throw new Error("Failed to update task");
       }
 
-      fetchTasks();
+      // Only refetch if not already fetching
+      if (!isFetchingTasksRef.current) {
+        fetchTasks();
+      }
     } catch (err) {
       console.error("Error toggling task:", err);
-      // Revert optimistic update by re-fetching
-      fetchTasks();
+      // Revert optimistic update by re-fetching (only if not already fetching)
+      if (!isFetchingTasksRef.current) {
+        fetchTasks();
+      }
     }
   };
 

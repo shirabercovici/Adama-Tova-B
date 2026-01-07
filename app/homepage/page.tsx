@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -9,10 +9,17 @@ export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [isExiting, setIsExiting] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const hasFetchedUserRef = useRef(false);
 
   // --- אפקט 1: בדיקת משתמש וקביעת טיימר של 2 שניות להצגת ההודעה ---
   useEffect(() => {
+    // Prevent multiple fetches
+    if (hasFetchedUserRef.current) {
+      return;
+    }
+    hasFetchedUserRef.current = true;
+    
     const checkUser = async () => {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) {
@@ -33,7 +40,8 @@ export default function Dashboard() {
       }
     };
     checkUser();
-  }, [router, supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run once
 
   // --- אפקט 2 (החדש!): הקשבה למשתנה isExiting ומעבר דף בפועל ---
   useEffect(() => {
