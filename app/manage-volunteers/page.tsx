@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { createClient } from "@/lib/supabase/client";
@@ -16,15 +16,23 @@ interface User {
 
 export default function ManageVolunteersPage() {
     const router = useRouter();
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
+    const hasFetchedUserRef = useRef(false);
     const [users, setUsers] = useState<User[]>([]);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
 
     useEffect(() => {
+        // Prevent multiple fetches
+        if (hasFetchedUserRef.current) {
+            return;
+        }
+        hasFetchedUserRef.current = true;
+        
         fetchUsers();
         fetchCurrentUser();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchCurrentUser = async () => {

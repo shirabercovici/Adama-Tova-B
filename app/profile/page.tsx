@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 
@@ -9,9 +9,16 @@ export default function ProfilePage() {
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const hasFetchedProfileRef = useRef(false);
 
   useEffect(() => {
+    // Prevent multiple fetches
+    if (hasFetchedProfileRef.current) {
+      return;
+    }
+    hasFetchedProfileRef.current = true;
+    
     const getProfile = async () => {
       // 1. Get the authenticated user from Supabase Auth
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -40,7 +47,8 @@ export default function ProfilePage() {
     };
 
     getProfile();
-  }, [router, supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run once
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

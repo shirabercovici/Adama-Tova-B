@@ -146,7 +146,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`Successfully fetched ${data?.length || 0} participants`);
     return Response.json({ participants: data || [] });
   } catch (error: any) {
     console.error("Error in GET /participants/api:", {
