@@ -102,7 +102,18 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
         }
     };
 
-    if (loading) return <div className="text-center py-10">טוען...</div>;
+    if (loading) {
+        return (
+            <main className="min-h-screen bg-[#F3F6EC] font-sans" dir="rtl">
+                <div className="max-w-md mx-auto min-h-screen border-x border-gray-200 relative bg-[#F3F6EC]">
+                    <BackButton />
+                    <div className="flex justify-center items-center min-h-[60vh]">
+                        <div className="text-gray-400">טוען...</div>
+                    </div>
+                </div>
+            </main>
+        );
+    }
 
     return (
         <main className="min-h-screen bg-[#F3F6EC] font-sans" dir="rtl">

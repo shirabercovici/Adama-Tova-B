@@ -6,8 +6,21 @@ import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 
 export default function ProfilePage() {
-  const [userData, setUserData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  // Try to load from localStorage first for instant display
+  const [userData, setUserData] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('userProfileData');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(!userData); // Only show loading if no cached data
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const hasFetchedProfileRef = useRef(false);
@@ -20,30 +33,41 @@ export default function ProfilePage() {
     hasFetchedProfileRef.current = true;
     
     const getProfile = async () => {
-      // 1. Get the authenticated user from Supabase Auth
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      try {
+        // Get authenticated user
+        const { data: { user: authUser } } = await supabase.auth.getUser();
 
-      if (!authUser) {
-        router.push("/");
-        return;
+        if (!authUser) {
+          router.push("/");
+          return;
+        }
+
+        // Fetch details from the 'users' table using the email
+        const { data: dbUser, error } = await supabase
+          .from("users")
+          .select("*")
+          .eq("email", authUser.email)
+          .single();
+
+        const finalUserData = (!error && dbUser) ? dbUser : authUser;
+        
+        // Update state
+        setUserData(finalUserData);
+        
+        // Save to localStorage for next time
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('userProfileData', JSON.stringify(finalUserData));
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        // Try to get user from auth as fallback
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          setUserData(authUser);
+        }
+      } finally {
+        setLoading(false);
       }
-
-      // 2. Fetch details from the 'users' table using the email (matching homepage logic)
-      const { data: dbUser, error } = await supabase
-        .from("users")
-        .select("*") // Selecting all columns like the homepage
-        .eq("email", authUser.email)
-        .single();
-
-      if (!error && dbUser) {
-        // Set state to the database user data
-        setUserData(dbUser);
-      } else {
-        // Fallback to auth data if the database record isn't found
-        setUserData(authUser);
-      }
-
-      setLoading(false);
     };
 
     getProfile();
@@ -55,7 +79,21 @@ export default function ProfilePage() {
     router.push("/");
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#f7faf3]">טוען...</div>;
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#f7faf3] font-sans" dir="rtl">
+        <div className="max-w-md mx-auto bg-[#f7faf3] min-h-screen border-x border-gray-200 relative">
+          <BackButton />
+          <div className="flex justify-center pt-4">
+            <div className="w-24 h-6 bg-black rounded-full"></div>
+          </div>
+          <div className="flex justify-center items-center min-h-[60vh]">
+            <div className="text-gray-400">טוען...</div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f7faf3] font-sans" dir="rtl">
