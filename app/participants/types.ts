@@ -25,5 +25,10 @@ export interface Task {
   participant_id: string | null;
   done_at: string | null;
   done_by: string | null;
+  done_by_user?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
 }
 

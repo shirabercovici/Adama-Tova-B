@@ -57,9 +57,9 @@ export async function GET(request: NextRequest) {
     try {
         const databaseClient = getDatabaseClient();
 
-        // Fetch all tasks
+        // Fetch all tasks with user info for done_by
         // Updated to order by due_date
-        const { data, error } = await databaseClient
+        const { data: tasksData, error } = await databaseClient
             .from("tasks")
             .select("*")
             .order("due_date", { ascending: true });
@@ -69,7 +69,26 @@ export async function GET(request: NextRequest) {
             return Response.json({ error: error.message }, { status: 500 });
         }
 
-        return Response.json({ tasks: data || [] });
+        // Fetch user info for tasks that have done_by
+        const tasksWithUsers = await Promise.all(
+            (tasksData || []).map(async (task) => {
+                if (task.done_by) {
+                    const { data: userData } = await databaseClient
+                        .from("users")
+                        .select("id, first_name, last_name")
+                        .eq("id", task.done_by)
+                        .single();
+                    
+                    return {
+                        ...task,
+                        done_by_user: userData || null
+                    };
+                }
+                return task;
+            })
+        );
+
+        return Response.json({ tasks: tasksWithUsers || [] });
     } catch (error) {
         console.error("Error in GET /tasks/api:", error);
         return Response.json({ error: "Internal server error" }, { status: 500 });
@@ -84,7 +103,7 @@ export async function PATCH(request: NextRequest) {
     try {
         const databaseClient = getDatabaseClient();
         const body = await request.json();
-        const { id, status, participant_id } = body;
+        const { id, status, participant_id, done_by } = body;
 
         if (!id) {
             return Response.json({ error: "Task ID is required" }, { status: 400 });
@@ -93,8 +112,12 @@ export async function PATCH(request: NextRequest) {
         const updates: any = { status };
         if (status === 'done') {
             updates.done_at = new Date().toISOString();
+            if (done_by) {
+                updates.done_by = done_by;
+            }
         } else {
             updates.done_at = null;
+            updates.done_by = null;
         }
 
         // Update task status

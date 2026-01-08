@@ -104,10 +104,61 @@ export async function GET(request: NextRequest) {
     const filterArchived = searchParams.get("filterArchived") || "all";
     const filterCircle = searchParams.get("filterCircle") || "all";
     const filterLastAttendance = searchParams.get("filterLastAttendance") || "all";
+    const countOnly = searchParams.get("countOnly") === "true";
 
+    // If countOnly is true, use a more efficient count query
+    if (countOnly) {
+      let countQuery = databaseClient
+        .from("participants")
+        .select("*", { count: 'exact', head: true });
+
+      // Apply the same filters
+      if (filterArchived === "active") {
+        countQuery = countQuery.eq("is_archived", false);
+      } else if (filterArchived === "archived") {
+        countQuery = countQuery.eq("is_archived", true);
+      }
+
+      if (filterCircle !== "all" && filterCircle) {
+        countQuery = countQuery.eq("bereavement_circle", filterCircle);
+      }
+
+      if (filterLastAttendance !== "all") {
+        const now = new Date();
+        const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        
+        if (filterLastAttendance === "today") {
+          const todayStr = today.toISOString().split("T")[0];
+          countQuery = countQuery.eq("last_attendance", todayStr);
+        } else if (filterLastAttendance === "week") {
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          const weekAgoStr = weekAgo.toISOString().split("T")[0];
+          countQuery = countQuery.gte("last_attendance", weekAgoStr);
+        } else if (filterLastAttendance === "month") {
+          const monthAgo = new Date(today);
+          monthAgo.setDate(monthAgo.getDate() - 30);
+          const monthAgoStr = monthAgo.toISOString().split("T")[0];
+          countQuery = countQuery.gte("last_attendance", monthAgoStr);
+        } else if (filterLastAttendance === "never") {
+          countQuery = countQuery.is("last_attendance", null);
+        }
+      }
+
+      const { count, error: countError } = await countQuery;
+
+      if (countError) {
+        console.error("Error fetching count:", countError);
+        return Response.json({ error: countError.message }, { status: 500 });
+      }
+
+      return Response.json({ count: count || 0 });
+    }
+
+    // Select only needed columns for better performance
     let query = databaseClient
       .from("participants")
-      .select("*")
+      .select("id, full_name, phone, email, bereavement_circle, bereavement_detail, general_notes, last_attendance, updates, is_archived, created_at, last_phone_call")
       .order("full_name", { ascending: true });
 
     // Filter by archived status
@@ -146,12 +197,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Search filter
+    // Search filter - search in all relevant fields including descriptions
     if (search) {
       query = query.or(
         `full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%,bereavement_detail.ilike.%${search}%,general_notes.ilike.%${search}%`
       );
     }
+
+    // Add limit to prevent fetching too many records at once
+    query = query.limit(100);
 
     const { data, error } = await query;
 

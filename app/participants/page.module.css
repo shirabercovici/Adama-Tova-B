@@ -691,10 +691,38 @@
   height: 24px;
 }
 
+.phoneLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  color: #4D58D8;
+  transition: opacity 0.2s;
+}
+
+.phoneLink:hover {
+  opacity: 0.7;
+}
+
+.phoneLink:active {
+  opacity: 0.5;
+}
+
 .taskText {
   font-size: 1.1rem;
   text-align: right;
   font-style: italic;
+}
+
+.taskDoneBy {
+  font-size: 0.9rem;
+  color: #4D58D8;
+  opacity: 0.7;
+  font-style: italic;
+  margin-left: 10px;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .taskCheckbox {
