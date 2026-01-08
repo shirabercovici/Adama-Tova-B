@@ -38,11 +38,8 @@ export default function ParticipantsPage() {
   const [isTasksOpen, setIsTasksOpen] = useState(false);
   const [isDoneTasksOpen, setIsDoneTasksOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [userInitials, setUserInitials] = useState<string>(() => {
-    // Always start with "א" to match server-side rendering
-    // Will be updated in useEffect after hydration
-    return 'א';
-  });
+  const [userInitials, setUserInitials] = useState<string>('א');
+  const [isHydrated, setIsHydrated] = useState(false);
   const fetchCountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFetchingTasksRef = useRef(false);
   const isFetchingCountRef = useRef(false);
@@ -57,20 +54,18 @@ export default function ParticipantsPage() {
     };
   }, []);
 
-  // Load initials from localStorage immediately on mount to prevent showing "א"
+  // Mark as hydrated and load initials from localStorage
   useEffect(() => {
+    // This runs only on client after hydration
+    setIsHydrated(true);
     if (typeof window !== 'undefined') {
-      // Load initials
       const savedInitials = localStorage.getItem('userInitials');
       if (savedInitials && savedInitials !== 'א') {
-        // Only set if current value is empty or default
-        if (!userInitials || userInitials === 'א') {
-          setUserInitials(savedInitials);
-        }
+        setUserInitials(savedInitials);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, []); // Only run once on mount (after hydration)
 
   // Debounce search to avoid too many API calls
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -707,7 +702,7 @@ export default function ParticipantsPage() {
             style={{ cursor: 'pointer' }}
             suppressHydrationWarning
           >
-            {userInitials}
+            {isHydrated ? userInitials : 'א'}
           </div>
           <div 
             className={styles.logo}
