@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
@@ -20,35 +20,35 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
     });
 
     useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const response = await fetch(`/manage-volunteers/api?id=${params.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const user = data.user;
+                    if (user) {
+                        setFormData({
+                            firstName: user.first_name || "",
+                            lastName: user.last_name || "",
+                            phone: user.phone_number || "",
+                            email: user.email || "",
+                            role: user.role === "מנהל.ת" ? "manager" : "volunteer"
+                        });
+                    }
+                } else {
+                    alert("שגיאה בטעינת הנתונים");
+                }
+            } catch (error) {
+                console.error("Error fetching user:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchUser();
     }, [params.id]);
 
-    const fetchUser = async () => {
-        try {
-            const response = await fetch(`/manage-volunteers/api?id=${params.id}`);
-            if (response.ok) {
-                const data = await response.json();
-                const user = data.user;
-                if (user) {
-                    setFormData({
-                        firstName: user.first_name || "",
-                        lastName: user.last_name || "",
-                        phone: user.phone_number || "",
-                        email: user.email || "",
-                        role: user.role === "מנהל.ת" ? "manager" : "volunteer"
-                    });
-                }
-            } else {
-                alert("שגיאה בטעינת הנתונים");
-            }
-        } catch (error) {
-            console.error("Error fetching user:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
