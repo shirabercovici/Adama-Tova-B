@@ -987,7 +987,7 @@ export default function ParticipantsPage() {
                         </div>
                         {doneByName && (
                           <div className={styles.taskDoneBy}>
-                            <span>בוצע ע&quot;י {doneByName}</span>
+                            <span>בוצע ע"י {doneByName}</span>
                           </div>
                         )}
                       </li>
