@@ -33,7 +33,7 @@ function getDatabaseClient() {
     PRIVATE_SUPABASE_SERVICE_KEY,
     {
       db: {
-        schema: 'public',
+        schema: 'public' as any,
       },
       auth: {
         persistSession: false,
@@ -44,7 +44,7 @@ function getDatabaseClient() {
           'x-client-info': 'supabase-js-nextjs',
         },
       },
-    }
+    } as any
   );
   
   return cachedDatabaseClient;
