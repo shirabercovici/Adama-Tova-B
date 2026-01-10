@@ -1,109 +1,55 @@
 "use client";
 
-import { NEXT_PUBLIC_GOOGLE_CLIENT_ID } from "@/lib/config";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        id: {
-          initialize: (config: any) => void;
-          renderButton: (element: HTMLElement, config: any) => void;
-        };
-      };
-    };
-  }
-}
+import { useState } from "react";
 
 const GoogleLoginButton = () => {
-  const buttonRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
-  const router = useRouter();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const handleSignInWithGoogle = async (response: any) => {
-      setErrorMessage(null);
-      
-      // 1. Authenticate with Google to get the user session
-      const { data, error: authError } = await supabase.auth.signInWithIdToken({
-        provider: "google",
-        token: response.credential,
-      });
+  const handleLogin = async () => {
+    setLoading(true);
+    
+    // Determine the base URL (works for localhost and production)
+    const redirectTo = `${window.location.origin}/auth/callback`;
 
-      if (authError) {
-        console.error("Login error:", authError);
-        setErrorMessage("Authentication failed.");
-        return;
-      }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
 
-      const userEmail = data.user?.email;
-
-      // 2. CHECK: Does this email exist in your 'users' table?
-      const { data: existingUser, error: dbError } = await supabase
-        .from("users") // Ensure this matches your table name exactly
-        .select("email")
-        .eq("email", userEmail)
-        .single();
-
-      if (dbError || !existingUser) {
-        // 3. REJECT: User not in allowed list
-        console.warn("Access denied: Email not found in approved users table.");
-        
-        // Sign out of Supabase immediately so the session isn't kept
-        await supabase.auth.signOut();
-        
-        setErrorMessage("Access Denied: Your account is not authorized for this system.");
-        return;
-      }
-
-      // 4. ALLOW: User is authorized
-      router.push("/homepage");
-    };
-
-    const initializeGoogle = () => {
-      if (window.google && buttonRef.current) {
-        window.google.accounts.id.initialize({
-          client_id: NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-          callback: handleSignInWithGoogle,
-          itp_support: true,
-        });
-        window.google.accounts.id.renderButton(buttonRef.current, {
-          type: "standard",
-          shape: "rectangular",
-          theme: "outline",
-          text: "signin_with",
-          size: "medium",
-          logo_alignment: "left",
-          width: 290,
-        });
-      }
-    };
-
-    if (window.google) {
-      initializeGoogle();
-    } else {
-      const checkGoogle = setInterval(() => {
-        if (window.google) {
-          clearInterval(checkGoogle);
-          initializeGoogle();
-        }
-      }, 100);
-      return () => clearInterval(checkGoogle);
+    if (error) {
+      console.error("Login error:", error.message);
+      setLoading(false);
     }
-  }, [supabase, router]);
+  };
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <div ref={buttonRef} />
-      {errorMessage && (
-        <p className="text-red-500 text-xs font-bold max-w-[290px]">
-          {errorMessage}
-        </p>
-      )}
+      <button
+        onClick={handleLogin}
+        disabled={loading}
+        className="flex items-center justify-center gap-3 px-6 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium hover:bg-gray-50 transition-all disabled:opacity-50 w-[290px]"
+      >
+        {loading ? (
+          <span>Connecting...</span>
+        ) : (
+          <>
+            <img 
+              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+              alt="Google" 
+              className="w-5 h-5" 
+            />
+            Sign in with Google
+          </>
+        )}
+      </button>
     </div>
   );
 };
