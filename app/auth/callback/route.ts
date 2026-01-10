@@ -10,30 +10,23 @@ export async function GET(request: Request) {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
     
-    // 1. Exchange the code for a session
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (!error && data?.user) {
-      const userEmail = data.user.email;
-
-      // 2. CHECK: Does this email exist in your 'users' table?
-      const { data: existingUser, error: dbError } = await supabase
+      const { data: existingUser } = await supabase
         .from("users")
         .select("email")
-        .eq("email", userEmail)
+        .eq("email", data.user.email)
         .single();
 
-      if (dbError || !existingUser) {
-        // 3. REJECT: Sign out and redirect to login with error
+      if (!existingUser) {
         await supabase.auth.signOut();
         return NextResponse.redirect(`${requestUrl.origin}/login?error=unauthorized`);
       }
 
-      // 4. ALLOW: User is in the table, proceed to homepage
       return NextResponse.redirect(`${requestUrl.origin}/homepage`);
     }
   }
 
-  // Fallback for errors
   return NextResponse.redirect(`${requestUrl.origin}/login`);
 }

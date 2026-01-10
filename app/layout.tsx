@@ -28,10 +28,10 @@ export default function RootLayout({
     <html lang="he" dir="rtl">
       <body>
         {/* The Script component goes inside body, usually at the top */}
-        <Script
+        {/* <Script
           src="https://accounts.google.com/gsi/client"
           strategy="beforeInteractive"
-        />
+        /> */}
 
         <main className="main-layout">
           {children}
