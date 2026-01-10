@@ -524,8 +524,8 @@ export default function ParticipantsPage() {
       const newStatus: "open" | "done" = task.status === 'done' ? 'open' : 'done';
       
       // Get current user info for optimistic update
-      let userId = null;
-      let doneByUser = null;
+      let userId: string | null = null;
+      let doneByUser: { id: string; first_name: string; last_name: string } | null = null;
       
       if (newStatus === 'done') {
         // Get user ID and name
@@ -987,7 +987,7 @@ export default function ParticipantsPage() {
                         </div>
                         {doneByName && (
                           <div className={styles.taskDoneBy}>
-                            <span>בוצע ע"י {doneByName}</span>
+                            <span>בוצע ע&quot;י {doneByName}</span>
                           </div>
                         )}
                       </li>
