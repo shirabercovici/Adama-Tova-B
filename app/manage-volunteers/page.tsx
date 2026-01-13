@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import BackButton from "@/components/BackButton";
 import { createClient } from "@/lib/supabase/client";
+import styles from "./page.module.css";
 
 interface User {
     id: string;
@@ -19,7 +19,6 @@ export default function ManageVolunteersPage() {
     const supabase = useMemo(() => createClient(), []);
     const hasFetchedUserRef = useRef(false);
     const [users, setUsers] = useState<User[]>([]);
-    const [currentUser, setCurrentUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
 
@@ -31,21 +30,15 @@ export default function ManageVolunteersPage() {
         hasFetchedUserRef.current = true;
         
         fetchUsers();
-        fetchCurrentUser();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const fetchCurrentUser = async () => {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-            const { data: dbUser } = await supabase
-                .from("users")
-                .select("*")
-                .eq("email", authUser.email)
-                .single();
-            setCurrentUser(dbUser || authUser);
-        }
-    };
+    useEffect(() => {
+        document.body.classList.add('profile-page');
+        return () => {
+            document.body.classList.remove('profile-page');
+        };
+    }, []);
 
     const fetchUsers = async () => {
         try {
@@ -70,83 +63,127 @@ export default function ManageVolunteersPage() {
         return fullName.includes(term) || phone.includes(term) || email.includes(term);
     });
 
-    return (
-        <main className="min-h-screen bg-[#F3F6EC] font-sans" dir="rtl">
-            <div className="max-w-md mx-auto min-h-screen border-x border-gray-200 relative bg-[#F3F6EC]">
-                {/* Header */}
-                <div className="pt-4 px-4 pb-2 border-b border-[#A2A988]">
-                    <div className="flex justify-between items-center mb-4">
-                        <BackButton />
-                        <button
-                            onClick={() => router.push('/add-volunteer')}
-                            className="flex items-center justify-center w-10 h-10 rounded-full bg-[#4D58D8] hover:bg-[#3d47b8] transition-colors"
-                            aria-label="הוסף איש צוות"
+    // Count volunteers and managers from ALL users (not filtered)
+    const volunteerCount = users.filter(
+        (user) => user.role === "מתנדב.ת" || user.role === "מתנדב" || user.role === "מתנדבת" || (user.role && user.role.includes("מתנדב"))
+    ).length;
+    const managerCount = users.filter(
+        (user) => user.role === "מנהל.ת" || user.role === "מנהל" || user.role === "מנהלת" || (user.role && user.role.includes("מנהל"))
+    ).length;
+
+    if (loading) {
+        return (
+            <main className={styles.main} dir="rtl">
+                <div className={styles.container}>
+                    <div className={styles.backButtonWrapper}>
+                        <button 
+                            onClick={() => router.back()}
+                            className={styles.closeXButton}
+                            aria-label="סגור"
                         >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="9" cy="7" r="4" stroke="white" fill="none" strokeWidth="3" />
-                                <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="white" fill="none" strokeWidth="3" />
-                                <path d="M18 9v6M15 12h6" stroke="white" strokeWidth="3" strokeLinecap="round" />
-                            </svg>
+                            ×
                         </button>
                     </div>
+                    <div className={styles.loadingContainer}>
+                        <div className={styles.loadingText}>טוען...</div>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
+    return (
+        <main className={styles.main} dir="rtl">
+            <div className={styles.container}>
+                <div className={styles.backButtonWrapper}>
+                    <button 
+                        onClick={() => router.back()}
+                        className={styles.closeXButton}
+                        aria-label="סגור"
+                    >
+                        ×
+                    </button>
                 </div>
 
-                <div className="px-6 mt-6">
-                    {/* Search */}
-                    <div className="mb-4 relative">
+                {/* Header with Add Button and Search */}
+                <div className={styles.header}>
+                    <div className={styles.searchBarWrapper}>
                         <input
                             type="text"
                             placeholder="חיפוש צוות"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full bg-white rounded-lg py-2 px-10 text-right focus:outline-none placeholder-gray-500 text-gray-700 font-bold border border-gray-300"
+                            className={styles.searchBar}
                         />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="11" cy="11" r="8"></circle>
-                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                            </svg>
-                        </div>
+                        <svg
+                            className={styles.searchIcon}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                    </div>
+                    <button
+                        onClick={() => router.push('/add-volunteer')}
+                        className={styles.addButton}
+                        aria-label="הוסף איש צוות"
+                    >
+                        <svg
+                            className={styles.addButtonIcon}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <circle cx="12" cy="8" r="5" />
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <line x1="12" y1="11" x2="12" y2="17" />
+                            <line x1="9" y1="14" x2="15" y2="14" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div className={styles.content}>
+                    {/* Team Summary */}
+                    <div className={styles.teamSummary}>
+                        {volunteerCount} מתנדבים.ות{managerCount > 0 ? `, ${managerCount} מנהלים.ות` : ""}
                     </div>
 
-                    {/* List */}
-                    <div className="space-y-0 mt-6">
-                        {loading ? (
-                            <div className="text-center py-4 text-gray-500">טעינה...</div>
-                        ) : (
-                            <div className="border-t border-[#A2A988]">
-                                {filteredUsers.map((user) => (
-                                    <div
-                                        key={user.id}
-                                        onClick={() => router.push(`/manage-volunteers/${user.id}`)}
-                                        className="flex items-stretch border-b border-[#A2A988] bg-[#EFF3E6] hover:bg-[#E0E5D5] cursor-pointer transition-colors h-14"
-                                    >
-                                        {/* Name Column (Right) */}
-                                        <div className="flex-1 flex items-center justify-start pr-4 pl-2">
-                                            <span className="font-bold text-gray-600 text-lg mx-auto md:mx-0 w-full text-right truncate">
-                                                {user.first_name} {user.last_name}
-                                            </span>
-                                        </div>
+                    <hr className={styles.divider} />
 
-                                        {/* Role Column (Middle) */}
-                                        <div className="w-32 flex items-center justify-center border-r border-[#A2A988] px-2">
-                                            <span className="text-black text-base">{user.role || "מתנדב.ת"}</span>
-                                        </div>
-
-                                        {/* Arrow Column (Left) */}
-                                        <div className="w-12 flex items-center justify-center border-r border-[#A2A988]">
-                                            <svg width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-black">
-                                                <polyline points="1.5 1 8.5 8 1.5 15"></polyline>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                ))}
-                                {filteredUsers.length === 0 && !loading && (
-                                    <div className="p-4 text-center text-gray-500 bg-[#EFF3E6] border-b border-[#A2A988]">לא נמצאו תוצאות</div>
-                                )}
+                    {/* Team Members List */}
+                    {filteredUsers.length === 0 ? (
+                        <div className={styles.emptyState}>
+                            <div className={styles.emptyStateText}>
+                                {search ? "לא נמצאו תוצאות" : "אין אנשי צוות"}
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        <div className={styles.teamList}>
+                            {filteredUsers.map((user, index) => (
+                                <div
+                                    key={user.id}
+                                    className={styles.teamMemberItem}
+                                    onClick={() => router.push(`/manage-volunteers/${user.id}`)}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className={styles.memberName}>
+                                        {user.first_name} {user.last_name}
+                                    </div>
+                                    <div className={styles.memberRole}>
+                                        {user.role || "מתנדב.ת"}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </main>
