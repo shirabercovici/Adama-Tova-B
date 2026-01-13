@@ -14,7 +14,13 @@ export default async function Login({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user) return <div className={styles.loginForm}>hello {user.email}</div>;
+  
+  /*/ If we want to restirct the accsess to only users that are in this list, this is the correct code line
+  if (user) return <div className={styles.loginForm}>hello {user.email}</div>;/*/
+
+  if (user) {
+    return redirect("/");
+  }
 
   const signIn = async (formData: FormData) => {
     "use server";

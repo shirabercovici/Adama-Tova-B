@@ -133,10 +133,11 @@ export async function PATCH(request: NextRequest) {
             return Response.json({ error: taskError.message }, { status: 500 });
         }
 
-        // If task is completed and linked to a participant, update last_phone_call
-        if (status === 'done' && participant_id) {
+        // If task is completed and linked to a participant, update last_phone_call and log activity
+        if (status === 'done' && participant_id && done_by) {
             const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
+            // Update participant's last_phone_call
             const { error: participantError } = await databaseClient
                 .from("participants")
                 .update({ last_phone_call: today })
@@ -145,6 +146,27 @@ export async function PATCH(request: NextRequest) {
             if (participantError) {
                 console.error("Error updating participant last_phone_call:", participantError);
                 // We don't fail the request if this part fails, but we log it.
+            }
+
+            // Get participant name for activity log
+            const { data: participantData } = await databaseClient
+                .from("participants")
+                .select("full_name")
+                .eq("id", participant_id)
+                .single();
+
+            // Log phone call activity (tasks are phone calls)
+            if (participantData) {
+                await databaseClient
+                    .from("user_activities")
+                    .insert({
+                        user_id: done_by,
+                        activity_type: 'phone_call',
+                        participant_id: participant_id,
+                        participant_name: participantData.full_name,
+                        description: `שיחת טלפון ${participantData.full_name}`,
+                        created_at: new Date().toISOString(),
+                    });
             }
         }
 
