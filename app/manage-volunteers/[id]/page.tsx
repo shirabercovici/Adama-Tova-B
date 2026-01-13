@@ -243,7 +243,6 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
 
                     {/* Remove Section */}
                     <div className="mt-8">
-                        <h2 className="text-sm text-gray-500 mb-1 border-b border-gray-400 pb-1 w-full text-right block">הסרה</h2>
                         <div className="border border-[#A2A988] mt-2 border-t-0">
                             {/* Note: border-t-0 because the header above acts as separator or we just want a box? 
                     Actually, let's just make it a simple button block as per design request often seen.*/}
@@ -251,7 +250,7 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                                 onClick={() => setShowDeleteModal(true)}
                                 className="w-full text-center py-3 text-black font-bold bg-[#F3F6EC] hover:bg-[#eaeedd] transition-colors border-t border-[#A2A988]"
                             >
-                                מחיקת פרופיל
+                                מחיקת איש צוות 
                             </button>
                         </div>
                     </div>

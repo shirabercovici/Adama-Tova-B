@@ -7,7 +7,7 @@
 :root {
   /* Define design variables */
   --color-primary: #4D58D8;
-  --color-secondary: #bfc6d2;
+  --color-secondary: #FFF2A8;
   --color-background: #FFFCE5;
   --color-accent: #535bf2;
 
@@ -24,6 +24,11 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+}
+
+body.profile-page {
+  background-color: var(--color-primary);
+  overflow: hidden;
 }
 
 html {
@@ -49,6 +54,20 @@ body.participants-page > main.main-layout {
   padding: 0 !important;
   margin: 0 !important;
   width: 100vw !important;
+}
+
+/* Full screen for profile page */
+body.profile-page {
+  overflow: hidden !important;
+}
+
+body.profile-page > main.main-layout {
+  max-width: 100vw !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: var(--color-primary) !important;
 }
 
 /* Override for participants page container - full width */

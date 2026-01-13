@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
+import styles from "./page.module.css";
 
 export default function ProfilePage() {
   // Try to load from localStorage first for instant display
@@ -98,16 +99,23 @@ export default function ProfilePage() {
     router.push("/");
   };
 
+  useEffect(() => {
+    document.body.classList.add('profile-page');
+    return () => {
+      document.body.classList.remove('profile-page');
+    };
+  }, []);
+
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f7faf3] font-sans" dir="rtl">
-        <div className="max-w-md mx-auto bg-[#f7faf3] min-h-screen border-x border-gray-200 relative">
-          <BackButton />
-          <div className="flex justify-center pt-4">
-            <div className="w-24 h-6 bg-black rounded-full"></div>
+      <main className={styles.main} dir="rtl">
+        <div className={styles.container}>
+          <div className={styles.backButtonWrapper}>
+            <BackButton />
           </div>
-          <div className="flex justify-center items-center min-h-[60vh]">
-            <div className="text-gray-400">טוען...</div>
+          <div className={styles.notch}></div>
+          <div className={styles.loadingContainer}>
+            <div className={styles.loadingText}>טוען...</div>
           </div>
         </div>
       </main>
@@ -115,73 +123,55 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7faf3] font-sans" dir="rtl">
-      <div className="max-w-md mx-auto bg-[#f7faf3] min-h-screen border-x border-gray-200 relative">
-        <BackButton />
-        <div className="flex justify-center pt-4">
-          <div className="w-24 h-6 bg-black rounded-full"></div>
+    <main className={styles.main} dir="rtl">
+      <div className={styles.container}>
+        <div className={styles.backButtonWrapper}>
+          <BackButton />
         </div>
+        <div className={styles.notch}></div>
 
         {/* User Greeting */}
-        <div className="flex justify-between items-center px-6 py-8">
-          <div>
-            <h3 className="text-xl font-bold text-gray-800">היי {userData?.first_name || "לא הוזן"}</h3>
-            <p className="text-gray-600">{userData?.role || "לא הוזן"}</p>
+        <div className={styles.header}>
+          <div className={styles.userInfo}>
+            <h3 className={styles.userName}>
+              {userData?.first_name || "לא הוזן"} {userData?.last_name || ""}
+            </h3>
+            <p className={styles.userRole}>{userData?.role || "לא הוזן"}</p>
           </div>
+          <button className={styles.closeButton} aria-label="סגור">
+            ×
+          </button>
         </div>
 
-        <div className="px-4 space-y-8">
+        <div className={styles.content}>
           {/* Section: Personal Details */}
-          <section>
-            <h3 className="text-gray-400 text-sm mb-2 px-2">פרטים אישיים</h3>
-            <div className="border-t border-gray-800">
-              <div className="flex items-center justify-between p-3 border-b border-gray-300">
-                <span className="text-gray-600">טלפון:</span>
-                <span className="font-medium">{userData?.phone_number || "לא הוזן"}</span>
+          <section className={styles.section}>
+            <div className={styles.personalDetails}>
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>מס&apos; טלפון</span>
+                <span className={styles.detailValue}>{userData?.phone_number || "לא הוזן"}</span>
               </div>
-              <div className="flex items-center justify-between p-3 border-b border-gray-300">
-                <span className="text-gray-600">דואל:</span>
-                <span className="font-medium">{userData?.email || "לא הוזן"}</span>
+              <div className={styles.detailRow}>
+                <span className={styles.detailLabel}>מייל</span>
+                <span className={styles.detailValue}>{userData?.email || "לא הוזן"}</span>
               </div>
             </div>
           </section>
 
-          {/* Section: Management */}
-          {userData?.role === "מנהל.ת" && (
-            <section>
-              <h3 className="text-gray-400 text-sm mb-2 px-2">ניהול אנשי צוות</h3>
-              <div className="border-y border-gray-300 divide-y divide-gray-300">
-                <button
-                  onClick={() => router.push('/add-volunteer')}
-                  className="w-full text-right p-3 font-bold hover:bg-white/40 transition-colors"
-                >
-                  הוספת איש צוות
-                </button>
-                <br></br>
-                <button
-                  onClick={() => router.push('/manage-volunteers')}
-                  className="w-full text-right p-3 font-bold hover:bg-white/40 transition-colors"
-                >
-                  עריכה/הסר איש צוות
-                </button>
-              </div>
-            </section>
-          )}
-
           {/* Section: Activity History */}
-          <section>
-            <h3 className="text-gray-400 text-sm mb-2 px-2">היסטוריית הפעילות שלי</h3>
-            <div className="border-t border-gray-800">
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>היסטוריית הפעילות שלי</h3>
+            <div className={styles.activityHistory}>
               {activitiesLoading ? (
-                <div className="flex justify-center items-center p-8">
-                  <div className="text-gray-400">טוען פעילויות...</div>
+                <div className={styles.loadingState}>
+                  <div className={styles.loadingStateText}>טוען פעילויות...</div>
                 </div>
               ) : activities.length === 0 ? (
-                <div className="flex justify-center items-center p-8">
-                  <div className="text-gray-400">אין פעילויות עדיין</div>
+                <div className={styles.emptyState}>
+                  <div className={styles.emptyStateText}>אין פעילויות עדיין</div>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200">
+                <div className={styles.activityList}>
                   {activities.map((activity, index) => {
                     const activityDate = new Date(activity.created_at);
                     const formattedDate = activityDate.toLocaleDateString("he-IL", {
@@ -217,13 +207,13 @@ export default function ProfilePage() {
                     };
 
                     return (
-                      <div key={activity.id || index} className="p-3 flex items-start gap-3">
-                        <div className="text-[#4D58D8] mt-0.5 flex-shrink-0">
+                      <div key={activity.id || index} className={styles.activityItem}>
+                        <div className={styles.activityIcon}>
                           {getActivityIcon()}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm text-gray-800">{activity.description}</div>
-                          <div className="text-xs text-gray-500 mt-1">{formattedDate}</div>
+                        <div className={styles.activityContent}>
+                          <div className={styles.activityDescription}>{activity.description}</div>
+                          <div className={styles.activityDate}>{formattedDate}</div>
                         </div>
                       </div>
                     );
@@ -233,13 +223,20 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          {/* Sign Out Button */}
-          <div className="pt-10 pb-20 text-center">
-            <br></br>
+        </div>
+
+        {/* Sticky Footer with Management and Sign Out Buttons */}
+        <div className={styles.stickyFooter}>
+          {userData?.role === "מנהל.ת" && (
             <button
-              onClick={handleSignOut}
-              className="text-lg font-medium border-t border-gray-300 pt-4 w-full text-red-600"
+              onClick={() => router.push('/manage-volunteers')}
+              className={styles.managementButton}
             >
+              ניהול אנשי צוות
+            </button>
+          )}
+          <div className={styles.signOutSection}>
+            <button onClick={handleSignOut} className={styles.signOutButton}>
               התנתקות
             </button>
           </div>
