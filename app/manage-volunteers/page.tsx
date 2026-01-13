@@ -77,26 +77,31 @@ export default function ManageVolunteersPage() {
                 <div className="pt-4 px-4 pb-2 border-b border-[#A2A988]">
                     <div className="flex justify-between items-center mb-4">
                         <BackButton />
-                        <div className="text-left rtl:text-right">
-                            <h3 className="text-base font-bold text-gray-800">היי {currentUser?.first_name || "אורח"}</h3>
-                            <p className="text-sm text-gray-600">{currentUser?.role || ""}</p>
-                        </div>
+                        <button
+                            onClick={() => router.push('/add-volunteer')}
+                            className="flex items-center justify-center w-10 h-10 rounded-full bg-[#4D58D8] hover:bg-[#3d47b8] transition-colors"
+                            aria-label="הוסף איש צוות"
+                        >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="9" cy="7" r="4" stroke="white" fill="none" strokeWidth="3" />
+                                <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="white" fill="none" strokeWidth="3" />
+                                <path d="M18 9v6M15 12h6" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
                 <div className="px-6 mt-6">
-                    <h1 className="text-xl font-bold text-right text-black mb-1">עריכה/הסרה איש צוות</h1>
-
                     {/* Search */}
                     <div className="mb-4 relative">
                         <input
                             type="text"
-                            placeholder="חיפוש לפי שם/טל/מייל"
+                            placeholder="חיפוש צוות"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full bg-transparent border-b-2 border-[#A2A988] py-2 px-2 text-right focus:outline-none placeholder-gray-500 text-gray-700 font-bold"
+                            className="w-full bg-white rounded-lg py-2 px-10 text-right focus:outline-none placeholder-gray-500 text-gray-700 font-bold border border-gray-300"
                         />
-                        <div className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <circle cx="11" cy="11" r="8"></circle>
                                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>

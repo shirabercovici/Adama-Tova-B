@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import BackButton from '../../components/BackButton';
 import { createClient } from '@/lib/supabase/client';
 import { Participant } from '@/app/participants/types';
+import { logActivity } from '@/lib/activity-logger';
 
 export default function ParticipantCardPage() {
   const searchParams = useSearchParams();
@@ -85,6 +86,26 @@ export default function ParticipantCardPage() {
 
     if (id) {
       await supabase.from('participants').update({ updates: JSON.stringify(updatedActivities) }).eq('id', id);
+      
+      // Log activity
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        const { data: dbUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', authUser.email)
+          .single();
+        
+        if (dbUser && participant) {
+          await logActivity({
+            user_id: dbUser.id,
+            activity_type: 'status_update',
+            participant_id: id,
+            participant_name: participant.full_name,
+            description: `עדכון סטטוס ${participant.full_name}: ${newUpdateText}`,
+          });
+        }
+      }
     }
   };
 
@@ -117,6 +138,28 @@ export default function ParticipantCardPage() {
       body: JSON.stringify({ id, last_attendance: newAttendance }),
     });
     setParticipant({ ...participant, last_attendance: newAttendance });
+    
+    // Log activity
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      const { data: dbUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', authUser.email)
+        .single();
+      
+      if (dbUser) {
+        await logActivity({
+          user_id: dbUser.id,
+          activity_type: newAttendance ? 'attendance_marked' : 'attendance_removed',
+          participant_id: id,
+          participant_name: participant.full_name,
+          description: newAttendance 
+            ? `נוכחות ${participant.full_name}`
+            : `הוסרה נוכחות ${participant.full_name}`,
+        });
+      }
+    }
   };
 
   const attendedToday = participant?.last_attendance === new Date().toISOString().split("T")[0];
@@ -206,8 +249,155 @@ export default function ParticipantCardPage() {
             margin: '0 auto'
           }}>
 
+<<<<<<< HEAD
             <div style={{ color: 'white' }}>
               <BackButton />
+=======
+    {!isEditing && (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+        <input 
+          type="checkbox" 
+          checked={attendedToday} 
+          onChange={handleMarkAttendance} 
+          style={{ width: '25px', height: '25px', cursor: 'pointer' }} 
+        />
+        <span style={{ fontSize: '0.7rem', color: 'white' }}></span>
+      </div>
+    )}
+
+    {isEditing && (
+      <div style={{ display: 'flex', gap: '5px' }}>
+        <button onClick={handleSaveChanges} style={{ padding: '5px 15px', backgroundColor: 'white', color: '#4D58D8', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>שמור</button>
+        <button onClick={() => setIsEditing(false)} style={{ padding: '5px 15px', backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>ביטול</button>
+      </div>
+    )}
+  </div>
+</div>
+{/* שורת הכרטיסיות - תיקון סדר מימין לשמאל */}
+<div style={{ 
+  display: 'flex', 
+  width: '100vw', 
+  margin: '-30px -20px 0 -20px', 
+  boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+  backgroundColor: '#4D58D8',
+  direction: 'rtl' // מבטיח שהכל יזרום מימין לשמאל באופן טבעי
+}}>
+  {['תיק פונה', 'עדכון חדש', 'היסטוריה'].map((tab) => (
+    <button
+      key={tab}
+      onClick={() => setActiveTab(tab)}
+      style={{
+        flex: 1,
+        padding: '15px 0',
+        border: 'none',
+        // קו מפריד משמאל לכל לשונית חוץ מהאחרונה
+        borderLeft: tab !== 'היסטוריה' ? '1px solid rgba(255,255,255,0.2)' : 'none', 
+        backgroundColor: activeTab === tab ? '#FEFCE8' : '#4D58D8',
+        color: activeTab === tab ? '#4D58D8' : 'white', 
+        fontWeight: 'bold',
+        fontSize: '1rem',
+        cursor: 'pointer',
+        borderRadius: '0',
+        outline: 'none'
+      }}
+    >
+      {tab}
+    </button>
+  ))}
+</div>
+{activeTab === 'תיק פונה' && (
+  <div style={{ padding: '20px', backgroundColor: '#FEFCE8', minHeight: '60vh', margin: '0 -20px', textAlign: 'right' }}>
+    
+    {/* הצגת הנתונים לפי הסדר החדש שביקשת */}
+    <InfoRow label="מס' טלפון" value={participant?.phone} />
+    <InfoRow label="מעגל" value={participant?.bereavement_circle} />
+    <InfoRow label="מייל" value={participant?.email} />
+    <InfoRow label="קשר" value={participant?.bereavement_detail} />
+    <InfoRow label="תיאור" value={participant?.general_notes} />
+  </div>
+)}
+      <div>
+        {activeTab === 'היסטוריה' && (
+  <div style={{ padding: '20px', backgroundColor: '#FEFCE8', minHeight: '60vh', margin: '0 -20px' }}>
+        <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f9f9f9', padding: '10px', borderRadius: '8px' }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#333' }}>שיחת טלפון אחרונה: <span style={{ fontWeight: 'normal', marginRight: '5px', color: '#4D58D8' }}>{getLastPhoneCallText()}</span></div>
+          {participant?.phone && (
+            <a 
+              href={`tel:${participant.phone}`} 
+              onClick={async () => {
+                // Log phone call activity
+                const { data: { user: authUser } } = await supabase.auth.getUser();
+                if (authUser) {
+                  const { data: dbUser } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', authUser.email)
+                    .single();
+                  
+                  if (dbUser && participant) {
+                    await logActivity({
+                      user_id: dbUser.id,
+                      activity_type: 'phone_call',
+                      participant_id: participant.id,
+                      participant_name: participant.full_name,
+                      description: `שיחת טלפון ${participant.full_name}`,
+                    });
+                  }
+                }
+              }}
+              style={{ backgroundColor: '#4D58D8', color: 'white', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            </a>
+          )}
+        </div>
+
+        {/* ציר הזמן המעודכן עם קו חוצץ רציף */}
+        <div style={{ padding: '10px' }}>
+          {allEvents.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#999' }}>אין עדכונים חדשים</div>
+          ) : (
+            allEvents.map((event, index) => (
+              <div key={index} style={{ display: 'flex', alignItems: 'stretch' }}>
+                <div style={{ width: '50px', color: '#4D58D8', fontStyle: 'italic', fontSize: '0.85rem', textAlign: 'left', paddingLeft: '10px', paddingTop: '5px' }}>{event.date}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '20px' }}>
+                  <div style={{ color: '#4D58D8', backgroundColor: 'white', padding: '5px 0', zIndex: 1 }}>
+                    {event.type === 'phone' && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>}
+                    {event.type === 'attendance' && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                    {event.type === 'status' && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>}
+                  </div>
+                  {index !== allEvents.length - 1 && <div style={{ flex: 1, width: '2px', backgroundColor: '#4D58D8', opacity: 0.3 }}></div>}
+                </div>
+                <div style={{ flex: 1, textAlign: 'right', color: '#4D58D8', paddingRight: '15px', paddingBottom: '25px', paddingTop: '2px' }}>
+                   <div style={{ fontWeight: event.type !== 'status' ? 'bold' : 'normal' }}>{event.text}</div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        </div>
+)}
+      </div>
+
+
+
+
+
+
+
+
+
+
+
+      {isPopupOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
+          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', width: '85%', maxWidth: '350px' }}>
+            <h3 style={{ marginTop: 0 }}>הוספת עדכון חדש</h3>
+            <textarea value={newUpdateText} onChange={(e) => setNewUpdateText(e.target.value)} placeholder="כתבי כאן..." style={{ width: '100%', height: '100px', marginBottom: '15px', padding: '10px' }} />
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={handleAddUpdate} style={{ flex: 1, padding: '10px', backgroundColor: '#4D58D8', color: 'white', border: 'none', borderRadius: '4px' }}>סיים</button>
+              <button onClick={() => setIsPopupOpen(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#eee', border: 'none', borderRadius: '4px' }}>ביטול</button>
+>>>>>>> 639b904473bdd7e94c0a2e262ca5749e5086d42c
             </div>
 
             {isEditing ? (

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
 import { motion } from "framer-motion";
+import { logActivity } from "@/lib/activity-logger";
 
 export default function ParticipantsPage() {
   const router = useRouter();
@@ -647,6 +648,31 @@ export default function ParticipantsPage() {
         throw new Error(errorMessage);
       }
 
+      // Log activity
+      const participant = participants.find(p => p.id === participantId);
+      if (participant) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const { data: dbUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', authUser.email)
+            .single();
+          
+          if (dbUser) {
+            await logActivity({
+              user_id: dbUser.id,
+              activity_type: newAttendance ? 'attendance_marked' : 'attendance_removed',
+              participant_id: participantId,
+              participant_name: participant.full_name,
+              description: newAttendance 
+                ? `נוכחות ${participant.full_name}`
+                : `הוסרה נוכחות ${participant.full_name}`,
+            });
+          }
+        }
+      }
+
       // Refresh count after a delay to ensure DB is updated
       // Use debounce to prevent multiple rapid calls
       if (fetchCountTimeoutRef.current) {
@@ -928,8 +954,27 @@ export default function ParticipantsPage() {
                         return (
                           <a
                             href={`tel:${cleanPhone}`}
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
+                              // Log phone call activity
+                              const { data: { user: authUser } } = await supabase.auth.getUser();
+                              if (authUser) {
+                                const { data: dbUser } = await supabase
+                                  .from('users')
+                                  .select('id')
+                                  .eq('email', authUser.email)
+                                  .single();
+                                
+                                if (dbUser && participant) {
+                                  await logActivity({
+                                    user_id: dbUser.id,
+                                    activity_type: 'phone_call',
+                                    participant_id: participant.id,
+                                    participant_name: participant.full_name,
+                                    description: `שיחת טלפון ${participant.full_name}`,
+                                  });
+                                }
+                              }
                               // On desktop, try to open phone app or show number
                               if (typeof window !== 'undefined' && !/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
                                 // Desktop - could show a prompt or copy to clipboard
