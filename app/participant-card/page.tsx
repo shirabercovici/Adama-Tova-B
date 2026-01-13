@@ -1,4 +1,5 @@
 "use client";
+
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import BackButton from '../../components/BackButton';
@@ -12,7 +13,7 @@ export default function ParticipantCardPage() {
   const supabase = createClient();
 
   const id = searchParams.get('id');
-
+  const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [activities, setActivities] = useState<any[]>([]);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -28,7 +29,7 @@ export default function ParticipantCardPage() {
     phone: '',
     general_notes: ''
   });
-
+const [activeTab, setActiveTab] = useState('תיק פונה');
   const urlName = searchParams.get('name') || 'פונה חדש';
 
   const fetchParticipant = useCallback(async () => {
@@ -194,65 +195,117 @@ export default function ParticipantCardPage() {
 
   const allEvents = getAllEvents();
   const displayName = isEditing ? editForm.full_name : (participant ? participant.full_name : urlName);
-
+const InfoRow = ({ label, value }: { label: string, value: any }) => (
+  <div style={{ padding: '10px 0' }}>
+    <div style={{ color: '#4D58D8', fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '5px' }}>{label}</div>
+    <div style={{ color: '#4D58D8', fontSize: '1rem' }}>{value || '---'}</div>
+    <div style={{ borderBottom: '1px solid rgba(77, 88, 216, 0.3)', marginTop: '10px' }}></div>
+  </div>
+);
   return (
     <div style={{ direction: 'rtl' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px', marginTop: '10px' }}>
-        <BackButton />
-        {isEditing ? (
-          <input type="text" value={editForm.full_name} onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })} style={{ fontSize: '1.8rem', flex: 1, textAlign: 'right', border: 'none', borderBottom: '2px solid #4D58D8', outline: 'none', color: '#4D58D8', background: 'transparent' }} />
-        ) : (
-          <h2 style={{ fontSize: '1.8rem', margin: 0, borderBottom: '2px solid #4D58D8', paddingBottom: '5px', flex: 1, textAlign: 'right', color: '#4D58D8' }}>{displayName}</h2>
-        )}
-        {!isEditing && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-            <input type="checkbox" checked={attendedToday} onChange={handleMarkAttendance} style={{ width: '25px', height: '25px', cursor: 'pointer' }} />
-            <span style={{ fontSize: '0.7rem', color: '#4D58D8' }}>נוכחות</span>
-          </div>
-        )}
-        {isEditing && (
-          <div style={{ display: 'flex', gap: '5px' }}>
-            <button onClick={handleSaveChanges} style={{ padding: '5px 15px', backgroundColor: '#4D58D8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>שמור</button>
-            <button onClick={() => setIsEditing(false)} style={{ padding: '5px 15px', backgroundColor: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>ביטול</button>
-          </div>
-        )}
-      </div>
+{/* --- ה-Header המושלם: נצמד למעלה ולצדדים --- */}
+<div style={{ 
+  backgroundColor: '#4D58D8', 
+  padding: '40px 20px 20px 20px', // הוספתי יותר פדינג למעלה (40px) כדי שהטקסט לא יהיה צמוד מדי לתקרה
+  margin: '-20px -50vw 30px -50vw', // מושך את המלבן למעלה ולצדדים
+  width: '100vw',
+  position: 'relative',
+  left: '50%',
+  right: '50%',
+  marginLeft: '-50vw',
+  marginRight: '-50vw',
+  color: 'white',
+  boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+  boxSizing: 'border-box',
+  display: 'flex',
+  flexDirection: 'column'
+}}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', width: '100%', maxWidth: '1200px', margin: '0 auto' }}>
+    
+    <div style={{ color: 'white' }}>
+      <BackButton />
+    </div>
+    
+    {isEditing ? (
+      <input 
+        type="text" 
+        value={editForm.full_name} 
+        onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })} 
+        style={{ fontSize: '1.8rem', flex: 1, textAlign: 'right', border: 'none', outline: 'none', color: 'white', background: 'transparent' }} 
+      />
+    ) : (
+      <h2 style={{ fontSize: '1.8rem', margin: 0, flex: 1, textAlign: 'right', color: 'white' }}>
+        {displayName}
+      </h2>
+    )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
-        {[ {label: 'קשר', field: 'bereavement_detail'}, {label: 'מעגל', field: 'bereavement_circle', isSelect: true}, {label: 'מייל', field: 'email'}, {label: 'פלאפון', field: 'phone'} ].map((f) => (
-          <div key={f.field}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>{f.label}</label>
-            {isEditing ? (
-              f.isSelect ? (
-                <select value={(editForm as any)[f.field]} onChange={(e) => setEditForm({ ...editForm, [f.field]: e.target.value })} style={{ width: '100%', padding: '8px', textAlign: 'right' }}>
-                  <option value="מעגל 1">מעגל 1</option><option value="מעגל 2">מעגל 2</option><option value="מעגל 3">מעגל 3</option><option value="מעגל 4">מעגל 4</option>
-                </select>
-              ) : (
-                <input type="text" value={(editForm as any)[f.field]} onChange={(e) => setEditForm({ ...editForm, [f.field]: e.target.value })} style={{ width: '100%', padding: '8px', textAlign: 'center' }} />
-              )
-            ) : (
-              <div style={{ backgroundColor: '#4D58D8', color: 'white', padding: '10px', textAlign: 'center', borderRadius: '2px', minHeight: '40px' }}>{(participant as any)?.[f.field]}</div>
-            )}
-          </div>
-        ))}
+    {!isEditing && (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+        <input 
+          type="checkbox" 
+          checked={attendedToday} 
+          onChange={handleMarkAttendance} 
+          style={{ width: '25px', height: '25px', cursor: 'pointer' }} 
+        />
+        <span style={{ fontSize: '0.7rem', color: 'white' }}></span>
       </div>
+    )}
 
-      <div style={{ marginBottom: '20px' }}>
-        <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>תיאור</label>
-        {isEditing ? (
-          <textarea value={editForm.general_notes} onChange={(e) => setEditForm({ ...editForm, general_notes: e.target.value })} style={{ width: '100%', padding: '10px', minHeight: '80px' }} />
-        ) : (
-          <div style={{ border: '1px solid #ccc', padding: '15px', minHeight: '60px', backgroundColor: 'white', textAlign: 'right' }}>{participant?.general_notes}</div>
-        )}
+    {isEditing && (
+      <div style={{ display: 'flex', gap: '5px' }}>
+        <button onClick={handleSaveChanges} style={{ padding: '5px 15px', backgroundColor: 'white', color: '#4D58D8', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>שמור</button>
+        <button onClick={() => setIsEditing(false)} style={{ padding: '5px 15px', backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>ביטול</button>
       </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', border: '1px solid #4D58D8', marginBottom: '20px' }}>
-        <button onClick={() => setIsPopupOpen(true)} style={{ padding: '10px', backgroundColor: '#eef2e8', border: 'none', borderLeft: '1px solid #4D58D8', cursor: 'pointer', fontWeight: 'bold' }}>+ הוספת עדכון</button>
-        <button onClick={handleArchive} style={{ padding: '10px', backgroundColor: participant?.is_archived ? '#ccc' : '#eef2e8', border: 'none', cursor: 'pointer' }}>{participant?.is_archived ? 'שחזר מארכיון' : 'העברה לארכיון'}</button>
-      </div>
-
-      <div style={{ marginBottom: '30px' }}>
-        <h4 style={{ color: '#888', fontStyle: 'italic', marginBottom: '10px' }}>פעילויות אחרונות</h4>
+    )}
+  </div>
+</div>
+{/* שורת הכרטיסיות - תיקון סדר מימין לשמאל */}
+<div style={{ 
+  display: 'flex', 
+  width: '100vw', 
+  margin: '-30px -20px 0 -20px', 
+  boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+  backgroundColor: '#4D58D8',
+  direction: 'rtl' // מבטיח שהכל יזרום מימין לשמאל באופן טבעי
+}}>
+  {['תיק פונה', 'עדכון חדש', 'היסטוריה'].map((tab) => (
+    <button
+      key={tab}
+      onClick={() => setActiveTab(tab)}
+      style={{
+        flex: 1,
+        padding: '15px 0',
+        border: 'none',
+        // קו מפריד משמאל לכל לשונית חוץ מהאחרונה
+        borderLeft: tab !== 'היסטוריה' ? '1px solid rgba(255,255,255,0.2)' : 'none', 
+        backgroundColor: activeTab === tab ? '#FEFCE8' : '#4D58D8',
+        color: activeTab === tab ? '#4D58D8' : 'white', 
+        fontWeight: 'bold',
+        fontSize: '1rem',
+        cursor: 'pointer',
+        borderRadius: '0',
+        outline: 'none'
+      }}
+    >
+      {tab}
+    </button>
+  ))}
+</div>
+{activeTab === 'תיק פונה' && (
+  <div style={{ padding: '20px', backgroundColor: '#FEFCE8', minHeight: '60vh', margin: '0 -20px', textAlign: 'right' }}>
+    
+    {/* הצגת הנתונים לפי הסדר החדש שביקשת */}
+    <InfoRow label="מס' טלפון" value={participant?.phone} />
+    <InfoRow label="מעגל" value={participant?.bereavement_circle} />
+    <InfoRow label="מייל" value={participant?.email} />
+    <InfoRow label="קשר" value={participant?.bereavement_detail} />
+    <InfoRow label="תיאור" value={participant?.general_notes} />
+  </div>
+)}
+      <div>
+        {activeTab === 'היסטוריה' && (
+  <div style={{ padding: '20px', backgroundColor: '#FEFCE8', minHeight: '60vh', margin: '0 -20px' }}>
         <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f9f9f9', padding: '10px', borderRadius: '8px' }}>
           <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#333' }}>שיחת טלפון אחרונה: <span style={{ fontWeight: 'normal', marginRight: '5px', color: '#4D58D8' }}>{getLastPhoneCallText()}</span></div>
           {participant?.phone && (
@@ -309,7 +362,19 @@ export default function ParticipantCardPage() {
             ))
           )}
         </div>
+        </div>
+)}
       </div>
+
+
+
+
+
+
+
+
+
+
 
       {isPopupOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000 }}>
@@ -323,11 +388,111 @@ export default function ParticipantCardPage() {
           </div>
         </div>
       )}
-      {participant && !isEditing && (
-        <div style={{ marginTop: '30px', marginBottom: '20px' }}>
-          <button onClick={() => setIsEditing(true)} style={{ width: '100%', padding: '12px', backgroundColor: 'transparent', border: '1px solid #4D58D8', color: '#4D58D8', cursor: 'pointer', borderRadius: '4px', fontWeight: 'bold' }}>עריכת פרטי פונה</button>
-        </div>
-      )}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+      {/* כפתורי פעולה קבועים בתחתית */}
+<div style={{ 
+  position: 'fixed', 
+  bottom: 0, 
+  left: 0, 
+  width: '100vw', 
+  backgroundColor: '#FFF2A8', 
+  boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
+  display: 'flex',
+  flexDirection: 'column',
+  zIndex: 1000 // מוודא שהם תמיד יהיו מעל שאר התוכן
+}}>
+  {/* כפתור ארכיון */}
+  <button 
+    onClick={() => setIsArchiveConfirmOpen(true)}
+    style={{ 
+      width: '100%', 
+      padding: '20px', 
+      border: 'none', 
+      borderBottom: '1px solid rgba(77, 88, 216, 0.2)', 
+      backgroundColor: 'transparent', 
+      color: '#4D58D8', 
+      fontSize: '1.2rem', 
+      fontWeight: 'bold', 
+      cursor: 'pointer' 
+    }}
+  >
+    {participant?.is_archived ? 'שחזר מארכיון' : 'העברה לארכיון'}
+  </button>
+
+  {/* כפתור עריכה */}
+  <button 
+    onClick={() => setIsEditing(true)} 
+    style={{ 
+      width: '100%', 
+      padding: '20px', 
+      border: 'none', 
+      backgroundColor: 'transparent', 
+      color: '#4D58D8', 
+      fontSize: '1.2rem', 
+      fontWeight: 'bold', 
+      cursor: 'pointer' 
+    }}
+  >
+    עריכה
+  </button>
+</div>
+
+{/* הוספת רווח בתחתית הדף כדי שהכפתורים לא יסתירו את התוכן האחרון */}
+{/* ... כל הקוד הקיים של הכפתורים הסטטיים ... */}
+ {isArchiveConfirmOpen && (
+  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
+    <div style={{ backgroundColor: '#FEFCE8', width: '85%', maxWidth: '350px', borderRadius: '15px', overflow: 'hidden', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+      
+      {/* כותרת הפופ-אפ */}
+      <div style={{ padding: '25px 20px 10px 20px' }}>
+        <h3 style={{ margin: 0, color: '#4D58D8', fontSize: '1.4rem' }}>להעביר לארכיון?</h3>
+      </div>
+
+{/* אזור התמונה - שימי לב שהשם archive-image.png צריך להיות זהה לשם הקובץ ששמרת */}
+<div style={{ padding: '10px', display: 'flex', justifyContent: 'center' }}>
+  <img 
+    src="/archive-image.png" 
+    alt="ארכיון" 
+    style={{ width: '120px', height: 'auto', objectFit: 'contain' }} 
+  />
+</div>
+      {/* כפתורי הפעולה בעיצוב צהוב סטטי */}
+      <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#FFF2A8' }}>
+        <button 
+          onClick={() => {
+            handleArchive(); // מבצע את הארכוב
+            setIsArchiveConfirmOpen(false); // סוגר את הפופ-אפ
+          }}
+          style={{ width: '100%', padding: '15px', border: 'none', borderTop: '1px solid rgba(77, 88, 216, 0.2)', backgroundColor: 'transparent', color: '#4D58D8', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}
+        >
+          כן
+        </button>
+        <button 
+          onClick={() => setIsArchiveConfirmOpen(false)}
+          style={{ width: '100%', padding: '15px', border: 'none', borderTop: '1px solid rgba(77, 88, 216, 0.2)', backgroundColor: 'transparent', color: '#4D58D8', fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}
+        >
+          ביטול
+        </button>
+      </div>
     </div>
+  </div>
+)}
+
+    </div> // זה ה-div שסוגר את הכל
   );
 }
