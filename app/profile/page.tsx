@@ -124,7 +124,6 @@ export default function ProfilePage() {
               ×
             </button>
           </div>
-          <div className={styles.notch}></div>
           <div className={styles.loadingContainer}>
             <div className={styles.loadingText}>טוען...</div>
           </div>
@@ -145,7 +144,6 @@ export default function ProfilePage() {
             ×
           </button>
         </div>
-        <div className={styles.notch}></div>
 
         {/* User Greeting */}
         <div className={styles.header}>
