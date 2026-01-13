@@ -7,30 +7,18 @@ import BackButton from "@/components/BackButton";
 import styles from "./page.module.css";
 
 export default function ProfilePage() {
-  // Try to load from localStorage first for instant display
-  const [userData, setUserData] = useState<any>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('userProfileData');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          return null;
-        }
-      }
-    }
-    return null;
-  });
-  const [loading, setLoading] = useState(!userData); // Only show loading if no cached data
+  const [userData, setUserData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<any[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const hasFetchedProfileRef = useRef(false);
 
   useEffect(() => {
-    // Prevent multiple fetches
-    if (hasFetchedProfileRef.current) {
+    // Only fetch after component is mounted to avoid hydration issues
+    if (!mounted || hasFetchedProfileRef.current) {
       return;
     }
     hasFetchedProfileRef.current = true;
@@ -92,7 +80,7 @@ export default function ProfilePage() {
 
     getProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps - only run once
+  }, [mounted]); // Run when mounted
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -100,11 +88,28 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
+    setMounted(true);
     document.body.classList.add('profile-page');
     return () => {
       document.body.classList.remove('profile-page');
     };
   }, []);
+
+  useEffect(() => {
+    // Load from localStorage after mount to avoid hydration mismatch
+    if (mounted && typeof window !== 'undefined') {
+      const saved = localStorage.getItem('userProfileData');
+      if (saved) {
+        try {
+          const cachedData = JSON.parse(saved);
+          setUserData(cachedData);
+          setLoading(false);
+        } catch {
+          // Invalid cache, continue with fetch
+        }
+      }
+    }
+  }, [mounted]);
 
   if (loading) {
     return (
@@ -208,12 +213,12 @@ export default function ProfilePage() {
 
                     return (
                       <div key={activity.id || index} className={styles.activityItem}>
+                        <div className={styles.activityDate}>{formattedDate}</div>
                         <div className={styles.activityIcon}>
                           {getActivityIcon()}
                         </div>
                         <div className={styles.activityContent}>
                           <div className={styles.activityDescription}>{activity.description}</div>
-                          <div className={styles.activityDate}>{formattedDate}</div>
                         </div>
                       </div>
                     );
