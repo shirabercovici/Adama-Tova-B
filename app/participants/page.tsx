@@ -31,7 +31,7 @@ export default function ParticipantsPage() {
   }, []); // Only calculate once on mount
 
   const [presentTodayCount, setPresentTodayCount] = useState<number>(initialCount);
-  
+
   // Use ref to track if we've loaded from localStorage to prevent resetting to 0
   const hasLoadedFromStorageRef = useRef(false);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -76,7 +76,7 @@ export default function ParticipantsPage() {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-    
+
     searchTimeoutRef.current = setTimeout(() => {
       setDebouncedSearch(search);
     }, 150); // Reduced from 300ms to 150ms for faster response
@@ -97,7 +97,7 @@ export default function ParticipantsPage() {
   // Fetch count of participants present today (independent of search)
   const fetchPresentTodayCount = useCallback(async () => {
     const now = Date.now();
-    
+
     // If there's already a fetch in progress, return the existing promise
     if (countFetchPromiseRef.current) {
       return countFetchPromiseRef.current;
@@ -124,7 +124,7 @@ export default function ParticipantsPage() {
     isFetchingCountRef.current = true;
     lastCountFetchTimeRef.current = now;
     lastCountFetchDateRef.current = todayStr;
-    
+
     // Create a promise and store it to prevent concurrent calls
     countFetchPromiseRef.current = (async () => {
       try {
@@ -173,7 +173,7 @@ export default function ParticipantsPage() {
 
   const fetchTasks = useCallback(async () => {
     const now = Date.now();
-    
+
     // If there's already a fetch in progress, return the existing promise
     if (tasksFetchPromiseRef.current) {
       return tasksFetchPromiseRef.current;
@@ -191,7 +191,7 @@ export default function ParticipantsPage() {
 
     isFetchingTasksRef.current = true;
     lastTasksFetchTimeRef.current = now;
-    
+
     // Create a promise and store it to prevent concurrent calls
     tasksFetchPromiseRef.current = (async () => {
       try {
@@ -221,9 +221,9 @@ export default function ParticipantsPage() {
       // Extract initials from first_name and last_name from users table
       const firstName = (user.first_name || '').trim();
       const lastName = (user.last_name || '').trim();
-      
+
       let initials = 'א'; // Default fallback
-      
+
       if (firstName && lastName) {
         // Both names exist - take first letter of each
         initials = firstName.charAt(0) + lastName.charAt(0);
@@ -237,7 +237,7 @@ export default function ParticipantsPage() {
         // Fallback to first letter of email
         initials = user.email.charAt(0).toUpperCase();
       }
-      
+
       // Only update if we have valid initials (not default 'א') and it's different from current
       if (initials !== 'א' && initials !== userInitials) {
         setUserInitials(initials);
@@ -257,12 +257,12 @@ export default function ParticipantsPage() {
               .select('first_name, last_name, email')
               .eq('email', authUser.email)
               .single();
-            
+
             if (dbUser) {
               setUser(dbUser);
               const firstName = (dbUser.first_name || '').trim();
               const lastName = (dbUser.last_name || '').trim();
-              
+
               let initials = 'א';
               if (firstName && lastName) {
                 initials = firstName.charAt(0) + lastName.charAt(0);
@@ -271,7 +271,7 @@ export default function ParticipantsPage() {
               } else if (lastName) {
                 initials = lastName.charAt(0);
               }
-              
+
               if (initials !== 'א' && initials !== userInitials) {
                 setUserInitials(initials);
                 if (typeof window !== 'undefined') {
@@ -284,7 +284,7 @@ export default function ParticipantsPage() {
           // Silent fail
         }
       };
-      
+
       fetchUserDirectly();
     }
   }, [user, supabase]);
@@ -322,9 +322,9 @@ export default function ParticipantsPage() {
     setError(null);
     try {
       const params = new URLSearchParams();
-      // Only show active participants
-      params.append("filterArchived", "active");
-      
+      // Show all participants (including archived) in search
+      params.append("filterArchived", "all");
+
       // If there's a debounced search query, add it
       if (debouncedSearch && debouncedSearch.trim() !== "") {
         params.append("search", debouncedSearch.trim());
@@ -410,27 +410,27 @@ export default function ParticipantsPage() {
       return;
     }
     hasFetchedInitialDataRef.current = true;
-    
+
     let isMounted = true;
     let fetchPromise: Promise<void> | null = null;
-    
+
     const fetchInitialData = async () => {
       // Prevent concurrent fetches
       if (fetchPromise) {
         return fetchPromise;
       }
-      
+
       fetchPromise = (async () => {
         // Fetch count and tasks in parallel
         await Promise.all([
           fetchPresentTodayCount(),
           fetchTasks()
         ]);
-        
+
         // Fetch user data from users table
         if (isMounted) {
           const { data: { user: authUser } } = await supabase.auth.getUser();
-          
+
           if (authUser && isMounted) {
             // Fetch user data from users table
             const { data: dbUser, error: dbError } = await supabase
@@ -438,18 +438,18 @@ export default function ParticipantsPage() {
               .select('first_name, last_name, email')
               .eq('email', authUser.email)
               .single();
-            
+
             // Use dbUser if available, otherwise fallback to authUser
             const userData = dbUser || authUser;
             setUser(userData);
-            
+
             // Extract initials from first_name and last_name from users table
             // Priority: dbUser (from users table) > userData
             const firstName = (dbUser?.first_name || '').trim();
             const lastName = (dbUser?.last_name || '').trim();
-            
+
             let initials = 'א'; // Default fallback
-            
+
             if (firstName && lastName) {
               // Both names exist - take first letter of each
               initials = firstName.charAt(0) + lastName.charAt(0);
@@ -463,7 +463,7 @@ export default function ParticipantsPage() {
               // Fallback to first letter of email
               initials = userData.email.charAt(0).toUpperCase();
             }
-            
+
             // Only update if we have valid initials (not default 'א') and it's different from current
             if (initials !== 'א' && initials !== userInitials) {
               setUserInitials(initials);
@@ -475,12 +475,12 @@ export default function ParticipantsPage() {
           }
         }
       })();
-      
+
       return fetchPromise;
     };
-    
+
     fetchInitialData();
-    
+
     return () => {
       isMounted = false;
     };
@@ -522,11 +522,11 @@ export default function ParticipantsPage() {
     try {
       // Optimistic update
       const newStatus: "open" | "done" = task.status === 'done' ? 'open' : 'done';
-      
+
       // Get current user info for optimistic update
       let userId: string | null = null;
       let doneByUser: { id: string; first_name: string; last_name: string } | null = null;
-      
+
       if (newStatus === 'done') {
         // Get user ID and name
         const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -551,7 +551,7 @@ export default function ParticipantsPage() {
           }
         }
       }
-      
+
       // Optimistic update with done_by_user info
       const updatedTasks = tasks.map((t) => {
         if (t.id === task.id) {
@@ -683,12 +683,12 @@ export default function ParticipantsPage() {
 
 
   return (
-      <motion.main 
-    className={styles.container}
-    initial={{ opacity: 0, x: 50 }} // מתחיל קצת מהצד ובשקיפות
-    animate={{ opacity: 1, x: 0 }}  // חוזר למרכז ונהיה גלוי
-    transition={{ duration: 0.6, ease: "easeOut" }} // תנועה חלקה
-      >
+    <motion.main
+      className={styles.container}
+      initial={{ opacity: 0, x: 50 }} // מתחיל קצת מהצד ובשקיפות
+      animate={{ opacity: 1, x: 0 }}  // חוזר למרכז ונהיה גלוי
+      transition={{ duration: 0.6, ease: "easeOut" }} // תנועה חלקה
+    >
       {/* Navbar */}
       <div className={styles.navbarWrapper}>
         {/* <Navbar /> */}
@@ -696,7 +696,7 @@ export default function ParticipantsPage() {
       {/* Purple Header */}
       <div className={styles.purpleHeader}>
         <div className={styles.headerTop}>
-          <div 
+          <div
             className={styles.headerButton}
             onClick={() => router.push('/profile')}
             style={{ cursor: 'pointer' }}
@@ -704,7 +704,7 @@ export default function ParticipantsPage() {
           >
             {isHydrated ? userInitials : 'א'}
           </div>
-          <div 
+          <div
             className={styles.logo}
             onClick={() => router.push('/participants')}
             style={{ cursor: 'pointer' }}
@@ -926,7 +926,7 @@ export default function ParticipantsPage() {
                         // Remove any non-digit characters except + for international numbers
                         const cleanPhone = phoneNumber.replace(/[^\d+]/g, '');
                         return (
-                          <a 
+                          <a
                             href={`tel:${cleanPhone}`}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -971,7 +971,7 @@ export default function ParticipantsPage() {
               {isDoneTasksOpen && (
                 <ul className={styles.taskList}>
                   {tasks.filter(t => t.status === 'done').map(task => {
-                    const doneByName = task.done_by_user 
+                    const doneByName = task.done_by_user
                       ? `${task.done_by_user.first_name || ''} ${task.done_by_user.last_name || ''}`.trim()
                       : null;
                     return (
