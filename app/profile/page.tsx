@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import BackButton from "@/components/BackButton";
+import Image from "next/image";
 import styles from "./page.module.css";
 
 export default function ProfilePage() {
@@ -116,7 +116,13 @@ export default function ProfilePage() {
       <main className={styles.main} dir="rtl">
         <div className={styles.container}>
           <div className={styles.backButtonWrapper}>
-            <BackButton />
+            <button 
+              onClick={() => router.back()}
+              className={styles.closeXButton}
+              aria-label="סגור"
+            >
+              ×
+            </button>
           </div>
           <div className={styles.notch}></div>
           <div className={styles.loadingContainer}>
@@ -131,7 +137,13 @@ export default function ProfilePage() {
     <main className={styles.main} dir="rtl">
       <div className={styles.container}>
         <div className={styles.backButtonWrapper}>
-          <BackButton />
+          <button 
+            onClick={() => router.back()}
+            className={styles.closeXButton}
+            aria-label="סגור"
+          >
+            ×
+          </button>
         </div>
         <div className={styles.notch}></div>
 
@@ -143,9 +155,6 @@ export default function ProfilePage() {
             </h3>
             <p className={styles.userRole}>{userData?.role || "לא הוזן"}</p>
           </div>
-          <button className={styles.closeButton} aria-label="סגור">
-            ×
-          </button>
         </div>
 
         <div className={styles.content}>
@@ -189,27 +198,50 @@ export default function ProfilePage() {
                       switch (activity.activity_type) {
                         case 'phone_call':
                           return (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                            </svg>
+                            <Image
+                              src="/icons/phone_call.svg"
+                              alt="Phone call"
+                              width={16}
+                              height={16}
+                              className={styles.activityIconImage}
+                            />
                           );
                         case 'attendance_marked':
                           return (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                              <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
+                            <Image
+                              src="/icons/attendace_marked.svg"
+                              alt="Attendance marked"
+                              width={16}
+                              height={16}
+                            />
                           );
                         case 'status_update':
                           return (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                            </svg>
+                            <Image
+                              src="/icons/status_update.svg"
+                              alt="Status update"
+                              width={16}
+                              height={16}
+                              className={styles.activityIconImage}
+                            />
                           );
                         default:
                           return null;
                       }
                     };
+
+                    // Parse status update description to separate main text from update details
+                    const isStatusUpdate = activity.activity_type === 'status_update';
+                    let mainDescription = activity.description;
+                    let updateDetails = '';
+                    
+                    if (isStatusUpdate) {
+                      const colonIndex = activity.description.indexOf(':');
+                      if (colonIndex !== -1) {
+                        mainDescription = activity.description.substring(0, colonIndex + 1);
+                        updateDetails = activity.description.substring(colonIndex + 1).trim();
+                      }
+                    }
 
                     return (
                       <div key={activity.id || index} className={styles.activityItem}>
@@ -218,7 +250,10 @@ export default function ProfilePage() {
                           {getActivityIcon()}
                         </div>
                         <div className={styles.activityContent}>
-                          <div className={styles.activityDescription}>{activity.description}</div>
+                          <div className={styles.activityDescription}>{mainDescription}</div>
+                          {isStatusUpdate && updateDetails && (
+                            <div className={styles.statusUpdateDetails}>{updateDetails}</div>
+                          )}
                         </div>
                       </div>
                     );

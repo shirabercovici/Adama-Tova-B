@@ -3,7 +3,7 @@
   width: 100%;
   height: 100%;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   border-radius: 0;
   background: var(--Blue-Adamami, #4D58D8);
@@ -52,6 +52,31 @@
   z-index: 10;
 }
 
+.closeXButton {
+  background: transparent;
+  border: none;
+  color: var(--color-background);
+  font-size: 2rem;
+  font-weight: 300;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: transform 0.1s;
+}
+
+.closeXButton:hover {
+  transform: scale(1.1);
+}
+
+.closeXButton:active {
+  transform: scale(0.95);
+}
+
 .notch {
   width: 96px;
   height: 24px;
@@ -86,19 +111,6 @@
   font-weight: 380;
 }
 
-.closeButton {
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 1.5rem;
-  cursor: pointer;
-  padding: 0;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
 .content {
   width: 100%;
@@ -108,7 +120,10 @@
   flex-direction: column;
   gap: 32px;
   overflow-y: auto;
-  padding-bottom: 160px; /* Space for sticky buttons */
+  overflow-x: hidden;
+  padding-bottom: 250px; /* Space for sticky buttons - enough to scroll above them */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  max-height: calc(100vh - 200px); /* Leave space for header and buttons */
 }
 
 .section {
@@ -195,6 +210,13 @@
   flex-shrink: 0;
   width: 20px;
   order: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.activityIconImage {
+  filter: brightness(0) invert(1); /* Makes SVG white to match the color scheme */
 }
 
 .activityContent {
@@ -213,6 +235,15 @@
   color: var(--color-background);
   font-weight: 400;
   line-height: 1.4;
+}
+
+.statusUpdateDetails {
+  font-size: 1.25rem;
+  color: var(--color-background);
+  font-weight: 300;
+  line-height: 1.4;
+  margin-top: 4px;
+  opacity: 0.9;
 }
 
 .activityDate {
