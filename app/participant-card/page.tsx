@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import BackButton from '../../components/BackButton';
 import { createClient } from '@/lib/supabase/client';
 import { Participant } from '@/app/participants/types';
+import { logActivity } from '@/lib/activity-logger';
 
 export default function ParticipantCardPage() {
   const searchParams = useSearchParams();
@@ -84,6 +85,26 @@ export default function ParticipantCardPage() {
 
     if (id) {
       await supabase.from('participants').update({ updates: JSON.stringify(updatedActivities) }).eq('id', id);
+      
+      // Log activity
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        const { data: dbUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', authUser.email)
+          .single();
+        
+        if (dbUser && participant) {
+          await logActivity({
+            user_id: dbUser.id,
+            activity_type: 'status_update',
+            participant_id: id,
+            participant_name: participant.full_name,
+            description: `עדכון סטטוס ${participant.full_name}: ${newUpdateText}`,
+          });
+        }
+      }
     }
   };
 
@@ -116,6 +137,28 @@ export default function ParticipantCardPage() {
       body: JSON.stringify({ id, last_attendance: newAttendance }),
     });
     setParticipant({ ...participant, last_attendance: newAttendance });
+    
+    // Log activity
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      const { data: dbUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', authUser.email)
+        .single();
+      
+      if (dbUser) {
+        await logActivity({
+          user_id: dbUser.id,
+          activity_type: newAttendance ? 'attendance_marked' : 'attendance_removed',
+          participant_id: id,
+          participant_name: participant.full_name,
+          description: newAttendance 
+            ? `נוכחות ${participant.full_name}`
+            : `הוסרה נוכחות ${participant.full_name}`,
+        });
+      }
+    }
   };
 
   const attendedToday = participant?.last_attendance === new Date().toISOString().split("T")[0];
@@ -213,7 +256,31 @@ export default function ParticipantCardPage() {
         <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f9f9f9', padding: '10px', borderRadius: '8px' }}>
           <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#333' }}>שיחת טלפון אחרונה: <span style={{ fontWeight: 'normal', marginRight: '5px', color: '#4D58D8' }}>{getLastPhoneCallText()}</span></div>
           {participant?.phone && (
-            <a href={`tel:${participant.phone}`} style={{ backgroundColor: '#4D58D8', color: 'white', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <a 
+              href={`tel:${participant.phone}`} 
+              onClick={async () => {
+                // Log phone call activity
+                const { data: { user: authUser } } = await supabase.auth.getUser();
+                if (authUser) {
+                  const { data: dbUser } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', authUser.email)
+                    .single();
+                  
+                  if (dbUser && participant) {
+                    await logActivity({
+                      user_id: dbUser.id,
+                      activity_type: 'phone_call',
+                      participant_id: participant.id,
+                      participant_name: participant.full_name,
+                      description: `שיחת טלפון ${participant.full_name}`,
+                    });
+                  }
+                }
+              }}
+              style={{ backgroundColor: '#4D58D8', color: 'white', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
             </a>
           )}

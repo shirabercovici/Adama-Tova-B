@@ -21,6 +21,8 @@ export default function ProfilePage() {
     return null;
   });
   const [loading, setLoading] = useState(!userData); // Only show loading if no cached data
+  const [activities, setActivities] = useState<any[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const hasFetchedProfileRef = useRef(false);
@@ -57,6 +59,23 @@ export default function ProfilePage() {
         // Save to localStorage for next time
         if (typeof window !== 'undefined') {
           localStorage.setItem('userProfileData', JSON.stringify(finalUserData));
+        }
+
+        // Fetch all activities for this user
+        if (dbUser?.id) {
+          try {
+            const activitiesResponse = await fetch(`/api/activities?user_id=${dbUser.id}&limit=50`);
+            if (activitiesResponse.ok) {
+              const activitiesData = await activitiesResponse.json();
+              setActivities(activitiesData.activities || []);
+            }
+          } catch (err) {
+            console.error("Error fetching activities:", err);
+          } finally {
+            setActivitiesLoading(false);
+          }
+        } else {
+          setActivitiesLoading(false);
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
@@ -148,6 +167,71 @@ export default function ProfilePage() {
               </div>
             </section>
           )}
+
+          {/* Section: Activity History */}
+          <section>
+            <h3 className="text-gray-400 text-sm mb-2 px-2">היסטוריית הפעילות שלי</h3>
+            <div className="border-t border-gray-800">
+              {activitiesLoading ? (
+                <div className="flex justify-center items-center p-8">
+                  <div className="text-gray-400">טוען פעילויות...</div>
+                </div>
+              ) : activities.length === 0 ? (
+                <div className="flex justify-center items-center p-8">
+                  <div className="text-gray-400">אין פעילויות עדיין</div>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {activities.map((activity, index) => {
+                    const activityDate = new Date(activity.created_at);
+                    const formattedDate = activityDate.toLocaleDateString("he-IL", {
+                      day: "numeric",
+                      month: "numeric",
+                    });
+
+                    // Get icon based on activity type
+                    const getActivityIcon = () => {
+                      switch (activity.activity_type) {
+                        case 'phone_call':
+                          return (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                            </svg>
+                          );
+                        case 'attendance_marked':
+                          return (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                          );
+                        case 'status_update':
+                          return (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            </svg>
+                          );
+                        default:
+                          return null;
+                      }
+                    };
+
+                    return (
+                      <div key={activity.id || index} className="p-3 flex items-start gap-3">
+                        <div className="text-[#4D58D8] mt-0.5 flex-shrink-0">
+                          {getActivityIcon()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-gray-800">{activity.description}</div>
+                          <div className="text-xs text-gray-500 mt-1">{formattedDate}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
 
           {/* Sign Out Button */}
           <div className="pt-10 pb-20 text-center">
