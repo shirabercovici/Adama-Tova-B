@@ -77,15 +77,6 @@ export default function ManageVolunteersPage() {
         return (
             <main className={styles.main} dir="rtl">
                 <div className={styles.container}>
-                    <div className={styles.backButtonWrapper}>
-                        <button 
-                            onClick={() => router.back()}
-                            className={styles.closeXButton}
-                            aria-label="סגור"
-                        >
-                            ×
-                        </button>
-                    </div>
                     <div className={styles.loadingContainer}>
                         <div className={styles.loadingText}>טוען...</div>
                     </div>
@@ -97,16 +88,6 @@ export default function ManageVolunteersPage() {
     return (
         <main className={styles.main} dir="rtl">
             <div className={styles.container}>
-                <div className={styles.backButtonWrapper}>
-                    <button 
-                        onClick={() => router.back()}
-                        className={styles.closeXButton}
-                        aria-label="סגור"
-                    >
-                        ×
-                    </button>
-                </div>
-
                 {/* Header with Search Bar and Add Button */}
                 <div className={styles.header}>
                     <SearchBarWithAdd
@@ -114,6 +95,7 @@ export default function ManageVolunteersPage() {
                         searchValue={search}
                         onSearchChange={setSearch}
                         onAddClick={() => router.push('/add-volunteer')}
+                        onBackClick={() => router.back()}
                         addButtonLabel="הוסף איש צוות"
                         searchBarLabel="חיפוש צוות"
                     />
