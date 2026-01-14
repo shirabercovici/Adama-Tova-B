@@ -27,8 +27,12 @@ export default function ParticipantsPage() {
   const [isTasksOpen, setIsTasksOpen] = useState(false);
   const [isDoneTasksOpen, setIsDoneTasksOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [userInitials, setUserInitials] = useState<string>('א');
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isStatusUpdatesOpen, setIsStatusUpdatesOpen] = useState(false);
+  const [statusUpdates, setStatusUpdates] = useState<any[]>([]);
+  const isFetchingStatusUpdatesRef = useRef(false);
   const fetchCountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFetchingTasksRef = useRef(false);
   const isFetchingCountRef = useRef(false);
@@ -218,6 +222,42 @@ export default function ParticipantsPage() {
     return tasksFetchPromiseRef.current;
   }, []);
 
+  // Helper function to check if user is a manager
+  const isManager = useCallback(() => {
+    return userRole === "מנהל.ת" || userRole === "מנהל" || userRole === "מנהלת" || (userRole && userRole.includes("מנהל"));
+  }, [userRole]);
+
+  // Fetch status updates for managers
+  const fetchStatusUpdates = useCallback(async () => {
+    // Only fetch if user is a manager
+    if (!isManager()) {
+      return;
+    }
+
+    // Prevent duplicate concurrent requests
+    if (isFetchingStatusUpdatesRef.current) {
+      return;
+    }
+
+    isFetchingStatusUpdatesRef.current = true;
+
+    try {
+      const response = await fetch("/api/activities?activity_type=status_update&limit=50", {
+        cache: 'no-store'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.activities) {
+          setStatusUpdates(data.activities);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching status updates:", err);
+    } finally {
+      isFetchingStatusUpdatesRef.current = false;
+    }
+  }, [isManager]);
+
   // Update initials when user data changes (in case data loads later)
   useEffect(() => {
     if (user) {
@@ -257,12 +297,15 @@ export default function ParticipantsPage() {
           if (authUser) {
             const { data: dbUser } = await supabase
               .from('users')
-              .select('first_name, last_name, email')
+              .select('first_name, last_name, email, role')
               .eq('email', authUser.email)
               .single();
 
             if (dbUser) {
               setUser(dbUser);
+              if (dbUser.role) {
+                setUserRole(dbUser.role);
+              }
               const firstName = (dbUser.first_name || '').trim();
               const lastName = (dbUser.last_name || '').trim();
 
@@ -310,11 +353,13 @@ export default function ParticipantsPage() {
     // Cancel previous request if it exists
     if (searchAbortControllerRef.current) {
       searchAbortControllerRef.current.abort();
+      searchAbortControllerRef.current = null;
     }
 
-    // Prevent duplicate concurrent requests
+    // Reset fetching flag if it's stuck
     if (isFetchingParticipantsRef.current) {
-      return;
+      // If we've been fetching for too long, reset
+      isFetchingParticipantsRef.current = false;
     }
 
     // Create new abort controller for this request
@@ -327,7 +372,7 @@ export default function ParticipantsPage() {
     // Use functional update to check current state without dependency
     setParticipants((currentParticipants) => {
       if (currentParticipants.length === 0) {
-        setLoading(true);
+    setLoading(true);
       }
       return currentParticipants;
     });
@@ -393,27 +438,37 @@ export default function ParticipantsPage() {
       clearTimeout(fetchParticipantsTimeoutRef.current);
     }
 
-    // Only fetch if search state actually changed
-    if (
-      debouncedSearch === lastFetchedSearchRef.current &&
-      isSearchActive === lastFetchedIsSearchActiveRef.current
-    ) {
+    // If search is not active, clear participants and return
+    if (!isSearchActive) {
+      lastFetchedIsSearchActiveRef.current = false;
       return;
     }
 
-    // Reduced debounce for faster response
-    fetchParticipantsTimeoutRef.current = setTimeout(() => {
+    // If search just became active, fetch immediately
+    if (isSearchActive && !lastFetchedIsSearchActiveRef.current) {
+      lastFetchedIsSearchActiveRef.current = true;
       lastFetchedSearchRef.current = debouncedSearch;
-      lastFetchedIsSearchActiveRef.current = isSearchActive;
+      // Reset fetching flag to ensure we can fetch
+      isFetchingParticipantsRef.current = false;
       fetchParticipantsDebounced();
-    }, 10); // Reduced from 50ms to 10ms
+      return;
+    }
+
+    // Only fetch if search query changed
+    if (debouncedSearch !== lastFetchedSearchRef.current) {
+      lastFetchedSearchRef.current = debouncedSearch;
+      // Small debounce for search query changes
+      fetchParticipantsTimeoutRef.current = setTimeout(() => {
+        fetchParticipantsDebounced();
+      }, 10);
+    }
 
     return () => {
       if (fetchParticipantsTimeoutRef.current) {
         clearTimeout(fetchParticipantsTimeoutRef.current);
       }
     };
-  }, [fetchParticipantsDebounced, debouncedSearch, isSearchActive]);
+  }, [isSearchActive, debouncedSearch, fetchParticipantsDebounced]);
 
   // Fetch initial data only once on mount
   useEffect(() => {
@@ -439,21 +494,30 @@ export default function ParticipantsPage() {
           fetchTasks()
         ]);
 
+        // Fetch status updates if user is a manager
+        if (isMounted) {
+          await fetchStatusUpdates();
+        }
+
         // Fetch user data from users table
         if (isMounted) {
-          const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
 
           if (authUser && isMounted) {
             // Fetch user data from users table
             const { data: dbUser, error: dbError } = await supabase
-              .from('users')
-              .select('first_name, last_name, email')
-              .eq('email', authUser.email)
-              .single();
-
+          .from('users')
+              .select('first_name, last_name, email, role')
+          .eq('email', authUser.email)
+          .single();
+        
             // Use dbUser if available, otherwise fallback to authUser
-            const userData = dbUser || authUser;
-            setUser(userData);
+        const userData = dbUser || authUser;
+        setUser(userData);
+            // Set user role
+            if (dbUser?.role) {
+              setUserRole(dbUser.role);
+            }
 
             // Extract initials from first_name and last_name from users table
             // Priority: dbUser (from users table) > userData
@@ -478,7 +542,7 @@ export default function ParticipantsPage() {
 
             // Only update if we have valid initials (not default 'א') and it's different from current
             if (initials !== 'א' && initials !== userInitials) {
-              setUserInitials(initials);
+        setUserInitials(initials);
               // Save to localStorage for persistence across page navigations
               if (typeof window !== 'undefined') {
                 localStorage.setItem('userInitials', initials);
@@ -606,13 +670,13 @@ export default function ParticipantsPage() {
 
       // Only refetch if not already fetching to get the latest data from server
       if (!isFetchingTasksRef.current) {
-        fetchTasks();
+      fetchTasks();
       }
     } catch (err) {
       console.error("Error toggling task:", err);
       // Revert optimistic update by re-fetching (only if not already fetching)
       if (!isFetchingTasksRef.current) {
-        fetchTasks();
+      fetchTasks();
       }
     }
   };
@@ -722,12 +786,12 @@ export default function ParticipantsPage() {
 
 
   return (
-    <motion.main
-      className={styles.container}
-      initial={{ opacity: 0, x: 50 }} // מתחיל קצת מהצד ובשקיפות
-      animate={{ opacity: 1, x: 0 }}  // חוזר למרכז ונהיה גלוי
-      transition={{ duration: 0.6, ease: "easeOut" }} // תנועה חלקה
-    >
+      <motion.main 
+    className={styles.container}
+    initial={{ opacity: 0, x: 50 }} // מתחיל קצת מהצד ובשקיפות
+    animate={{ opacity: 1, x: 0 }}  // חוזר למרכז ונהיה גלוי
+    transition={{ duration: 0.6, ease: "easeOut" }} // תנועה חלקה
+      >
       {/* Navbar */}
       <div className={styles.navbarWrapper}>
         {/* <Navbar /> */}
@@ -735,7 +799,7 @@ export default function ParticipantsPage() {
       {/* Purple Header */}
       <div className={styles.purpleHeader}>
         <div className={styles.headerTop}>
-          <div
+          <div 
             className={styles.headerButton}
             onClick={() => router.push('/profile')}
             style={{ cursor: 'pointer' }}
@@ -743,7 +807,7 @@ export default function ParticipantsPage() {
           >
             {isHydrated ? userInitials : 'א'}
           </div>
-          <div
+          <div 
             className={styles.logo}
             onClick={() => router.push('/participants')}
             style={{ cursor: 'pointer' }}
@@ -761,14 +825,14 @@ export default function ParticipantsPage() {
         <div className={`${styles.headerCenter} ${isSearchActive ? styles.hidden : ''}`}>
           {!isSearchActive && !isTasksOpen && (
             <>
-              <div className={styles.headerNumber}>{presentTodayCount}</div>
+              <div className={styles.headerNumber} suppressHydrationWarning>{presentTodayCount}</div>
               <div className={styles.headerSubtitle}>פונים נוכחים במתחם</div>
             </>
           )}
         </div>
         <div className={styles.headerSearchBar}>
           <SearchBarWithAdd
-            placeholder="חיפוש פונה"
+              placeholder="חיפוש פונה"
             searchValue={search}
             onSearchChange={setSearch}
             onAddClick={() => router.push("/new-participant")}
@@ -777,6 +841,7 @@ export default function ParticipantsPage() {
             isSearchActive={isSearchActive}
             onSearchActiveChange={setIsSearchActive}
             onCloseSearch={handleCloseSearch}
+            hasResults={participants.length > 0}
           />
         </div>
       </div>
@@ -793,13 +858,8 @@ export default function ParticipantsPage() {
         </div>
       )}
 
-      {/* Empty */}
-      {!loading && !error && isSearchActive && participants.length === 0 && (
-        <div className={styles.empty}>לא נמצאו פונים</div>
-      )}
-
       {/* Participants List - Show when search is active */}
-      {!loading && !error && isSearchActive && participants.length > 0 && (
+      {!loading && !error && isSearchActive && (
         <div className={styles.participantsList}>
           {/* List Header */}
           <div className={styles.listHeader}>
@@ -811,13 +871,20 @@ export default function ParticipantsPage() {
             </div>
           </div>
 
-          {participants.map((participant) => {
+          {participants.length > 0 ? participants.map((participant) => {
             const attendedToday = isToday(participant.last_attendance);
 
             return (
               <div
                 key={participant.id}
                 className={`${styles.participantCard} ${participant.is_archived ? styles.archived : ""}`}
+                onClick={(e) => {
+                  // Only navigate if click was not on checkbox
+                  if (!(e.target as HTMLElement).closest(`.${styles.attendanceCheckboxContainer}`)) {
+                    router.push(`/participant-card?id=${participant.id}`);
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
               >
                 {/* Attendance Checkbox Container */}
                 <div className={styles.attendanceCheckboxContainer}>
@@ -826,7 +893,11 @@ export default function ParticipantsPage() {
                       type="checkbox"
                       checked={attendedToday}
                       onChange={(e) => {
+                        e.stopPropagation();
                         handleMarkAttendance(participant.id, participant.last_attendance);
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
                       }}
                       className={styles.checkbox}
                     />
@@ -839,8 +910,6 @@ export default function ParticipantsPage() {
                 {/* Name, Bereavement Detail and Phone */}
                 <div
                   className={styles.participantInfo}
-                  onClick={() => router.push(`/participant-card?id=${participant.id}`)}
-                  style={{ cursor: 'pointer' }}
                 >
                   <div className={styles.participantName}>{participant.full_name}</div>
                   {(participant.phone || participant.bereavement_detail) && (
@@ -859,29 +928,96 @@ export default function ParticipantsPage() {
                 </div>
               </div>
             );
-          })}
+          }) : (
+            <div className={styles.empty}>לא נמצאו פונים</div>
+          )}
+        </div>
+      )}
+
+      {/* Status Updates Drawer - Show only for managers when NOT searching */}
+      {!isSearchActive && isManager() && (
+        <div className={`${styles.statusUpdatesDrawer} ${isStatusUpdatesOpen ? styles.open : styles.closed}`}>
+          <div className={styles.tasksLine}>
+            <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+              <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <div className={styles.tasksHandle} onClick={() => setIsStatusUpdatesOpen(!isStatusUpdatesOpen)}>
+            <div className={styles.tasksTitle}>
+              <div className={styles.tasksArrow}>
+                {isStatusUpdatesOpen ? (
+                  <svg width="21" height="17" viewBox="0 0 21 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1.50024 1.50024L8.78526 13.6419C9.56207 14.9366 11.4384 14.9366 12.2152 13.6419L19.5002 1.50024" stroke="#4D58D8" strokeWidth="3" strokeLinecap="round"/>
+                  </svg>
+                ) : (
+                  <svg width="21" height="17" viewBox="0 0 21 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19.5002 14.6127L12.2152 2.47098C11.4384 1.1763 9.56206 1.1763 8.78526 2.47098L1.50024 14.6127" stroke="#4D58D8" strokeWidth="3" strokeLinecap="round"/>
+                  </svg>
+                )}
+              </div>
+              <span className={styles.tasksTitleText}>עדכוני סטטוס</span>
+            </div>
+          </div>
+
+          <div className={styles.tasksContent}>
+            <ul className={styles.taskList}>
+              {statusUpdates.length > 0 ? (
+                statusUpdates.map((update, index) => {
+                  const colonIndex = update.description.indexOf(':');
+                  const participantName = colonIndex !== -1 ? update.description.substring(0, colonIndex).replace('עדכון סטטוס ', '') : '';
+                  const updateText = colonIndex !== -1 ? update.description.substring(colonIndex + 1).trim() : update.description;
+                  const updateDate = new Date(update.created_at);
+                  const formattedDate = `${updateDate.getDate()}/${updateDate.getMonth() + 1}`;
+                  
+                  return (
+                    <li key={update.id || index} className={styles.statusUpdateItem}>
+                      <div className={styles.statusUpdateContent}>
+                        <div className={styles.statusUpdateHeader}>
+                          <span className={styles.statusUpdateParticipant}>{participantName}</span>
+                          <span className={styles.statusUpdateDate}>{formattedDate}</span>
+                        </div>
+                        <div className={styles.statusUpdateText}>{updateText}</div>
+                      </div>
+                    </li>
+                  );
+                })
+              ) : (
+                <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
+                  <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין עדכוני סטטוס</span>
+                </li>
+              )}
+            </ul>
+          </div>
         </div>
       )}
 
       {/* Tasks Drawer - Show only when NOT searching */}
       {!isSearchActive && (
         <div className={`${styles.tasksDrawer} ${isTasksOpen ? styles.open : styles.closed}`}>
-          <div className={styles.tasksHandle} onClick={() => setIsTasksOpen(!isTasksOpen)}>
+          <div className={styles.tasksLine}>
+            <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+              <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <div className={`${styles.tasksHandle} ${isTasksOpen ? styles.open : ''}`} onClick={() => setIsTasksOpen(!isTasksOpen)}>
             <div className={styles.tasksTitle}>
-              <span>יש לך זמן לדבר?</span>
-              <svg
-                className={`${styles.chevron} ${isTasksOpen ? styles.open : ''}`}
-                width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              >
+              <div className={styles.tasksArrow}>
                 {isTasksOpen ? (
-                  <polyline points="18 15 12 9 6 15"></polyline>
+                  <svg width="21" height="17" viewBox="0 0 21 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1.50024 1.50024L8.78526 13.6419C9.56207 14.9366 11.4384 14.9366 12.2152 13.6419L19.5002 1.50024" stroke="#4D58D8" strokeWidth="3" strokeLinecap="round"/>
+                  </svg>
                 ) : (
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                )}
+                  <svg width="21" height="17" viewBox="0 0 21 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19.5002 14.6127L12.2152 2.47098C11.4384 1.1763 9.56206 1.1763 8.78526 2.47098L1.50024 14.6127" stroke="#4D58D8" strokeWidth="3" strokeLinecap="round"/>
               </svg>
+                )}
+              </div>
+              <span className={styles.tasksTitleText}>מטלות</span>
             </div>
           </div>
-
+          {isTasksOpen && (
+            <div className={styles.tasksDivider}></div>
+          )}
           <div className={styles.tasksContent}>
             <ul className={styles.taskList}>
               {tasks.filter(t => t.status !== 'done').map(task => (
@@ -891,112 +1027,165 @@ export default function ParticipantsPage() {
                       type="checkbox"
                       className={styles.taskCheckbox}
                       checked={task.status === 'done'}
-                      onChange={() => handleTaskToggle(task)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleTaskToggle(task);
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
                     />
                     <span className={styles.taskText}>{task.title}</span>
                   </div>
                   <div className={styles.taskItemAction}>
+                    <div className={styles.taskItemVerticalLine}>
+                      <svg width="1" height="3.6875rem" viewBox="0 0 1 59" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                        <line x1="0.5" y1="0" x2="0.5" y2="59" stroke="#4D58D8" strokeWidth="1"/>
+                      </svg>
+                    </div>
+                    <div className={styles.phoneIconWrapper}>
                     {task.participant_id && (() => {
                       const participant = participants.find(p => p.id === task.participant_id);
                       const phoneNumber = participant?.phone;
-                      if (phoneNumber) {
-                        // Remove any non-digit characters except + for international numbers
-                        const cleanPhone = phoneNumber.replace(/[^\d+]/g, '');
+                      const cleanPhone = phoneNumber ? phoneNumber.replace(/[^\d+]/g, '') : '';
+                      
+                      const phoneIcon = (
+                        <svg 
+                          width="27" 
+                          height="27" 
+                          viewBox="0 0 27 27" 
+                          fill="none" 
+                          xmlns="http://www.w3.org/2000/svg"
+                          style={{ 
+                            width: '1.5rem', 
+                            height: '1.5rem',
+                            display: 'block'
+                          }}
+                        >
+                          <path 
+                            d="M10.4756 18.8141C16.1083 24.2491 19.3586 24.9427 21.5821 25.0403C22.7576 25.092 23.9128 24.5955 24.7297 23.7488C26.6493 21.7595 25.9475 18.4805 23.2645 17.8146C21.2482 17.3141 19.1218 17.0088 17.7467 17.4284C14.4358 18.4387 10.0979 15.1873 10.7305 10.6582C10.9661 8.97128 10.7029 7.06235 10.2799 5.33084C9.62796 2.66291 6.3765 2.09745 4.46945 4.0738C3.61644 4.9578 3.17604 6.19369 3.35087 7.40963C3.70209 9.85248 4.73946 13.2792 10.4756 18.8141Z" 
+                            stroke="#4D58D8" 
+                            strokeWidth="2"
+                          />
+                        </svg>
+                      );
+
+                      if (cleanPhone) {
                         return (
                           <a
                             href={`tel:${cleanPhone}`}
                             onClick={async (e) => {
                               e.stopPropagation();
-                              // Log phone call activity
-                              const { data: { user: authUser } } = await supabase.auth.getUser();
-                              if (authUser) {
-                                const { data: dbUser } = await supabase
-                                  .from('users')
-                                  .select('id')
-                                  .eq('email', authUser.email)
-                                  .single();
-                                
-                                if (dbUser && participant) {
-                                  await logActivity({
-                                    user_id: dbUser.id,
-                                    activity_type: 'phone_call',
-                                    participant_id: participant.id,
-                                    participant_name: participant.full_name,
-                                    description: `שיחת טלפון ${participant.full_name}`,
-                                  });
+                              (async () => {
+                                try {
+                                  const { data: { user: authUser } } = await supabase.auth.getUser();
+                                  if (authUser) {
+                                    const { data: dbUser } = await supabase
+                                      .from('users')
+                                      .select('id')
+                                      .eq('email', authUser.email)
+                                      .single();
+                                    
+                                    if (dbUser && participant) {
+                                      await logActivity({
+                                        user_id: dbUser.id,
+                                        activity_type: 'phone_call',
+                                        participant_id: participant.id,
+                                        participant_name: participant.full_name,
+                                        description: `שיחת טלפון ${participant.full_name}`,
+                                      });
+                                    }
+                                  }
+                                } catch (error) {
+                                  console.error('Error logging phone call:', error);
                                 }
-                              }
-                              // On desktop, try to open phone app or show number
-                              if (typeof window !== 'undefined' && !/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                                // Desktop - could show a prompt or copy to clipboard
-                                // For now, just let the tel: link work (some systems have phone apps)
-                              }
+                              })();
                             }}
                             className={styles.phoneLink}
                             aria-label={`התקשר ל-${participant?.full_name || 'פונה'}`}
                           >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                            </svg>
+                            {phoneIcon}
                           </a>
                         );
                       }
-                      return (
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4D58D8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.3 }}>
-                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                        </svg>
-                      );
+                      return <div className={styles.phoneLink}>{phoneIcon}</div>;
                     })()}
+                    </div>
+                  </div>
+                  <div className={styles.taskItemHorizontalLine}>
+                    <svg width="23.75rem" height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#4D58D8" strokeWidth="1"/>
+                    </svg>
                   </div>
                 </li>
               ))}
             </ul>
-
-            {/* Done Section Header */}
-            <div className={styles.doneSection}>
-              <div className={styles.doneHeader} onClick={() => setIsDoneTasksOpen(!isDoneTasksOpen)}>
-                <span>בוצע</span>
-                <svg
-                  className={`${styles.chevron} ${isDoneTasksOpen ? styles.open : ''}`}
-                  width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                >
-                  <polyline points="6 9 12 15 18 9"></polyline>
+            
+            {/* Horizontal line after last task */}
+            {tasks.filter(t => t.status !== 'done').length > 0 && (
+              <div className={styles.tasksEndLine}>
+                <svg width="23.75rem" height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#4D58D8" strokeWidth="1"/>
                 </svg>
               </div>
-              {/* Done tasks list */}
-              {isDoneTasksOpen && (
-                <ul className={styles.taskList}>
-                  {tasks.filter(t => t.status === 'done').map(task => {
-                    const doneByName = task.done_by_user
-                      ? `${task.done_by_user.first_name || ''} ${task.done_by_user.last_name || ''}`.trim()
-                      : null;
-                    return (
-                      <li key={task.id} className={styles.taskItem} style={{ opacity: 0.7 }}>
-                        <div className={styles.taskItemContent}>
-                          <input
-                            type="checkbox"
-                            className={styles.taskCheckbox}
-                            checked={task.status === 'done'}
-                            onChange={() => handleTaskToggle(task)}
-                          />
-                          <span className={styles.taskText} style={{ textDecoration: 'line-through' }}>{task.title}</span>
-                        </div>
-                        {doneByName && (
-                          <div className={styles.taskDoneBy}>
-                            <span>בוצע ע&quot;י {doneByName}</span>
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
-                  {tasks.filter(t => t.status === 'done').length === 0 && (
-                    <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
-                      <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין משימות שבוצעו</span>
-                    </li>
-                  )}
-                </ul>
-              )}
+            )}
+            
+            {/* Spacing */}
+            <div className={styles.tasksSpacing}></div>
+            
+            {/* Done Section Divider */}
+            <div className={styles.doneSectionDivider}>
+              <svg width="0" height="27.5rem" viewBox="0 0 0 440" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="0" y1="0" x2="440" y2="0" stroke="var(--Blue-Adamami, #4D58D8)" strokeWidth="1"/>
+              </svg>
             </div>
+
+            {/* Done Section */}
+            <div className={styles.doneSection}>
+              {/* Done tasks list */}
+              <ul className={styles.taskList}>
+                {tasks.filter(t => t.status === 'done').map(task => {
+                  const doneByName = task.done_by_user
+                    ? `${task.done_by_user.first_name || ''} ${task.done_by_user.last_name || ''}`.trim()
+                    : null;
+                  return (
+                    <li key={task.id} className={styles.taskItem} style={{ opacity: 0.7 }}>
+                      <div className={styles.taskItemContent}>
+                        <input
+                          type="checkbox"
+                          className={styles.taskCheckbox}
+                          checked={task.status === 'done'}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleTaskToggle(task);
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        />
+                        <span className={styles.taskText} style={{ textDecoration: 'line-through' }}>{task.title}</span>
+                      </div>
+                      {doneByName && (
+                        <div className={styles.taskDoneBy}>
+                          <span>בוצע ע&quot;י {doneByName}</span>
+                        </div>
+                      )}
+                      <div className={styles.taskItemHorizontalLine}>
+                        <svg width="23.75rem" height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#4D58D8" strokeWidth="1"/>
+                        </svg>
+                      </div>
+                    </li>
+                  );
+                })}
+                {tasks.filter(t => t.status === 'done').length === 0 && (
+                  <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
+                    <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין משימות שבוצעו</span>
+                  </li>
+                )}
+              </ul>
+            </div>
+            <div className={styles.tasksBottomLine}></div>
           </div>
         </div>
       )}
