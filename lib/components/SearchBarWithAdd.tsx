@@ -93,21 +93,32 @@ export default function SearchBarWithAdd({
           className={styles.searchInput}
           aria-label={searchBarLabel}
         />
-        {/* Back arrow inside search bar */}
+        {/* Search icon / Back arrow inside search bar */}
         <button
           type="button"
           onClick={handleBackArrow}
           className={styles.backArrowButton}
-          aria-label={onBackClick ? "חזור" : (isSearchActive ? "סגור חיפוש" : "חזור")}
+          aria-label={onBackClick ? "חזור" : (isSearchActive ? "סגור חיפוש" : "חיפוש")}
         >
-          <Image
-            src="/icons/right_arrow.svg"
-            alt={isSearchActive ? "סגור חיפוש" : "חזור"}
-            width={24}
-            height={24}
-            className={styles.backArrowIcon}
-            unoptimized
-          />
+          {isSearchActive ? (
+            <Image
+              src="/icons/right_arrow.svg"
+              alt="סגור חיפוש"
+              width={24}
+              height={24}
+              className={styles.backArrowIcon}
+              unoptimized
+            />
+          ) : (
+            <Image
+              src="/icons/search icon.svg"
+              alt="חיפוש"
+              width={23}
+              height={24}
+              className={styles.backArrowIcon}
+              unoptimized
+            />
+          )}
         </button>
       </div>
 
