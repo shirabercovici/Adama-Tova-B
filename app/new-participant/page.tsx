@@ -191,7 +191,7 @@ export default function NewParticipantPage() {
                         </div>
 
                         <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', width: '100%', gap: '0.625rem' }}>
-                            <label style={{ display: 'block', fontFamily: 'EditorSans_PRO', fontSize: '1.5rem', fontWeight: 'normal', margin: 0, color: 'var(--color-primary)', textAlign: 'right' }}>מס' טלפון*</label>
+                            <label style={{ display: 'block', fontFamily: 'EditorSans_PRO', fontSize: '1.5rem', fontWeight: 'normal', margin: 0, color: 'var(--color-primary)', textAlign: 'right' }}>מס&apos; טלפון*</label>
                             <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', borderRadius: 0, fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', fontStyle: 'italic', color: '#949ADD', textAlign: 'right' }} />
                         </div>
 
