@@ -748,7 +748,7 @@ export default function ParticipantsPage() {
         <div className={`${styles.headerCenter} ${isSearchActive ? styles.hidden : ''}`}>
           {!isSearchActive && !isTasksOpen && (
             <>
-              <div className={styles.headerNumber}>{presentTodayCount}</div>
+              <div className={styles.headerNumber} suppressHydrationWarning>{presentTodayCount}</div>
               <div className={styles.headerSubtitle}>פונים נוכחים במתחם</div>
             </>
           )}
@@ -915,19 +915,19 @@ export default function ParticipantsPage() {
       {/* Tasks Drawer - Show only when NOT searching */}
       {!isSearchActive && (
         <div className={`${styles.tasksDrawer} ${isTasksOpen ? styles.open : styles.closed}`}>
+          <div className={styles.tasksLine}>
+            <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+              <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round"/>
+            </svg>
+          </div>
           <div className={styles.tasksHandle} onClick={() => setIsTasksOpen(!isTasksOpen)}>
             <div className={styles.tasksTitle}>
-              <span>יש לך זמן לדבר?</span>
-              <svg
-                className={`${styles.chevron} ${isTasksOpen ? styles.open : ''}`}
-                width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              >
-                {isTasksOpen ? (
-                  <polyline points="18 15 12 9 6 15"></polyline>
-                ) : (
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                )}
-              </svg>
+              <div className={styles.tasksArrow}>
+                <svg width="21" height="17" viewBox="0 0 21 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M19.5002 14.6127L12.2152 2.47098C11.4384 1.1763 9.56206 1.1763 8.78526 2.47098L1.50024 14.6127" stroke="#4D58D8" strokeWidth="3" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <span className={styles.tasksTitleText}>מטלות</span>
             </div>
           </div>
 

@@ -582,7 +582,8 @@
   }
   
   .tasksDrawer {
-    max-width: 600px;
+    max-width: 100vw;
+    width: 100vw;
   }
 }
 
@@ -595,8 +596,10 @@
   right: 0;
   background-color: #FFFCE5;
   /* Cream background like the rest */
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   transition: height 0.3s ease-in-out, transform 0.3s ease-in-out;
   z-index: 100;
@@ -606,11 +609,12 @@
   width: 100vw;
   max-width: 100vw;
   margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
 .tasksDrawer.closed {
-  height: 60px;
+  height: 5.9375rem;
   /* Height of just the handle/header */
 }
 
@@ -620,25 +624,57 @@
 }
 
 .tasksHandle {
-  width: 100%;
-  padding: 15px;
+  width: 100vw;
+  padding: 0 0 15px 0;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  background-color: #FFF8B0;
-  /* Slightly darker cream/yellow for handle */
-  border-bottom: 1px solid #4D58D8;
+  background-color: #FFF2A8;
+  height: 5.9375rem;
+  align-self: stretch;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.tasksLine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100vw;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  z-index: 1;
+  overflow: visible;
+}
+
+.tasksLine svg {
+  width: 100%;
+  height: 1px;
+  display: block;
 }
 
 .tasksTitle {
-  font-family: 'EditorSans_PRO', sans-serif;
-  font-size: 1.2rem;
-  color: #4D58D8;
-  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+  direction: rtl;
+  gap: 0.5rem;
+}
+
+.tasksTitleText {
+  font-family: 'EditorSans_PRO', sans-serif;
+  font-size: 1.875rem;
+  color: #4D58D8;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 98%;
+  text-align: center;
 }
 
 .chevron {
@@ -647,6 +683,15 @@
 
 .chevron.open {
   transform: rotate(180deg);
+}
+
+.tasksArrow {
+  display: flex;
+  padding: 0.625rem 0.9375rem 0.625rem 0.625rem;
+  justify-content: flex-end;
+  align-items: center;
+  position: relative;
+  z-index: 2;
 }
 
 .tasksContent {
