@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import SearchBarWithAdd from "@/lib/components/SearchBarWithAdd";
 import styles from "./page.module.css";
 
 interface User {
@@ -63,6 +64,7 @@ export default function ManageVolunteersPage() {
         return fullName.includes(term) || phone.includes(term) || email.includes(term);
     });
 
+
     // Count volunteers and managers from ALL users (not filtered)
     const volunteerCount = users.filter(
         (user) => user.role === "מתנדב.ת" || user.role === "מתנדב" || user.role === "מתנדבת" || (user.role && user.role.includes("מתנדב"))
@@ -105,49 +107,16 @@ export default function ManageVolunteersPage() {
                     </button>
                 </div>
 
-                {/* Header with Add Button and Search */}
+                {/* Header with Search Bar and Add Button */}
                 <div className={styles.header}>
-                    <div className={styles.searchBarWrapper}>
-                        <input
-                            type="text"
-                            placeholder="חיפוש צוות"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className={styles.searchBar}
-                        />
-                        <svg
-                            className={styles.searchIcon}
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        >
-                            <circle cx="11" cy="11" r="8" />
-                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                        </svg>
-                    </div>
-                    <button
-                        onClick={() => router.push('/add-volunteer')}
-                        className={styles.addButton}
-                        aria-label="הוסף איש צוות"
-                    >
-                        <svg
-                            className={styles.addButtonIcon}
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        >
-                            <circle cx="12" cy="8" r="5" />
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                            <line x1="12" y1="11" x2="12" y2="17" />
-                            <line x1="9" y1="14" x2="15" y2="14" />
-                        </svg>
-                    </button>
+                    <SearchBarWithAdd
+                        placeholder="חיפוש צוות"
+                        searchValue={search}
+                        onSearchChange={setSearch}
+                        onAddClick={() => router.push('/add-volunteer')}
+                        addButtonLabel="הוסף איש צוות"
+                        searchBarLabel="חיפוש צוות"
+                    />
                 </div>
 
                 <div className={styles.content}>

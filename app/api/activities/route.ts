@@ -111,9 +111,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const allActivities: any[] = [];
-
     // Fetch all activities from user_activities table (attendance, updates, phone calls, status updates, and tasks logged as phone calls)
+    // Database already orders and limits, so we just need to parse metadata
     const { data: activitiesData, error: activitiesError } = await databaseClient
       .from("user_activities")
       .select("*")
@@ -121,27 +120,21 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false })
       .limit(limit);
 
-    if (!activitiesError && activitiesData) {
-      // Parse metadata JSON strings
-      activitiesData.forEach((activity: any) => {
-        allActivities.push({
-          ...activity,
-          metadata: activity.metadata ? JSON.parse(activity.metadata as string) : null,
-        });
-      });
+    if (activitiesError) {
+      console.error("Error fetching activities:", activitiesError);
+      return Response.json(
+        { error: "Failed to fetch activities", details: activitiesError.message },
+        { status: 500 }
+      );
     }
 
-    // Sort all activities by created_at (most recent first)
-    allActivities.sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime();
-      const dateB = new Date(b.created_at).getTime();
-      return dateB - dateA;
-    });
+    // Parse metadata JSON strings (only if activities exist)
+    const activities = (activitiesData || []).map((activity: any) => ({
+      ...activity,
+      metadata: activity.metadata ? JSON.parse(activity.metadata as string) : null,
+    }));
 
-    // Limit to requested number
-    const limitedActivities = allActivities.slice(0, limit);
-
-    return Response.json({ activities: limitedActivities });
+    return Response.json({ activities });
   } catch (error: any) {
     console.error("Error in GET /api/activities:", error);
     return Response.json(

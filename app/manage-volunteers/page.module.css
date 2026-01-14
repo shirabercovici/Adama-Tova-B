@@ -75,69 +75,92 @@
   gap: 12px;
 }
 
-.addButton {
-  background: var(--color-background);
+.headerSearchBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  padding-top: 0.75rem;
+  width: 100%;
+}
+
+.addPersonButton {
+  background: transparent;
   border: none;
-  border-radius: 12px;
-  width: 4rem;
-  height: 4rem;
+  cursor: pointer;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  color: white;
   flex-shrink: 0;
-  transition: transform 0.1s;
-  padding: 0;
+  width: 35.5px;
+  height: 29.2px;
 }
 
-.addButton:hover {
-  transform: scale(1.05);
+.addPersonDivider {
+  width: 1px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
 }
 
-.addButton:active {
-  transform: scale(0.95);
+.addPersonButton:hover {
+  opacity: 0.8;
 }
 
-.addButtonIcon {
-  width: 24px;
+.searchDivider {
+  width: 1px;
   height: 24px;
-  color: #4D58D8;
+  background: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
 }
 
-.searchBar {
+.searchInputContainer {
   flex: 1;
-  background: var(--color-background);
+  position: relative;
+}
+
+.headerSearchInput {
+  width: 100%;
+  padding: 0.5rem;
   border: none;
-  border-radius: 12px;
-  height: 4rem;
-  width: 15rem;
-  padding: 30px 40px 30px 25px;
-  font-size: 1.25rem;
-  font-weight: 400;
-  color: #4D58D8;
-  direction: rtl;
+  background: transparent;
+  color: white;
+  font-family: var(--font-body);
+  font-weight: 300;
+  font-style: italic;
+  font-size: 30px;
+  line-height: 100%;
+  letter-spacing: 0;
+  text-align: right;
   outline: none;
 }
 
-.searchBar::placeholder {
-  color: #4D58D8;
-  opacity: 0.6;
+.headerSearchInput::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-body);
+  font-weight: 300;
+  font-style: italic;
 }
 
-.searchBarWrapper {
-  flex: 1;
-  position: relative;
+.searchIconButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  width: 27.5px;
+  height: 27.5px;
 }
 
-.searchIcon {
-  position: absolute;
-  right: 12px;
-  width: 20px;
-  height: 20px;
-  color: #4D58D8;
-  pointer-events: none;
+.searchIconButton:hover {
+  opacity: 0.8;
 }
 
 .divider {
