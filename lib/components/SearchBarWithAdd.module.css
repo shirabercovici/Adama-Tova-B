@@ -1,0 +1,109 @@
+.searchBarContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+}
+
+/* Add Button - Square with rounded corners, light beige background */
+.addButton {
+  background: var(--color-background);
+  border: none;
+  border-radius: 12px;
+  width: 4rem;
+  height: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s, opacity 0.1s;
+  padding: 0;
+  color: #4D58D8;
+}
+
+.addButton:hover {
+  transform: scale(1.05);
+  opacity: 0.9;
+}
+
+.addButton:active {
+  transform: scale(0.95);
+}
+
+.addButtonIcon {
+  width: 30px;
+  height: 30px;
+  filter: none;
+}
+
+/* Search Bar Wrapper - Pill shape with light beige background */
+.searchBarWrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--color-background);
+  border-radius: 10px;
+  padding: 0 16px 0 48px; /* Extra padding on left for back arrow */
+  height: 4rem;
+}
+
+/* Search Input */
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #949ADD;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-style: italic;
+  font-size: 1.875rem;
+  line-height: 100%;
+  letter-spacing: 0;
+  text-align: right;
+  outline: none;
+  width: 100%;
+  padding-right: 0.938rem;
+  direction: rtl;
+}
+
+.searchInput::placeholder {
+  color: #949ADD;
+  font-family: var(--font-body);
+  font-weight: 300;
+  font-style: italic;
+}
+
+/* Back Arrow Button - Inside search bar on the right */
+.backArrowButton {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.backArrowButton:hover {
+  opacity: 1;
+}
+
+.backArrowButton:active {
+  opacity: 0.8;
+}
+
+.backArrowIcon {
+  width: 24px;
+  height: 24px;
+  filter: none;
+}

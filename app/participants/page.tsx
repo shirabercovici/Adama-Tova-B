@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import SearchBarWithAdd from "@/lib/components/SearchBarWithAdd";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
 import { motion } from "framer-motion";
@@ -17,21 +18,8 @@ export default function ParticipantsPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [isSearchActive, setIsSearchActive] = useState(false);
-  // Use useMemo to get initial count from localStorage
-  const initialCount = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('presentTodayCount');
-      if (saved) {
-        const count = parseInt(saved, 10);
-        if (!isNaN(count) && count >= 0) {
-          return count;
-        }
-      }
-    }
-    return 0;
-  }, []); // Only calculate once on mount
-
-  const [presentTodayCount, setPresentTodayCount] = useState<number>(initialCount);
+  // Always start with 0 to avoid hydration mismatch
+  const [presentTodayCount, setPresentTodayCount] = useState<number>(0);
 
   // Use ref to track if we've loaded from localStorage to prevent resetting to 0
   const hasLoadedFromStorageRef = useRef(false);
@@ -63,6 +51,16 @@ export default function ParticipantsPage() {
       const savedInitials = localStorage.getItem('userInitials');
       if (savedInitials && savedInitials !== 'א') {
         setUserInitials(savedInitials);
+      }
+      
+      // Load count from localStorage after hydration to avoid mismatch
+      const savedCount = localStorage.getItem('presentTodayCount');
+      if (savedCount) {
+        const count = parseInt(savedCount, 10);
+        if (!isNaN(count) && count >= 0) {
+          setPresentTodayCount(count);
+          hasLoadedFromStorageRef.current = true;
+        }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -144,14 +142,18 @@ export default function ParticipantsPage() {
           // If countOnly is used, response will have 'count' property instead of 'participants'
           const count = data.count !== undefined ? data.count : (data.participants || []).length;
           // Only update if count is valid and different from current (to prevent unnecessary updates)
-          if (count >= 0 && count !== presentTodayCount) {
-            setPresentTodayCount(count);
-            // Save to localStorage for persistence across page navigations
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('presentTodayCount', count.toString());
-              hasLoadedFromStorageRef.current = true;
+          // Use functional update to avoid dependency on presentTodayCount
+          setPresentTodayCount((currentCount) => {
+            if (count >= 0 && count !== currentCount) {
+              // Save to localStorage for persistence across page navigations
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('presentTodayCount', count.toString());
+                hasLoadedFromStorageRef.current = true;
+              }
+              return count;
             }
-          }
+            return currentCount;
+          });
         } else {
           // Silently ignore 404 errors for count fetch
           // The API route might not be loaded yet
@@ -273,12 +275,16 @@ export default function ParticipantsPage() {
                 initials = lastName.charAt(0);
               }
 
-              if (initials !== 'א' && initials !== userInitials) {
-                setUserInitials(initials);
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('userInitials', initials);
+              // Use functional update to avoid dependency on userInitials
+              setUserInitials((currentInitials) => {
+                if (initials !== 'א' && initials !== currentInitials) {
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('userInitials', initials);
+                  }
+                  return initials;
                 }
-              }
+                return currentInitials;
+              });
             }
           }
         } catch (error) {
@@ -288,7 +294,8 @@ export default function ParticipantsPage() {
 
       fetchUserDirectly();
     }
-  }, [user, supabase]);
+  }, [user, supabase]); // userInitials is updated via functional setState, no need in deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   // Use debounced search for fetching participants
   const fetchParticipantsDebounced = useCallback(async () => {
@@ -317,9 +324,13 @@ export default function ParticipantsPage() {
     isFetchingParticipantsRef.current = true;
     // Don't show loading immediately - keep previous results visible for better UX
     // Only show loading if we don't have any participants yet
-    if (participants.length === 0) {
-      setLoading(true);
-    }
+    // Use functional update to check current state without dependency
+    setParticipants((currentParticipants) => {
+      if (currentParticipants.length === 0) {
+        setLoading(true);
+      }
+      return currentParticipants;
+    });
     setError(null);
     try {
       const params = new URLSearchParams();
@@ -495,7 +506,9 @@ export default function ParticipantsPage() {
 
   const handleSearchBlur = () => {
     // Don't deactivate if there's text in the search or participants are shown
-    if (search.trim() === "" && participants.length === 0) {
+    // Check participants length via a ref to avoid dependency
+    const currentParticipantsLength = participants.length;
+    if (search.trim() === "" && currentParticipantsLength === 0) {
       setIsSearchActive(false);
     }
   };
@@ -754,79 +767,17 @@ export default function ParticipantsPage() {
           )}
         </div>
         <div className={styles.headerSearchBar}>
-          <button
-            type="button"
-            onClick={isSearchActive ? handleCloseSearch : undefined}
-            className={styles.searchIconButton}
-            style={isSearchActive ? { background: 'transparent', border: 'none', boxShadow: 'none' } : undefined}
-            aria-label={isSearchActive ? "סגור חיפוש" : "חיפוש"}
-          >
-            {isSearchActive ? (
-              <svg
-                width="27.5"
-                height="27.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <polyline points="9 18 15 12 9 6" stroke="currentColor" strokeWidth="3" />
-              </svg>
-            ) : (
-              <svg
-                width="27.5"
-                height="27.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <circle cx="11" cy="11" r="8" stroke="currentColor" fill="none" strokeWidth="3" />
-                <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-              </svg>
-            )}
-          </button>
-          <div className={styles.searchDivider}></div>
-          <div className={styles.searchInputContainer}>
-            <input
-              type="text"
-              placeholder="חיפוש פונה"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onFocus={handleSearchFocus}
-              onBlur={handleSearchBlur}
-              className={styles.headerSearchInput}
-            />
-          </div>
-          <div className={styles.addPersonDivider}></div>
-          <button
-            type="button"
-            onClick={() => router.push("/new-participant")}
-            className={styles.addPersonButton}
-            aria-label="הוסף פונה חדש"
-          >
-            <svg
-              width="35.5"
-              height="29.2"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {/* Person silhouette */}
-              <circle cx="9" cy="7" r="4" stroke="currentColor" fill="none" strokeWidth="3" />
-              <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="currentColor" fill="none" strokeWidth="3" />
-              {/* Plus sign */}
-              <path d="M18 9v6M15 12h6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            </svg>
-          </button>
+          <SearchBarWithAdd
+            placeholder="חיפוש פונה"
+            searchValue={search}
+            onSearchChange={setSearch}
+            onAddClick={() => router.push("/new-participant")}
+            addButtonLabel="הוסף פונה חדש"
+            searchBarLabel="חיפוש פונה"
+            isSearchActive={isSearchActive}
+            onSearchActiveChange={setIsSearchActive}
+            onCloseSearch={handleCloseSearch}
+          />
         </div>
       </div>
 

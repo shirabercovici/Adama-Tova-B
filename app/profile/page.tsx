@@ -7,10 +7,37 @@ import Image from "next/image";
 import styles from "./page.module.css";
 
 export default function ProfilePage() {
-  const [userData, setUserData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  // Initialize with cached data immediately (synchronous)
+  const getInitialState = () => {
+    if (typeof window === 'undefined') {
+      return { userData: null, activities: [] };
+    }
+    
+    try {
+      const saved = localStorage.getItem('userProfileData');
+      if (saved) {
+        const cachedData = JSON.parse(saved);
+        const cachedActivities = cachedData?.id 
+          ? localStorage.getItem(`userActivities_${cachedData.id}`)
+          : null;
+        
+        return {
+          userData: cachedData,
+          activities: cachedActivities ? JSON.parse(cachedActivities) : []
+        };
+      }
+    } catch {
+      // Invalid cache, use defaults
+    }
+    
+    return { userData: null, activities: [] };
+  };
+
+  const initialState = getInitialState();
+  const [userData, setUserData] = useState<any>(initialState.userData);
+  const [loading, setLoading] = useState(!initialState.userData);
+  const [activities, setActivities] = useState<any[]>(initialState.activities);
+  const [activitiesLoading, setActivitiesLoading] = useState(!initialState.activities.length);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -33,7 +60,39 @@ export default function ProfilePage() {
           return;
         }
 
-        // Fetch details from the 'users' table using the email
+        // First, get just the user ID (lightweight query) to start activities fetch early
+        const { data: userWithId } = await supabase
+          .from("users")
+          .select("id")
+          .eq("email", authUser.email)
+          .single();
+
+        // Start fetching activities immediately if we have the ID
+        if (userWithId?.id) {
+          // Fetch activities in parallel with profile
+          fetch(`/api/activities?user_id=${userWithId.id}&limit=50`)
+            .then(async (activitiesResponse) => {
+              if (activitiesResponse.ok) {
+                const activitiesData = await activitiesResponse.json();
+                const fetchedActivities = activitiesData.activities || [];
+                setActivities(fetchedActivities);
+                // Cache activities for next time
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem(`userActivities_${userWithId.id}`, JSON.stringify(fetchedActivities));
+                }
+              }
+            })
+            .catch((err) => {
+              console.error("Error fetching activities:", err);
+            })
+            .finally(() => {
+              setActivitiesLoading(false);
+            });
+        } else {
+          setActivitiesLoading(false);
+        }
+
+        // Now fetch full user details
         const { data: dbUser, error } = await supabase
           .from("users")
           .select("*")
@@ -42,29 +101,12 @@ export default function ProfilePage() {
 
         const finalUserData = (!error && dbUser) ? dbUser : authUser;
         
-        // Update state
+        // Update state immediately
         setUserData(finalUserData);
         
         // Save to localStorage for next time
         if (typeof window !== 'undefined') {
           localStorage.setItem('userProfileData', JSON.stringify(finalUserData));
-        }
-
-        // Fetch all activities for this user
-        if (dbUser?.id) {
-          try {
-            const activitiesResponse = await fetch(`/api/activities?user_id=${dbUser.id}&limit=50`);
-            if (activitiesResponse.ok) {
-              const activitiesData = await activitiesResponse.json();
-              setActivities(activitiesData.activities || []);
-            }
-          } catch (err) {
-            console.error("Error fetching activities:", err);
-          } finally {
-            setActivitiesLoading(false);
-          }
-        } else {
-          setActivitiesLoading(false);
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
@@ -95,21 +137,8 @@ export default function ProfilePage() {
     };
   }, []);
 
-  useEffect(() => {
-    // Load from localStorage after mount to avoid hydration mismatch
-    if (mounted && typeof window !== 'undefined') {
-      const saved = localStorage.getItem('userProfileData');
-      if (saved) {
-        try {
-          const cachedData = JSON.parse(saved);
-          setUserData(cachedData);
-          setLoading(false);
-        } catch {
-          // Invalid cache, continue with fetch
-        }
-      }
-    }
-  }, [mounted]);
+  // Note: Cached data is now loaded synchronously in useState initializer above
+  // This useEffect is kept for cases where we need to refresh from cache
 
   if (loading) {
     return (
@@ -174,11 +203,7 @@ export default function ProfilePage() {
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>היסטוריית הפעילות שלי</h3>
             <div className={styles.activityHistory}>
-              {activitiesLoading ? (
-                <div className={styles.loadingState}>
-                  <div className={styles.loadingStateText}>טוען פעילויות...</div>
-                </div>
-              ) : activities.length === 0 ? (
+              {activities.length === 0 ? (
                 <div className={styles.emptyState}>
                   <div className={styles.emptyStateText}>אין פעילויות עדיין</div>
                 </div>

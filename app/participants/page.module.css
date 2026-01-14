@@ -638,10 +638,7 @@
 }
 
 .tasksLine {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: relative;
   width: 100vw;
   height: 1px;
   margin: 0;
@@ -649,6 +646,7 @@
   box-sizing: border-box;
   z-index: 1;
   overflow: visible;
+  flex-shrink: 0;
 }
 
 .tasksLine svg {
