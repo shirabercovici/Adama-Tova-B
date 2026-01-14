@@ -9,6 +9,7 @@ interface SearchBarWithAddProps {
   searchValue: string;
   onSearchChange: (value: string) => void;
   onAddClick: () => void;
+  onBackClick?: () => void;
   addButtonLabel?: string;
   searchBarLabel?: string;
   isSearchActive?: boolean;
@@ -21,6 +22,7 @@ export default function SearchBarWithAdd({
   searchValue,
   onSearchChange,
   onAddClick,
+  onBackClick,
   addButtonLabel = "הוסף איש צוות",
   searchBarLabel = "חיפוש",
   isSearchActive: externalIsSearchActive,
@@ -54,13 +56,19 @@ export default function SearchBarWithAdd({
     }
   };
 
-  // Handle close search (back arrow button)
-  const handleCloseSearch = () => {
-    if (onCloseSearch) {
-      onCloseSearch();
-    } else {
-      setIsSearchActive(false);
-      onSearchChange("");
+  // Handle back arrow button - always navigates back if onBackClick provided, otherwise closes search
+  const handleBackArrow = () => {
+    if (onBackClick) {
+      // Always navigate back if handler provided
+      onBackClick();
+    } else if (isSearchActive) {
+      // If search is active, close it
+      if (onCloseSearch) {
+        onCloseSearch();
+      } else {
+        setIsSearchActive(false);
+        onSearchChange("");
+      }
     }
   };
 
@@ -88,9 +96,9 @@ export default function SearchBarWithAdd({
         {/* Back arrow inside search bar */}
         <button
           type="button"
-          onClick={isSearchActive ? handleCloseSearch : undefined}
+          onClick={handleBackArrow}
           className={styles.backArrowButton}
-          aria-label={isSearchActive ? "סגור חיפוש" : "חזור"}
+          aria-label={onBackClick ? "חזור" : (isSearchActive ? "סגור חיפוש" : "חזור")}
         >
           <Image
             src="/icons/right_arrow.svg"

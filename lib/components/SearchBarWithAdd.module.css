@@ -46,7 +46,7 @@
   align-items: center;
   background: var(--color-background);
   border-radius: 10px;
-  padding: 0 16px 0 48px; /* Extra padding on left for back arrow */
+  padding: 0 16px 0 60px; /* Extra padding on left for back arrow with more space */
   height: 4rem;
 }
 
@@ -55,7 +55,7 @@
   flex: 1;
   border: none;
   background: transparent;
-  color: #949ADD;
+  color: var(--color-primary); /* Primary color when typing */
   font-family: var(--font-body);
   font-weight: 400;
   font-style: italic;
@@ -65,7 +65,7 @@
   text-align: right;
   outline: none;
   width: 100%;
-  padding-right: 0.938rem;
+  padding-right: 2rem; /* Increased gap between text and arrow */
   direction: rtl;
 }
 
@@ -76,10 +76,15 @@
   font-style: italic;
 }
 
+/* When input has value, ensure text stays primary color */
+.searchInput:not(:placeholder-shown) {
+  color: var(--color-primary);
+}
+
 /* Back Arrow Button - Inside search bar on the right */
 .backArrowButton {
   position: absolute;
-  right: 12px;
+  right: 16px;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -90,20 +95,22 @@
   flex-shrink: 0;
   width: 24px;
   height: 24px;
-  opacity: 0.7;
+  opacity: 1;
   transition: opacity 0.2s;
 }
 
 .backArrowButton:hover {
-  opacity: 1;
+  opacity: 0.8;
 }
 
 .backArrowButton:active {
-  opacity: 0.8;
+  opacity: 0.6;
 }
 
 .backArrowIcon {
   width: 24px;
   height: 24px;
   filter: none;
+  /* Ensure arrow uses primary color - SVG already has #4D58D8 but ensure it's visible */
+  color: var(--color-primary);
 }
