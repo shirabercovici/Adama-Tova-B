@@ -15,6 +15,7 @@ interface SearchBarWithAddProps {
   isSearchActive?: boolean;
   onSearchActiveChange?: (active: boolean) => void;
   onCloseSearch?: () => void;
+  hasResults?: boolean; // Indicates if there are results shown (e.g., participants list)
 }
 
 export default function SearchBarWithAdd({
@@ -28,6 +29,7 @@ export default function SearchBarWithAdd({
   isSearchActive: externalIsSearchActive,
   onSearchActiveChange,
   onCloseSearch,
+  hasResults = false,
 }: SearchBarWithAddProps) {
   const [internalIsSearchActive, setInternalIsSearchActive] = useState(false);
   
@@ -50,8 +52,9 @@ export default function SearchBarWithAdd({
   };
 
   const handleSearchBlur = () => {
-    // Don't deactivate if there's text in the search
-    if (searchValue.trim() === "") {
+    // Don't deactivate if there's text in the search or if there are results shown
+    // This prevents the search from closing when clicking on results (e.g., participant cards)
+    if (searchValue.trim() === "" && !hasResults) {
       setIsSearchActive(false);
     }
   };
@@ -85,7 +88,7 @@ export default function SearchBarWithAdd({
       <div className={styles.searchBarWrapper}>
         <input
           type="text"
-          placeholder={placeholder}
+          placeholder={isSearchActive ? "" : placeholder}
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
           onFocus={handleSearchFocus}

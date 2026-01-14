@@ -353,11 +353,13 @@ export default function ParticipantsPage() {
     // Cancel previous request if it exists
     if (searchAbortControllerRef.current) {
       searchAbortControllerRef.current.abort();
+      searchAbortControllerRef.current = null;
     }
 
-    // Prevent duplicate concurrent requests
+    // Reset fetching flag if it's stuck
     if (isFetchingParticipantsRef.current) {
-      return;
+      // If we've been fetching for too long, reset
+      isFetchingParticipantsRef.current = false;
     }
 
     // Create new abort controller for this request
@@ -436,27 +438,37 @@ export default function ParticipantsPage() {
       clearTimeout(fetchParticipantsTimeoutRef.current);
     }
 
-    // Only fetch if search state actually changed
-    if (
-      debouncedSearch === lastFetchedSearchRef.current &&
-      isSearchActive === lastFetchedIsSearchActiveRef.current
-    ) {
+    // If search is not active, clear participants and return
+    if (!isSearchActive) {
+      lastFetchedIsSearchActiveRef.current = false;
       return;
     }
 
-    // Reduced debounce for faster response
-    fetchParticipantsTimeoutRef.current = setTimeout(() => {
+    // If search just became active, fetch immediately
+    if (isSearchActive && !lastFetchedIsSearchActiveRef.current) {
+      lastFetchedIsSearchActiveRef.current = true;
       lastFetchedSearchRef.current = debouncedSearch;
-      lastFetchedIsSearchActiveRef.current = isSearchActive;
+      // Reset fetching flag to ensure we can fetch
+      isFetchingParticipantsRef.current = false;
       fetchParticipantsDebounced();
-    }, 10); // Reduced from 50ms to 10ms
+      return;
+    }
+
+    // Only fetch if search query changed
+    if (debouncedSearch !== lastFetchedSearchRef.current) {
+      lastFetchedSearchRef.current = debouncedSearch;
+      // Small debounce for search query changes
+      fetchParticipantsTimeoutRef.current = setTimeout(() => {
+        fetchParticipantsDebounced();
+      }, 10);
+    }
 
     return () => {
       if (fetchParticipantsTimeoutRef.current) {
         clearTimeout(fetchParticipantsTimeoutRef.current);
       }
     };
-  }, [fetchParticipantsDebounced, debouncedSearch, isSearchActive]);
+  }, [isSearchActive, debouncedSearch, fetchParticipantsDebounced]);
 
   // Fetch initial data only once on mount
   useEffect(() => {
@@ -829,6 +841,7 @@ export default function ParticipantsPage() {
             isSearchActive={isSearchActive}
             onSearchActiveChange={setIsSearchActive}
             onCloseSearch={handleCloseSearch}
+            hasResults={participants.length > 0}
           />
         </div>
       </div>
@@ -845,13 +858,8 @@ export default function ParticipantsPage() {
         </div>
       )}
 
-      {/* Empty */}
-      {!loading && !error && isSearchActive && participants.length === 0 && (
-        <div className={styles.empty}>לא נמצאו פונים</div>
-      )}
-
       {/* Participants List - Show when search is active */}
-      {!loading && !error && isSearchActive && participants.length > 0 && (
+      {!loading && !error && isSearchActive && (
         <div className={styles.participantsList}>
           {/* List Header */}
           <div className={styles.listHeader}>
@@ -863,13 +871,20 @@ export default function ParticipantsPage() {
             </div>
           </div>
 
-          {participants.map((participant) => {
+          {participants.length > 0 ? participants.map((participant) => {
             const attendedToday = isToday(participant.last_attendance);
 
             return (
               <div
                 key={participant.id}
                 className={`${styles.participantCard} ${participant.is_archived ? styles.archived : ""}`}
+                onClick={(e) => {
+                  // Only navigate if click was not on checkbox
+                  if (!(e.target as HTMLElement).closest(`.${styles.attendanceCheckboxContainer}`)) {
+                    router.push(`/participant-card?id=${participant.id}`);
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
               >
                 {/* Attendance Checkbox Container */}
                 <div className={styles.attendanceCheckboxContainer}>
@@ -878,7 +893,11 @@ export default function ParticipantsPage() {
                       type="checkbox"
                       checked={attendedToday}
                       onChange={(e) => {
+                        e.stopPropagation();
                         handleMarkAttendance(participant.id, participant.last_attendance);
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
                       }}
                       className={styles.checkbox}
                     />
@@ -891,8 +910,6 @@ export default function ParticipantsPage() {
                 {/* Name, Bereavement Detail and Phone */}
                 <div
                   className={styles.participantInfo}
-                  onClick={() => router.push(`/participant-card?id=${participant.id}`)}
-                  style={{ cursor: 'pointer' }}
                 >
                   <div className={styles.participantName}>{participant.full_name}</div>
                   {(participant.phone || participant.bereavement_detail) && (
@@ -911,7 +928,9 @@ export default function ParticipantsPage() {
                 </div>
               </div>
             );
-          })}
+          }) : (
+            <div className={styles.empty}>לא נמצאו פונים</div>
+          )}
         </div>
       )}
 
@@ -1008,7 +1027,13 @@ export default function ParticipantsPage() {
                       type="checkbox"
                       className={styles.taskCheckbox}
                       checked={task.status === 'done'}
-                      onChange={() => handleTaskToggle(task)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleTaskToggle(task);
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
                     />
                     <span className={styles.taskText}>{task.title}</span>
                   </div>
@@ -1130,7 +1155,13 @@ export default function ParticipantsPage() {
                           type="checkbox"
                           className={styles.taskCheckbox}
                           checked={task.status === 'done'}
-                          onChange={() => handleTaskToggle(task)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleTaskToggle(task);
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
                         />
                         <span className={styles.taskText} style={{ textDecoration: 'line-through' }}>{task.title}</span>
                       </div>
