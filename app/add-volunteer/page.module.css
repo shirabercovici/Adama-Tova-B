@@ -1,0 +1,280 @@
+/* Main container with dark purple-brown background */
+.main {
+  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  max-width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #594957;
+  padding: 0;
+  margin: 0;
+  font-family: var(--font-body);
+  direction: rtl;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+/* Inner content area with light cream background */
+.container {
+  width: 100%;
+  max-width: 500px;
+  background: var(--color-background);
+  border-radius: 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Top section - Beige/Cream background */
+.topSection {
+  background: #F8F8EC;
+  padding: 24px 20px;
+  border-radius: 12px 12px 0 0;
+  position: relative;
+}
+
+.backButtonWrapper {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+}
+
+.closeXButton {
+  background: transparent;
+  border: none;
+  color: var(--color-primary);
+  font-size: 2rem;
+  font-weight: 300;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: transform 0.1s;
+}
+
+.closeXButton:hover {
+  transform: scale(1.1);
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  margin-top: 16px;
+  position: relative;
+  padding-right: 40px;
+}
+
+.userName {
+  font-size: 1.875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin: 0;
+  margin-bottom: 4px;
+}
+
+.userRole {
+  color: #666;
+  font-size: 1rem;
+  font-weight: 400;
+  margin: 0;
+}
+
+.arrowIcon {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-primary);
+  font-size: 1.5rem;
+}
+
+/* Middle section - Blue-Purple background */
+.middleSection {
+  background: var(--color-accent);
+  padding: 32px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  color: white;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.fieldInput {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid white;
+  color: white;
+  font-size: 1rem;
+  padding: 8px 0;
+  outline: none;
+  width: 100%;
+  direction: rtl;
+}
+
+.fieldInput::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.fieldInput:focus {
+  border-bottom-color: white;
+}
+
+.permissionsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.permissionsLabel {
+  color: white;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.radioGroup {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.radioOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.radioButton {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: transparent;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.radioButton.selected {
+  background: #4D58D8;
+  border-color: #4D58D8;
+}
+
+.radioButton.selected::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: white;
+}
+
+.radioLabel {
+  color: white;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.radioInput {
+  display: none;
+}
+
+/* Bottom section - Light Yellow background */
+.bottomSection {
+  background: var(--color-secondary);
+  padding: 24px 20px;
+  border-radius: 0 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.actionButton {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.actionButton:hover {
+  background: rgba(77, 88, 216, 0.1);
+}
+
+.actionButton:active {
+  transform: scale(0.98);
+}
+
+.deleteButton {
+  color: #dc2626;
+}
+
+.saveButton {
+  color: var(--color-primary);
+}
+
+.actionButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.loadingText {
+  color: #9ca3af;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .container {
+    border-radius: 0;
+    min-height: 100vh;
+    max-width: 100vw;
+    width: 100vw;
+  }
+
+  .topSection {
+    border-radius: 0;
+  }
+
+  .bottomSection {
+    border-radius: 0;
+  }
+}
