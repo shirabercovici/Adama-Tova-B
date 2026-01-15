@@ -1059,7 +1059,20 @@ export default function ParticipantsPage() {
                     {task.participant_id && (() => {
                       const participant = participants.find(p => p.id === task.participant_id);
                       const phoneNumber = participant?.phone;
-                      const cleanPhone = phoneNumber ? phoneNumber.replace(/[^\d+]/g, '') : '';
+                      // Clean phone number - keep only digits and +, remove spaces and dashes
+                      let cleanPhone = phoneNumber ? phoneNumber.replace(/[^\d+]/g, '') : '';
+                      // If phone starts with 0, replace with +972 for international format
+                      if (cleanPhone && cleanPhone.startsWith('0')) {
+                        cleanPhone = '+972' + cleanPhone.substring(1);
+                      } else if (cleanPhone && !cleanPhone.startsWith('+')) {
+                        // If no + and starts with country code, add +
+                        if (cleanPhone.startsWith('972')) {
+                          cleanPhone = '+' + cleanPhone;
+                        } else {
+                          // Assume Israeli number, add +972
+                          cleanPhone = '+972' + cleanPhone;
+                        }
+                      }
                       
                       const phoneIcon = (
                         <svg 
@@ -1084,10 +1097,16 @@ export default function ParticipantsPage() {
 
                       if (cleanPhone) {
                         return (
-                          <a
-                            href={`tel:${cleanPhone}`}
+                          <button
+                            type="button"
                             onClick={async (e) => {
                               e.stopPropagation();
+                              e.preventDefault();
+                              
+                              // Open phone dialer
+                              window.location.href = `tel:${cleanPhone}`;
+                              
+                              // Log activity in background without blocking
                               (async () => {
                                 try {
                                   const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -1115,9 +1134,18 @@ export default function ParticipantsPage() {
                             }}
                             className={styles.phoneLink}
                             aria-label={`התקשר ל-${participant?.full_name || 'פונה'}`}
+                            style={{ 
+                              pointerEvents: 'auto', 
+                              touchAction: 'manipulation',
+                              WebkitTapHighlightColor: 'transparent',
+                              background: 'none',
+                              border: 'none',
+                              padding: 0,
+                              cursor: 'pointer'
+                            }}
                           >
                             {phoneIcon}
-                          </a>
+                          </button>
                         );
                       }
                       return <div className={styles.phoneLink}>{phoneIcon}</div>;
