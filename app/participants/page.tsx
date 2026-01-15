@@ -1035,12 +1035,34 @@ export default function ParticipantsPage() {
                         e.stopPropagation();
                       }}
                     />
-                    <span className={styles.taskText}>{task.title}</span>
+                    <span className={styles.taskText}>
+                      {(() => {
+                        const title = task.title;
+                        const prefix = "להתקשר ל";
+                        if (title.startsWith(prefix)) {
+                          const participantName = title.substring(prefix.length);
+                          return (
+                            <>
+                              <span style={{ fontWeight: 400 }}>{prefix}</span>
+                              <span style={{ 
+                                color: 'var(--Blue-Adamami, #4D58D8)',
+                                fontFamily: 'EditorSans_PRO, sans-serif',
+                                fontSize: '1.5rem',
+                                fontStyle: 'italic',
+                                fontWeight: 600,
+                                lineHeight: '98%'
+                              }}>{participantName}</span>
+                            </>
+                          );
+                        }
+                        return title;
+                      })()}
+                    </span>
                   </div>
                   <div className={styles.taskItemAction}>
                     <div className={styles.taskItemVerticalLine}>
-                      <svg width="1" height="3.6875rem" viewBox="0 0 1 59" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-                        <line x1="0.5" y1="0" x2="0.5" y2="59" stroke="#4D58D8" strokeWidth="1"/>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="1" viewBox="0 0 1 100" fill="none" preserveAspectRatio="none">
+                        <path d="M0.5 0L0.5 100" stroke="#4D58D8" strokeLinecap="round"/>
                       </svg>
                     </div>
                     <div className={styles.phoneIconWrapper}>
@@ -1121,25 +1143,9 @@ export default function ParticipantsPage() {
               ))}
             </ul>
             
-            {/* Horizontal line after last task */}
-            {tasks.filter(t => t.status !== 'done').length > 0 && (
-              <div className={styles.tasksEndLine}>
-                <svg width="23.75rem" height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#4D58D8" strokeWidth="1"/>
-                </svg>
-              </div>
-            )}
-            
             {/* Spacing */}
             <div className={styles.tasksSpacing}></div>
             
-            {/* Done Section Divider */}
-            <div className={styles.doneSectionDivider}>
-              <svg width="0" height="27.5rem" viewBox="0 0 0 440" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="0" y1="0" x2="440" y2="0" stroke="var(--Blue-Adamami, #4D58D8)" strokeWidth="1"/>
-              </svg>
-            </div>
-
             {/* Done Section */}
             <div className={styles.doneSection}>
               {/* Done tasks list */}
@@ -1163,13 +1169,47 @@ export default function ParticipantsPage() {
                             e.stopPropagation();
                           }}
                         />
-                        <span className={styles.taskText} style={{ textDecoration: 'line-through' }}>{task.title}</span>
-                      </div>
-                      {doneByName && (
-                        <div className={styles.taskDoneBy}>
-                          <span>בוצע ע&quot;י {doneByName}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                          <span className={styles.taskText} style={{ textDecoration: 'line-through' }}>
+                            {(() => {
+                              const title = task.title;
+                              const prefix = "להתקשר ל";
+                              if (title.startsWith(prefix)) {
+                                const participantName = title.substring(prefix.length);
+                                return (
+                                  <>
+                                    <span style={{ 
+                                      color: '#949ADD',
+                                      textAlign: 'right',
+                                      fontFamily: 'EditorSans_PRO, sans-serif',
+                                      fontSize: '1.5rem',
+                                      fontStyle: 'italic',
+                                      fontWeight: 400,
+                                      lineHeight: '98%',
+                                      textDecorationLine: 'line-through'
+                                    }}>{prefix}</span>
+                                    <span style={{ 
+                                      color: '#949ADD',
+                                      fontFamily: 'EditorSans_PRO, sans-serif',
+                                      fontSize: '1.5rem',
+                                      fontStyle: 'italic',
+                                      fontWeight: 600,
+                                      lineHeight: '98%',
+                                      textDecorationLine: 'line-through'
+                                    }}>{participantName}</span>
+                                  </>
+                                );
+                              }
+                              return title;
+                            })()}
+                          </span>
+                          {doneByName && (
+                            <div className={styles.taskDoneBy}>
+                              <span>בוצע ע&quot;י {doneByName}</span>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                       <div className={styles.taskItemHorizontalLine}>
                         <svg width="23.75rem" height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#4D58D8" strokeWidth="1"/>
