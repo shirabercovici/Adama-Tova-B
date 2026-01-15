@@ -655,26 +655,33 @@
 }
 
 .tasksHandle {
-  width: 100vw;
-  padding: 0 0 15px 0;
   display: flex;
-  justify-content: center;
+  width: 100vw;
+  height: 5.9375rem;
+  flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
+  gap: 0.3125rem;
+  flex-shrink: 0;
   cursor: pointer;
   background-color: #FFF2A8;
-  height: 5.9375rem;
-  align-self: stretch;
   position: relative;
   box-sizing: border-box;
+  padding-top: 0.37rem;
 }
 
 .tasksHandle.open {
-  width: 27.5rem;
+  display: flex;
+  width: 100vw;
   height: 4.375rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.3125rem;
   flex-shrink: 0;
   background: var(--Yellow-Adamami, #FFF2A8);
-  margin: 0 auto;
-  padding: 0 0 15px 0;
+  margin: 0;
+  padding-top: 0.37rem;
 }
 
 .tasksLine {
@@ -697,17 +704,15 @@
 
 .tasksTitle {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 100%;
+  justify-content: flex-start;
+  width: 27.5rem;
+  max-width: 100%;
   position: relative;
   direction: rtl;
-  gap: 0.5rem;
+  gap: 0;
   margin: 0 auto;
-}
-
-.tasksHandle.open .tasksTitle {
-  justify-content: center;
 }
 
 .tasksTitleText {
@@ -719,10 +724,6 @@
   line-height: 98%;
   text-align: center;
   flex-shrink: 0;
-  position: relative;
-  left: 0;
-  right: 0;
-  margin: 0 auto;
 }
 
 .chevron {
@@ -733,15 +734,14 @@
   transform: rotate(180deg);
 }
 
-.tasksArrow {
-  display: flex;
-  padding: 0.625rem 0.9375rem 0.625rem 0.625rem;
-  justify-content: center;
-  align-items: center;
-  position: absolute;
-  left: calc(50% + 3rem);
-  z-index: 2;
+.tasksTopLine {
+  width: 6.5rem;
+  height: 0.1875rem;
+  border-radius: 1.875rem;
+  background: var(--blue-adamami-20, rgba(77, 88, 216, 0.20));
   flex-shrink: 0;
+  margin-bottom: 0.88rem;
+  margin-top: 0;
 }
 
 .tasksDivider {
@@ -870,6 +870,9 @@
   list-style: none;
   padding: 0;
   margin: 0;
+  max-width: 27.5rem;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .taskItem {

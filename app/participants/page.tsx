@@ -1001,17 +1001,7 @@ export default function ParticipantsPage() {
           </div>
           <div className={`${styles.tasksHandle} ${isTasksOpen ? styles.open : ''}`} onClick={() => setIsTasksOpen(!isTasksOpen)}>
             <div className={styles.tasksTitle}>
-              <div className={styles.tasksArrow}>
-                {isTasksOpen ? (
-                  <svg width="21" height="17" viewBox="0 0 21 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1.50024 1.50024L8.78526 13.6419C9.56207 14.9366 11.4384 14.9366 12.2152 13.6419L19.5002 1.50024" stroke="#4D58D8" strokeWidth="3" strokeLinecap="round"/>
-                  </svg>
-                ) : (
-                  <svg width="21" height="17" viewBox="0 0 21 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M19.5002 14.6127L12.2152 2.47098C11.4384 1.1763 9.56206 1.1763 8.78526 2.47098L1.50024 14.6127" stroke="#4D58D8" strokeWidth="3" strokeLinecap="round"/>
-              </svg>
-                )}
-              </div>
+              <div className={styles.tasksTopLine}></div>
               <span className={styles.tasksTitleText}>מטלות</span>
             </div>
           </div>
