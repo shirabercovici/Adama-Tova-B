@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import styles from "./page.module.css";
 
 export default function AddVolunteerPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        document.body.classList.add('profile-page');
+        return () => {
+            document.body.classList.remove('profile-page');
+        };
+    }, []);
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -63,122 +73,135 @@ export default function AddVolunteerPage() {
         router.back();
     };
 
-    const fullName = formData.firstName && formData.lastName 
-        ? `${formData.firstName} ${formData.lastName}` 
-        : "";
-    const displayRole = formData.role === "volunteer" ? "מתנדב.ת" : "מנהל.ת";
-
     return (
         <main className={styles.main} dir="rtl">
             <div className={styles.container}>
-                {/* Top Section - Beige/Cream background */}
-                <div className={styles.topSection}>
-                    <div className={styles.backButtonWrapper}>
+                {/* Header with User Info */}
+                <div className={styles.header}>
+                    <div className={styles.headerTop}>
                         <button 
                             onClick={handleBack}
-                            className={styles.closeXButton}
-                            aria-label="סגור"
+                            className={styles.backButton}
+                            aria-label="חזור"
                         >
-                            ×
+                            <Image
+                                src="/icons/right_arrow.svg"
+                                alt="חזור"
+                                width={17}
+                                height={21}
+                            />
                         </button>
-                    </div>
-                    <div className={styles.userInfo}>
-                        <h3 className={styles.userName}>
-                            {fullName || "הוספת איש צוות חדש"}
-                        </h3>
-                    </div>
-                </div>
-
-                {/* Middle Section - Blue-Purple background */}
-                <div className={styles.middleSection}>
-                    {/* First Name Field */}
-                    <div className={styles.formField}>
-                        <label className={styles.fieldLabel}>שם פרטי</label>
-                        <input
-                            type="text"
-                            name="firstName"
-                            value={formData.firstName}
-                            onChange={handleChange}
-                            className={styles.fieldInput}
-                        />
-                    </div>
-
-                    {/* Last Name Field */}
-                    <div className={styles.formField}>
-                        <label className={styles.fieldLabel}>שם משפחה</label>
-                        <input
-                            type="text"
-                            name="lastName"
-                            value={formData.lastName}
-                            onChange={handleChange}
-                            className={styles.fieldInput}
-                        />
-                    </div>
-
-                    {/* Phone Number Field */}
-                    <div className={styles.formField}>
-                        <label className={styles.fieldLabel}>מס&apos; טלפון</label>
-                        <input
-                            type="tel"
-                            name="phone"
-                            value={formData.phone}
-                            onChange={handleChange}
-                            className={styles.fieldInput}
-                            dir="ltr"
-                        />
-                    </div>
-
-                    {/* Email Field */}
-                    <div className={styles.formField}>
-                        <label className={styles.fieldLabel}>מייל</label>
-                        <input
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            className={styles.fieldInput}
-                            dir="ltr"
-                        />
-                    </div>
-
-                    {/* Permissions Section */}
-                    <div className={styles.permissionsSection}>
-                        <label className={styles.permissionsLabel}>הרשאה</label>
-                        <div className={styles.radioGroup}>
-                            <label className={styles.radioOption}>
-                                <input
-                                    type="radio"
-                                    name="role"
-                                    value="volunteer"
-                                    checked={formData.role === 'volunteer'}
-                                    onChange={() => handleRoleChange('volunteer')}
-                                    className={styles.radioInput}
-                                />
-                                <div className={`${styles.radioButton} ${formData.role === 'volunteer' ? styles.selected : ''}`}></div>
-                                <span className={styles.radioLabel}>מתנדב.ת</span>
-                            </label>
-                            <label className={styles.radioOption}>
-                                <input
-                                    type="radio"
-                                    name="role"
-                                    value="manager"
-                                    checked={formData.role === 'manager'}
-                                    onChange={() => handleRoleChange('manager')}
-                                    className={styles.radioInput}
-                                />
-                                <div className={`${styles.radioButton} ${formData.role === 'manager' ? styles.selected : ''}`}></div>
-                                <span className={styles.radioLabel}>מנהל.ת</span>
-                            </label>
+                        <div className={styles.userInfo}>
+                            <h3 className={styles.userName}>הוספת איש צוות חדש</h3>
                         </div>
                     </div>
                 </div>
 
-                {/* Bottom Section - Light Yellow background */}
+                {/* Content Section */}
+                <div className={styles.content}>
+                    <div className={styles.formSection}>
+                        {/* First Name */}
+                        <div className={styles.formField}>
+                            <label className={styles.fieldLabel}>שם פרטי*</label>
+                            <input
+                                type="text"
+                                name="firstName"
+                                value={formData.firstName}
+                                onChange={handleChange}
+                                className={styles.fieldInput}
+                                placeholder="הזן שם פרטי"
+                            />
+                        </div>
+
+                        {/* Last Name */}
+                        <div className={styles.formField}>
+                            <label className={styles.fieldLabel}>שם משפחה*</label>
+                            <input
+                                type="text"
+                                name="lastName"
+                                value={formData.lastName}
+                                onChange={handleChange}
+                                className={styles.fieldInput}
+                                placeholder="הזן שם משפחה"
+                            />
+                        </div>
+
+                        {/* Phone */}
+                        <div className={styles.formField}>
+                            <label className={styles.fieldLabel}>מס&apos; טלפון*</label>
+                            <input
+                                type="tel"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                className={styles.fieldInput}
+                                placeholder="הזן מספר טלפון"
+                                dir="ltr"
+                                style={{ textAlign: 'right' }}
+                            />
+                        </div>
+
+                        {/* Email */}
+                        <div className={styles.formField}>
+                            <label className={styles.fieldLabel}>מייל*</label>
+                            <input
+                                type="email"
+                                name="email"
+                                value={formData.email}
+                                onChange={handleChange}
+                                className={styles.fieldInput}
+                                placeholder="הזן כתובת מייל"
+                                dir="ltr"
+                                style={{ textAlign: 'right' }}
+                            />
+                        </div>
+
+                        {/* Role Selection */}
+                        <div className={styles.roleSection}>
+                            <label className={styles.roleLabel}>הרשאה</label>
+                            <div className={styles.roleOptions}>
+                                <label className={styles.roleOption} onClick={() => handleRoleChange('volunteer')}>
+                                    <div className={`${styles.radioButton} ${formData.role === 'volunteer' ? styles.active : ''}`}>
+                                        {formData.role === 'volunteer' && <div className={styles.radioButtonInner}></div>}
+                                    </div>
+                                    <span className={styles.roleText}>מתנדב.ת</span>
+                                    <input
+                                        type="radio"
+                                        name="role"
+                                        value="volunteer"
+                                        checked={formData.role === 'volunteer'}
+                                        onChange={() => handleRoleChange('volunteer')}
+                                        className={styles.hiddenInput}
+                                    />
+                                </label>
+
+                                <div className={styles.roleSeparator}></div>
+
+                                <label className={styles.roleOption} onClick={() => handleRoleChange('manager')}>
+                                    <div className={`${styles.radioButton} ${formData.role === 'manager' ? styles.active : ''}`}>
+                                        {formData.role === 'manager' && <div className={styles.radioButtonInner}></div>}
+                                    </div>
+                                    <span className={styles.roleText}>מנהל.ת</span>
+                                    <input
+                                        type="radio"
+                                        name="role"
+                                        value="manager"
+                                        checked={formData.role === 'manager'}
+                                        onChange={() => handleRoleChange('manager')}
+                                        className={styles.hiddenInput}
+                                    />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bottom Action Button */}
                 <div className={styles.bottomSection}>
                     <button
                         onClick={handleSave}
                         disabled={loading}
-                        className={`${styles.actionButton} ${styles.saveButton}`}
+                        className={styles.saveButton}
                     >
                         {loading ? "שומר..." : "שמירה"}
                     </button>

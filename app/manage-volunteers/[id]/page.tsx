@@ -255,6 +255,8 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                                     />
                                 </label>
 
+                                <div className={styles.roleSeparator}></div>
+
                                 <label className={styles.roleOption} onClick={() => handleRoleChange('manager')}>
                                     <div className={`${styles.radioButton} ${formData.role === 'manager' ? styles.active : ''}`}>
                                         {formData.role === 'manager' && <div className={styles.radioButtonInner}></div>}
