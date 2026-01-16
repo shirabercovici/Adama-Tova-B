@@ -29,6 +29,11 @@ function getDatabaseClient() {
         persistSession: false,
         autoRefreshToken: false,
       },
+      global: {
+        headers: {
+          'x-client-info': 'supabase-js-nextjs',
+        },
+      },
     } as any
   );
   

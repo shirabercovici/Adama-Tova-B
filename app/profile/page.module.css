@@ -6,7 +6,7 @@
   justify-content: flex-start;
   align-items: center;
   border-radius: 0;
-  background: var(--Blue-Adamami, #4D58D8);
+  background: var(--color-accent);
   margin: 0;
   position: relative;
   padding: 0;
@@ -21,7 +21,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: var(--Blue-Adamami, #4D58D8);
+  background: var(--color-accent);
   padding: 0;
   margin: 0;
   font-family: var(--font-body);
@@ -42,7 +42,7 @@
 }
 
 .loadingText {
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .backButtonWrapper {
@@ -55,7 +55,7 @@
 .closeXButton {
   background: transparent;
   border: none;
-  color: var(--color-background);
+  color: var(--color-primary);
   font-size: 2rem;
   font-weight: 300;
   cursor: pointer;
@@ -77,20 +77,14 @@
   transform: scale(0.95);
 }
 
-.notch {
-  width: 96px;
-  height: 24px;
-  background: black;
-  border-radius: 9999px;
-  margin-top: 16px;
-}
-
+/* Header with user info */
 .header {
   width: 100%;
   padding: 32px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: var(--color-accent);
 }
 
 .userInfo {
@@ -102,6 +96,7 @@
   font-size: 1.875rem;
   font-weight: 380;
   color: var(--color-background);
+  margin: 0;
 }
 
 .userRole {
@@ -109,62 +104,121 @@
   opacity: 0.8;
   font-size: 1.25rem;
   font-weight: 380;
+  margin: 0;
 }
 
+/* Tab Navigation */
+.tabNavigation {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: flex-end;
+  background: var(--color-accent);
+  padding: 0 20px;
+  gap: 0;
+}
 
+.tab {
+  padding: 12px 24px;
+  border: none;
+  background: var(--color-accent);
+  color: white;
+  font-size: 1.125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 12px 12px 0 0;
+  position: relative;
+}
+
+.tabActive {
+  background: var(--color-accent);
+  color: white !important;
+  z-index: 2;
+}
+
+.tabInactive {
+  background: var(--color-secondary);
+  color: var(--color-primary);
+  border-radius: 12px 12px 0 0;
+  z-index: 1;
+}
+
+.tabInactive:hover {
+  background: rgba(255, 242, 168, 0.9);
+}
+
+/* Content Area */
 .content {
   width: 100%;
-  padding: 0 16px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 32px;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: 250px; /* Space for sticky buttons - enough to scroll above them */
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-  max-height: calc(100vh - 200px); /* Leave space for header and buttons */
+  background: var(--color-accent);
+  padding-bottom: 200px;
+  -webkit-overflow-scrolling: touch;
 }
 
-.section {
+/* Personal Information Section */
+.personalInfoSection {
+  width: 100%;
+  padding: 32px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  color: white;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.fieldValue {
+  color: white;
+  font-size: 1rem;
+  padding: 8px 0;
+  border-bottom: 1px solid white;
+  min-height: 24px;
+}
+
+.logoutButton {
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid white;
+  border-radius: 8px;
+  background: transparent;
+  color: white;
+  font-size: 1.125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
   width: 100%;
 }
 
-.sectionTitle {
-  color: var(--color-background);
-  font-size: 1.875rem;
-  font-weight: 400;
-  margin-bottom: 8px;
-  padding: 0 8px;
+.logoutButton:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.personalDetails {
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
+.logoutButton:active {
+  transform: scale(0.98);
 }
 
-.detailRow {
+/* History Section */
+.historySection {
+  width: 100%;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  padding: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  gap: 4px;
-}
-
-.detailLabel {
-  color: var(--color-background);
-  font-size: 1.5rem;
-  font-weight: 400;
-}
-
-.detailValue {
-  font-weight: 300;
-  color: var(--color-background);
-  font-size: 1.25rem;
-}
-
-.activityHistory {
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .loadingState,
@@ -178,6 +232,7 @@
 .loadingStateText,
 .emptyStateText {
   color: rgba(255, 255, 255, 0.6);
+  font-size: 1.25rem;
 }
 
 .activityList {
@@ -186,7 +241,7 @@
 }
 
 .activityItem {
-  padding: 12px;
+  padding: 12px 0;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -205,7 +260,7 @@
 }
 
 .activityIcon {
-  color: var(--color-background);
+  color: white;
   margin-top: 2px;
   flex-shrink: 0;
   width: 20px;
@@ -228,27 +283,8 @@
 
 .activityDate {
   order: 1;
-}
-
-.activityDescription {
-  font-size: 1.5rem;
-  color: var(--color-background);
-  font-weight: 400;
-  line-height: 1.4;
-}
-
-.statusUpdateDetails {
   font-size: 1.25rem;
-  color: var(--color-background);
-  font-weight: 300;
-  line-height: 1.4;
-  margin-top: 4px;
-  opacity: 0.9;
-}
-
-.activityDate {
-  font-size: 1.25rem;
-  color: var(--color-background);
+  color: white;
   width: 60px;
   text-align: right;
   flex-shrink: 0;
@@ -256,11 +292,24 @@
   font-weight: 400;
 }
 
-.managementSection {
-  display: none; /* Hide from content, will show in sticky footer */
+.activityDescription {
+  font-size: 1.5rem;
+  color: white;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
-.stickyFooter {
+.statusUpdateDetails {
+  font-size: 1.25rem;
+  color: white;
+  font-weight: 300;
+  line-height: 1.4;
+  margin-top: 4px;
+  opacity: 0.9;
+}
+
+/* Bottom Section */
+.bottomSection {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -269,54 +318,31 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--color-primary, #4D58D8);
-  padding: 20px 0;
+  background: var(--color-secondary);
+  padding: 24px 20px;
   z-index: 100;
+  gap: 12px;
 }
 
-.managementButton {
+.actionButton {
   width: 100%;
-  height: 95px;
-  text-align: center;
-  padding: 12px 24px;
-  font-weight: 400;
-  font-size: 1.875rem;
-  background: var(--color-secondary);
+  padding: 16px;
   border: none;
   border-radius: 8px;
-  color: var(--color-primary);
-  cursor: pointer;
-  transition: background-color 0.2s;
-  margin-bottom: 12px;
-}
-
-.managementButton:hover {
-  background: var(--color-accent, #535bf2);
-}
-
-.signOutSection {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0;
-}
-
-.signOutButton {
   font-size: 1.125rem;
   font-weight: 500;
-  padding: 12px 24px;
-  width: 200px;
-  background: var(--color-primary, #4D58D8);
-  border: none;
-  border-radius: 8px;
-  color: #ef4444;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  background: transparent;
+  color: var(--color-primary);
 }
 
-.signOutButton:hover {
-  background: var(--color-accent, #535bf2);
+.actionButton:hover {
+  background: rgba(77, 88, 216, 0.1);
+}
+
+.actionButton:active {
+  transform: scale(0.98);
 }
 
 /* Responsive adjustments */
