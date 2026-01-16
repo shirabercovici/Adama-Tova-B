@@ -301,10 +301,10 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                         
                         <div className={styles.modalIllustration}>
                             <Image
-                                src="/ADAMAMI.svg"
-                                alt="Plant illustration"
-                                width={120}
-                                height={120}
+                                src="/icons/delete_profile.svg"
+                                alt="Delete profile illustration"
+                                width={180}
+                                height={160}
                                 className={styles.plantIcon}
                             />
                         </div>
