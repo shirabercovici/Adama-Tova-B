@@ -69,8 +69,8 @@ export async function GET(request: NextRequest) {
 
         // Optimize: Batch fetch all needed data instead of N+1 queries
         const tasks = tasksData || [];
-        const doneByUserIds = Array.from(new Set(tasks.filter(t => t.done_by).map(t => t.done_by)));
-        const participantIds = Array.from(new Set(tasks.filter(t => t.participant_id).map(t => t.participant_id)));
+        const doneByUserIds = Array.from(new Set(tasks.map(t => t.done_by).filter((id): id is string => id !== null)));
+        const participantIds = Array.from(new Set(tasks.map(t => t.participant_id).filter((id): id is string => id !== null)));
         
         // Batch fetch users
         const usersMap = new Map();
