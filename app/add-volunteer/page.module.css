@@ -35,7 +35,7 @@
 /* Header Section */
 .header {
   width: 100%;
-  padding: 2rem 1.5rem 1.5rem;
+  padding: 3rem 1.5rem 1.5rem;
   background: var(--color-background);
   display: flex;
   flex-direction: column;
@@ -44,26 +44,37 @@
 
 .headerTop {
   display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 1.25rem;
   width: 100%;
+  padding-top: 1.5625rem;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
 }
 
-.backButton {
+.closeXButton {
   background: transparent;
   border: none;
   color: var(--color-primary);
+  font-size: 2rem;
+  font-weight: 300;
   cursor: pointer;
   padding: 0;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s ease;
+  line-height: 1;
+  transition: transform 0.1s;
+  flex-shrink: 0;
 }
 
-.backButton:hover {
-  transform: translateX(4px);
+.closeXButton:hover {
+  transform: scale(1.1);
+}
+
+.closeXButton:active {
+  transform: scale(0.95);
 }
 
 .userInfo {
