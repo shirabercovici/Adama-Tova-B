@@ -47,8 +47,8 @@
 
 .backButtonWrapper {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 1.25rem;
+  right: 1.25rem;
   z-index: 10;
 }
 
@@ -61,8 +61,8 @@
   cursor: pointer;
   padding-right: 0rem;
   padding-top: 1.56rem;
-  width: 32px;
-  height: 32px;
+  width: 2rem;
+  height: 2rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,19 +99,21 @@
   font-weight: 400;
   color: var(--color-background);
   margin: 0;
+  line-height: 1;
+  margin-bottom: 0;
 }
 
 .userRole {
   color: var(--color-background);
   opacity: 0.8;
   font-size: 1.25rem;
-  font-weight: 380;
+  font-weight: 300;
   margin: 0;
 }
 
 /* Tab Navigation */
 .tabNavigation {
-  width: calc(100% + 40px);
+  width: calc(100% + 2.5rem);
   display: flex;
   flex-direction: row;
   justify-content: flex-start;
@@ -133,7 +135,7 @@
 }
 
 .tab {
-  padding: 12px 24px;
+  padding: 0.75rem 0.75rem;
   border: none;
   background: var(--color-primary);
   color: var(--color-background);
@@ -141,10 +143,10 @@
   font-weight: 400;
   cursor: pointer;
   transition: all 0.2s;
-  border-radius: 12px 12px 0 0;
+  border-radius: 0.75rem 0.75rem 0 0;
   position: relative;
   width: 100%;
-  height: 3.375rem;
+  height: 4.375rem;
 }
 
 .tabActive {
@@ -173,7 +175,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--color-primary);
-  padding: 2rem 1rem 1.25rem 1.25rem;
+  padding: 0 1rem 1.25rem 1.25rem;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -189,7 +191,7 @@
   display: flex;
   flex-direction: column;
   padding-top: 0;
-  border-bottom: 1px solid var(--color-background);
+  border-bottom: 0.0625rem solid var(--color-background);
 }
 
 .formField:first-child {
@@ -202,6 +204,7 @@
   font-weight: 400;
   margin-bottom: 0.25rem;
   margin-top: 1rem;
+  line-height: 98%;
 }
 
 .fieldValue {
@@ -209,18 +212,18 @@
   background: transparent;
   border: none;
   outline: none;
-  font-size: 1.125rem;
-  font-weight: 400;
+  font-size: 1.25rem;
+  font-weight: 300;
   color: var(--color-background);
   font-family: var(--font-body);
   padding: 0.25rem 0;
 }
 
 .logoutButton {
-  margin-top: 24px;
-  padding: 16px;
-  border: 1px solid white;
-  border-radius: 8px;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 0.0625rem solid white;
+  border-radius: 0.5rem;
   background: transparent;
   color: white;
   font-size: 1.875rem;
@@ -241,7 +244,7 @@
 /* History Section */
 .historySection {
   width: 100%;
-  padding: 20px;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
 }
@@ -251,7 +254,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 32px;
+  padding: 2rem;
 }
 
 .loadingStateText,
@@ -266,29 +269,29 @@
 }
 
 .activityItem {
-  padding: 12px 0;
+  padding: 0.75rem 0;
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 0.75rem;
+  border-bottom: 0.0625rem solid rgba(255, 255, 255, 0.1);
   position: relative;
 }
 
 .activityItem::after {
   content: '';
   position: absolute;
-  right: 70px;
+  right: 4.375rem;
   top: 0;
   bottom: 0;
-  width: 1px;
+  width: 0.0625rem;
   background: rgba(255, 255, 255, 0.2);
 }
 
 .activityIcon {
   color: white;
-  margin-top: 2px;
+  margin-top: 0.125rem;
   flex-shrink: 0;
-  width: 20px;
+  width: 1.25rem;
   order: 2;
   display: flex;
   align-items: center;
@@ -297,6 +300,10 @@
 
 .activityIconImage {
   filter: brightness(0) invert(1); /* Makes SVG white to match the color scheme */
+}
+
+.activityIconImageNoFilter {
+  /* No filter - preserves original SVG colors */
 }
 
 .activityContent {
@@ -310,10 +317,10 @@
   order: 1;
   font-size: 1.25rem;
   color: white;
-  width: 60px;
+  width: 3.75rem;
   text-align: right;
   flex-shrink: 0;
-  padding-right: 12px;
+  padding-right: 0.75rem;
   font-weight: 400;
 }
 
@@ -329,7 +336,7 @@
   color: white;
   font-weight: 300;
   line-height: 1.4;
-  margin-top: 4px;
+  margin-top: 0.25rem;
   opacity: 0.9;
 }
 
@@ -349,8 +356,8 @@
 }
 
 .separator {
-  width: calc(100% + 40px);
-  height: 1px;
+  width: calc(100% + 2.5rem);
+  height: 0.0625rem;
   background: var(--color-primary);
 }
 
