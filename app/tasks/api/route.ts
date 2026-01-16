@@ -67,24 +67,57 @@ export async function GET(request: NextRequest) {
             return Response.json({ error: error.message }, { status: 500 });
         }
 
-        // Fetch user info for tasks that have done_by
-        const tasksWithUsers = await Promise.all(
-            (tasksData || []).map(async (task) => {
-                if (task.done_by) {
-                    const { data: userData } = await databaseClient
-                        .from("users")
-                        .select("id, first_name, last_name")
-                        .eq("id", task.done_by)
-                        .single();
-                    
-                    return {
-                        ...task,
-                        done_by_user: userData || null
-                    };
-                }
-                return task;
-            })
-        );
+        // Optimize: Batch fetch all needed data instead of N+1 queries
+        const tasks = tasksData || [];
+        const doneByUserIds = [...new Set(tasks.filter(t => t.done_by).map(t => t.done_by))];
+        const participantIds = [...new Set(tasks.filter(t => t.participant_id).map(t => t.participant_id))];
+        
+        // Batch fetch users
+        const usersMap = new Map();
+        if (doneByUserIds.length > 0) {
+            const { data: usersData } = await databaseClient
+                .from("users")
+                .select("id, first_name, last_name")
+                .in("id", doneByUserIds);
+            
+            if (usersData) {
+                usersData.forEach(user => {
+                    usersMap.set(user.id, user);
+                });
+            }
+        }
+        
+        // Batch fetch participants
+        const participantsMap = new Map();
+        if (participantIds.length > 0) {
+            const { data: participantsData } = await databaseClient
+                .from("participants")
+                .select("id, phone, full_name")
+                .in("id", participantIds);
+            
+            if (participantsData) {
+                participantsData.forEach(participant => {
+                    participantsMap.set(participant.id, participant);
+                });
+            }
+        }
+        
+        // Map data to tasks
+        const tasksWithUsers = tasks.map(task => {
+            const taskWithData: any = { ...task };
+            
+            if (task.done_by && usersMap.has(task.done_by)) {
+                taskWithData.done_by_user = usersMap.get(task.done_by);
+            }
+            
+            if (task.participant_id && participantsMap.has(task.participant_id)) {
+                const participant = participantsMap.get(task.participant_id);
+                taskWithData.participant_phone = participant.phone || null;
+                taskWithData.participant_name = participant.full_name || null;
+            }
+            
+            return taskWithData;
+        });
 
         return Response.json({ tasks: tasksWithUsers || [] });
     } catch (error) {
@@ -165,6 +198,58 @@ export async function PATCH(request: NextRequest) {
                         description: `שיחת טלפון ${participantData.full_name}`,
                         created_at: new Date().toISOString(),
                     });
+            }
+        }
+        
+        // If task is uncompleted (status changed from 'done' to 'open') and linked to a participant, restore last_phone_call
+        if (status === 'open' && participant_id) {
+            // First, delete the most recent phone_call activity for this participant (the one created when task was marked as done)
+            // Get the most recent activity first
+            const { data: recentActivities } = await databaseClient
+                .from("user_activities")
+                .select("id, created_at")
+                .eq("participant_id", participant_id)
+                .eq("activity_type", "phone_call")
+                .order("created_at", { ascending: false })
+                .limit(1);
+            
+            if (recentActivities && recentActivities.length > 0) {
+                // Delete the most recent activity
+                const { error: deleteError } = await databaseClient
+                    .from("user_activities")
+                    .delete()
+                    .eq("id", recentActivities[0].id);
+                
+                if (deleteError) {
+                    console.error("Error deleting phone call activity:", deleteError);
+                }
+            }
+            
+            // Now find the previous most recent phone call activity (if any)
+            const { data: previousActivities } = await databaseClient
+                .from("user_activities")
+                .select("created_at")
+                .eq("participant_id", participant_id)
+                .eq("activity_type", "phone_call")
+                .order("created_at", { ascending: false })
+                .limit(1);
+            
+            let previousLastPhoneCall: string | null = null;
+            
+            if (previousActivities && previousActivities.length > 0) {
+                // Get the date from the previous most recent activity
+                const activityDate = new Date(previousActivities[0].created_at);
+                previousLastPhoneCall = activityDate.toISOString().split("T")[0];
+            }
+            
+            // Update participant's last_phone_call to the previous value (or null if no previous calls)
+            const { error: participantError } = await databaseClient
+                .from("participants")
+                .update({ last_phone_call: previousLastPhoneCall })
+                .eq("id", participant_id);
+            
+            if (participantError) {
+                console.error("Error restoring participant last_phone_call:", participantError);
             }
         }
 
