@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import styles from "./page.module.css";
 
 export default function AddVolunteerPage() {
@@ -113,15 +112,10 @@ export default function AddVolunteerPage() {
                     <div className={styles.headerTop}>
                         <button 
                             onClick={handleBack}
-                            className={styles.backButton}
-                            aria-label="חזור"
+                            className={styles.closeXButton}
+                            aria-label="סגור"
                         >
-                            <Image
-                                src="/icons/right_arrow.svg"
-                                alt="חזור"
-                                width={17}
-                                height={21}
-                            />
+                            ×
                         </button>
                         <div className={styles.userInfo}>
                             <h3 className={styles.userName}>הוספת איש צוות חדש</h3>

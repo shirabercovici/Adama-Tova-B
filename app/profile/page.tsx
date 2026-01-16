@@ -301,7 +301,7 @@ export default function ProfilePage() {
                               alt="Attendance marked"
                               width={16}
                               height={16}
-                              className={styles.activityIconImage}
+                              className={styles.activityIconImageNoFilter}
                             />
                           );
                         case 'status_update':
