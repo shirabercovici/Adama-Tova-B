@@ -8,20 +8,37 @@ import { type NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+// Cache the admin client to avoid recreating it on every request
+let cachedAdminClient: ReturnType<typeof createClient> | null = null;
+
 function getAdminClient() {
+    // Return cached client if it exists
+    if (cachedAdminClient) {
+        return cachedAdminClient;
+    }
+
     if (!PUBLIC_SUPABASE_URL || !PRIVATE_SUPABASE_SERVICE_KEY) {
         throw new Error("Missing Supabase environment variables for admin");
     }
-    return createClient(
+    
+    // Create and cache the client
+    cachedAdminClient = createClient(
         PUBLIC_SUPABASE_URL,
         PRIVATE_SUPABASE_SERVICE_KEY,
         {
             auth: {
                 autoRefreshToken: false,
                 persistSession: false
-            }
+            },
+            global: {
+                headers: {
+                    'x-client-info': 'supabase-js-nextjs',
+                },
+            },
         }
     );
+    
+    return cachedAdminClient;
 }
 
 export async function POST(request: NextRequest) {

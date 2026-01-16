@@ -39,6 +39,7 @@ export default function ProfilePage() {
   const [activities, setActivities] = useState<any[]>(initialState.activities);
   const [activitiesLoading, setActivitiesLoading] = useState(!initialState.activities.length);
   const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<'personal' | 'history'>('personal');
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const hasFetchedProfileRef = useRef(false);
@@ -174,7 +175,7 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        {/* User Greeting */}
+        {/* User Info Header */}
         <div className={styles.header}>
           <div className={styles.userInfo}>
             <h3 className={styles.userName}>
@@ -184,26 +185,64 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className={styles.content}>
-          {/* Section: Personal Details */}
-          <section className={styles.section}>
-            <div className={styles.personalDetails}>
-              <div className={styles.detailRow}>
-                <span className={styles.detailLabel}>מס&apos; טלפון</span>
-                <span className={styles.detailValue}>{userData?.phone_number || "לא הוזן"}</span>
-              </div>
-              <div className={styles.detailRow}>
-                <span className={styles.detailLabel}>מייל</span>
-                <span className={styles.detailValue}>{userData?.email || "לא הוזן"}</span>
-              </div>
-            </div>
-          </section>
+        {/* Tab Navigation */}
+        <div className={styles.tabNavigation}>
+          <button
+            className={`${styles.tab} ${activeTab === 'personal' ? styles.tabActive : styles.tabInactive}`}
+            onClick={() => setActiveTab('personal')}
+          >
+            מידע אישי
+          </button>
+          <button
+            className={`${styles.tab} ${activeTab === 'history' ? styles.tabActive : styles.tabInactive}`}
+            onClick={() => setActiveTab('history')}
+          >
+            היסטוריה
+          </button>
+        </div>
 
-          {/* Section: Activity History */}
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>היסטוריית הפעילות שלי</h3>
-            <div className={styles.activityHistory}>
-              {activities.length === 0 ? (
+        {/* Content Area */}
+        <div className={styles.content}>
+          {activeTab === 'personal' ? (
+            /* Personal Information Tab */
+            <div className={styles.personalInfoSection}>
+              {/* First Name Field */}
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>שם פרטי</label>
+                <div className={styles.fieldValue}>{userData?.first_name || "לא הוזן"}</div>
+              </div>
+
+              {/* Last Name Field */}
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>שם משפחה</label>
+                <div className={styles.fieldValue}>{userData?.last_name || "לא הוזן"}</div>
+              </div>
+
+              {/* Phone Number Field */}
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>מס&apos; טלפון</label>
+                <div className={styles.fieldValue} dir="ltr">{userData?.phone_number || "לא הוזן"}</div>
+              </div>
+
+              {/* Email Field */}
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>מייל</label>
+                <div className={styles.fieldValue} dir="ltr">{userData?.email || "לא הוזן"}</div>
+              </div>
+
+              {/* Logout Button */}
+              <button onClick={handleSignOut} className={styles.logoutButton}>
+                התנתקות
+              </button>
+            </div>
+          ) : (
+            /* History Tab */
+            <div className={styles.historySection}>
+              {activitiesLoading ? (
+                <div className={styles.loadingState}>
+                  <div className={styles.loadingStateText}>טוען...</div>
+                </div>
+              ) : activities.length === 0 ? (
                 <div className={styles.emptyState}>
                   <div className={styles.emptyStateText}>אין פעילויות עדיין</div>
                 </div>
@@ -236,6 +275,7 @@ export default function ProfilePage() {
                               alt="Attendance marked"
                               width={16}
                               height={16}
+                              className={styles.activityIconImage}
                             />
                           );
                         case 'status_update':
@@ -284,25 +324,27 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-          </section>
-
+          )}
         </div>
 
-        {/* Sticky Footer with Management and Sign Out Buttons */}
-        <div className={styles.stickyFooter}>
+        {/* Bottom Section with Action Buttons */}
+        <div className={styles.bottomSection}>
           {userData?.role === "מנהל.ת" && (
             <button
               onClick={() => router.push('/manage-volunteers')}
-              className={styles.managementButton}
+              className={styles.actionButton}
             >
               ניהול אנשי צוות
             </button>
           )}
-          <div className={styles.signOutSection}>
-            <button onClick={handleSignOut} className={styles.signOutButton}>
-              התנתקות
+          {userData?.id && (
+            <button
+              onClick={() => router.push(`/manage-volunteers/${userData.id}`)}
+              className={styles.actionButton}
+            >
+              עריכה
             </button>
-          </div>
+          )}
         </div>
       </div>
     </main>
