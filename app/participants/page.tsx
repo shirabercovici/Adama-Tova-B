@@ -308,13 +308,16 @@ export default function ParticipantsPage() {
       }
 
       // Only update if we have valid initials (not default 'א') and it's different from current
-      if (initials !== 'א' && initials !== userInitials) {
-        setUserInitials(initials);
-        // Save to localStorage for persistence
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('userInitials', initials);
+      setUserInitials((currentInitials) => {
+        if (initials !== 'א' && initials !== currentInitials) {
+          // Save to localStorage for persistence
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('userInitials', initials);
+          }
+          return initials;
         }
-      }
+        return currentInitials;
+      });
     } else {
       // If no user, try to fetch it directly
       const fetchUserDirectly = async () => {
@@ -364,7 +367,6 @@ export default function ParticipantsPage() {
       fetchUserDirectly();
     }
   }, [user, supabase]); // userInitials is updated via functional setState, no need in deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   // Use debounced search for fetching participants
   const fetchParticipantsDebounced = useCallback(async () => {
