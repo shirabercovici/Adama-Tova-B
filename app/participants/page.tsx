@@ -7,22 +7,16 @@ import { createClient } from "@/lib/supabase/client";
 import SearchBarWithAdd from "@/lib/components/SearchBarWithAdd";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
-import { motion } from "framer-motion";
 import { logActivity } from "@/lib/activity-logger";
 
 export default function ParticipantsPage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false, will load from cache first
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [isSearchActive, setIsSearchActive] = useState(false);
-  // Always start with 0 to avoid hydration mismatch
-  const [presentTodayCount, setPresentTodayCount] = useState<number>(0);
-
-  // Use ref to track if we've loaded from localStorage to prevent resetting to 0
-  const hasLoadedFromStorageRef = useRef(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isTasksOpen, setIsTasksOpen] = useState(false);
   const [isDoneTasksOpen, setIsDoneTasksOpen] = useState(false);
@@ -33,11 +27,10 @@ export default function ParticipantsPage() {
   const [isStatusUpdatesOpen, setIsStatusUpdatesOpen] = useState(false);
   const [statusUpdates, setStatusUpdates] = useState<any[]>([]);
   const isFetchingStatusUpdatesRef = useRef(false);
-  const fetchCountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFetchingTasksRef = useRef(false);
-  const isFetchingCountRef = useRef(false);
   const hasFetchedInitialDataRef = useRef(false);
   const searchAbortControllerRef = useRef<AbortController | null>(null);
+  const hasLoadedFromCacheRef = useRef(false);
 
   // Add class to body to hide navbar and make full width
   useEffect(() => {
@@ -57,14 +50,31 @@ export default function ParticipantsPage() {
         setUserInitials(savedInitials);
       }
       
-      // Load count from localStorage after hydration to avoid mismatch
-      const savedCount = localStorage.getItem('presentTodayCount');
-      if (savedCount) {
-        const count = parseInt(savedCount, 10);
-        if (!isNaN(count) && count >= 0) {
-          setPresentTodayCount(count);
-          hasLoadedFromStorageRef.current = true;
+      // Load participants from cache FIRST for instant display (most important feature)
+      // This MUST be synchronous and happen immediately - no delays
+      try {
+        const cachedParticipants = localStorage.getItem('participants_cache');
+        if (cachedParticipants) {
+          const { participants: cachedParticipantsData, timestamp, filterType } = JSON.parse(cachedParticipants);
+          // Use cache if it's less than 5 minutes old (increased for better UX)
+          // Always use cache if available, even if slightly old - better than loading
+          if (cachedParticipantsData && Array.isArray(cachedParticipantsData) && 
+              Date.now() - timestamp < 5 * 60 * 1000 && 
+              filterType === 'active') {
+            // Set immediately - no async, no delays
+            setParticipants(cachedParticipantsData);
+            setLoading(false); // We have cached data, no loading needed
+            hasLoadedFromCacheRef.current = true;
+          } else if (cachedParticipantsData && Array.isArray(cachedParticipantsData) && 
+                     filterType === 'active') {
+            // Even if cache is old, use it for instant display - refresh in background
+            setParticipants(cachedParticipantsData);
+            setLoading(false);
+            hasLoadedFromCacheRef.current = true;
+          }
         }
+      } catch (e) {
+        // Ignore cache errors
       }
       
       // Load tasks from cache for instant display
@@ -79,6 +89,13 @@ export default function ParticipantsPage() {
         }
       } catch (e) {
         // Ignore cache errors
+      }
+      
+      // Start fetching participants immediately if we don't have cached data
+      // This is the most important feature - load it ASAP
+      if (!hasLoadedFromCacheRef.current) {
+        // No cache - trigger fetch immediately (will be handled by useEffect)
+        setDebouncedSearch("");
       }
       
       // Preload tasks immediately in the background (without waiting for other data)
@@ -112,87 +129,6 @@ export default function ParticipantsPage() {
     };
   }, [search]);
 
-  // Track last fetch time to prevent too frequent calls
-  const lastCountFetchTimeRef = useRef<number>(0);
-  const lastCountFetchDateRef = useRef<string>("");
-  const countFetchPromiseRef = useRef<Promise<void> | null>(null);
-  const COUNT_FETCH_COOLDOWN = 3000; // Minimum 3 seconds between fetches
-
-  // Fetch count of participants present today (independent of search)
-  const fetchPresentTodayCount = useCallback(async () => {
-    const now = Date.now();
-
-    // If there's already a fetch in progress, return the existing promise
-    if (countFetchPromiseRef.current) {
-      return countFetchPromiseRef.current;
-    }
-
-    // Prevent duplicate concurrent requests
-    if (isFetchingCountRef.current) {
-      return;
-    }
-
-    // Calculate today's date string
-    const nowDate = new Date();
-    const today = new Date(Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate()));
-    const todayStr = today.toISOString().split("T")[0];
-
-    // If we already fetched for today and it's within cooldown, skip
-    if (
-      lastCountFetchDateRef.current === todayStr &&
-      now - lastCountFetchTimeRef.current < COUNT_FETCH_COOLDOWN
-    ) {
-      return Promise.resolve();
-    }
-
-    isFetchingCountRef.current = true;
-    lastCountFetchTimeRef.current = now;
-    lastCountFetchDateRef.current = todayStr;
-
-    // Create a promise and store it to prevent concurrent calls
-    countFetchPromiseRef.current = (async () => {
-      try {
-        const params = new URLSearchParams();
-        params.append("filterLastAttendance", "today");
-        params.append("filterArchived", "active");
-        params.append("countOnly", "true"); // Request only count, not all records
-
-        const url = `/participants/api?${params.toString()}`;
-        const response = await fetch(url, {
-          cache: 'no-store'
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          // If countOnly is used, response will have 'count' property instead of 'participants'
-          const count = data.count !== undefined ? data.count : (data.participants || []).length;
-          // Only update if count is valid and different from current (to prevent unnecessary updates)
-          // Use functional update to avoid dependency on presentTodayCount
-          setPresentTodayCount((currentCount) => {
-            if (count >= 0 && count !== currentCount) {
-              // Save to localStorage for persistence across page navigations
-              if (typeof window !== 'undefined') {
-                localStorage.setItem('presentTodayCount', count.toString());
-                hasLoadedFromStorageRef.current = true;
-              }
-              return count;
-            }
-            return currentCount;
-          });
-        } else {
-          // Silently ignore 404 errors for count fetch
-          // The API route might not be loaded yet
-        }
-      } catch (err) {
-        // Silently ignore errors for count fetch
-      } finally {
-        isFetchingCountRef.current = false;
-        countFetchPromiseRef.current = null;
-      }
-    })();
-
-    return countFetchPromiseRef.current;
-  }, []);
 
   // Track last fetch time for tasks
   const lastTasksFetchTimeRef = useRef<number>(0);
@@ -377,13 +313,6 @@ export default function ParticipantsPage() {
 
   // Use debounced search for fetching participants
   const fetchParticipantsDebounced = useCallback(async () => {
-    // Only fetch if search is active
-    if (!isSearchActive) {
-      setParticipants([]);
-      setLoading(false);
-      setError(null);
-      return;
-    }
 
     // Cancel previous request if it exists
     if (searchAbortControllerRef.current) {
@@ -402,24 +331,23 @@ export default function ParticipantsPage() {
     searchAbortControllerRef.current = abortController;
 
     isFetchingParticipantsRef.current = true;
-    // Don't show loading immediately - keep previous results visible for better UX
+    // Don't show loading if we have cached participants - instant experience
     // Only show loading if we don't have any participants yet
-    // Use functional update to check current state without dependency
     setParticipants((currentParticipants) => {
-      if (currentParticipants.length === 0) {
-    setLoading(true);
+      if (currentParticipants.length === 0 && !hasLoadedFromCacheRef.current) {
+        setLoading(true);
       }
       return currentParticipants;
     });
     setError(null);
     try {
       const params = new URLSearchParams();
-      // Show all participants (including archived) in search
-      params.append("filterArchived", "all");
-
-      // If there's a debounced search query, add it
+      // Show only active participants by default, all when searching
       if (debouncedSearch && debouncedSearch.trim() !== "") {
+        params.append("filterArchived", "all");
         params.append("search", debouncedSearch.trim());
+      } else {
+        params.append("filterArchived", "active");
       }
 
       const response = await fetch(`/participants/api?${params.toString()}`, {
@@ -442,8 +370,23 @@ export default function ParticipantsPage() {
       if (!data) {
         throw new Error("Invalid response from API");
       }
-      setParticipants(data.participants || []);
+      const fetchedParticipants = data.participants || [];
+      setParticipants(fetchedParticipants);
       setError(null);
+      
+      // Save to cache for instant loading next time (most important feature)
+      if (typeof window !== 'undefined') {
+        try {
+          const filterType = (debouncedSearch && debouncedSearch.trim() !== "") ? 'search' : 'active';
+          localStorage.setItem('participants_cache', JSON.stringify({
+            participants: fetchedParticipants,
+            timestamp: Date.now(),
+            filterType: filterType
+          }));
+        } catch (e) {
+          // Ignore cache errors (e.g., quota exceeded)
+        }
+      }
     } catch (err) {
       // Don't show error if request was aborted
       if (err instanceof Error && err.name === 'AbortError') {
@@ -460,11 +403,10 @@ export default function ParticipantsPage() {
         searchAbortControllerRef.current = null;
       }
     }
-  }, [isSearchActive, debouncedSearch]);
+  }, [debouncedSearch]);
 
   // Track last fetched values to prevent unnecessary refetches
   const lastFetchedSearchRef = useRef<string>("");
-  const lastFetchedIsSearchActiveRef = useRef<boolean>(false);
   const fetchParticipantsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -473,29 +415,20 @@ export default function ParticipantsPage() {
       clearTimeout(fetchParticipantsTimeoutRef.current);
     }
 
-    // If search is not active, clear participants and return
-    if (!isSearchActive) {
-      lastFetchedIsSearchActiveRef.current = false;
-      return;
-    }
-
-    // If search just became active, fetch immediately
-    if (isSearchActive && !lastFetchedIsSearchActiveRef.current) {
-      lastFetchedIsSearchActiveRef.current = true;
-      lastFetchedSearchRef.current = debouncedSearch;
-      // Reset fetching flag to ensure we can fetch
-      isFetchingParticipantsRef.current = false;
-      fetchParticipantsDebounced();
-      return;
-    }
-
     // Only fetch if search query changed
     if (debouncedSearch !== lastFetchedSearchRef.current) {
       lastFetchedSearchRef.current = debouncedSearch;
-      // Small debounce for search query changes
-      fetchParticipantsTimeoutRef.current = setTimeout(() => {
+      // For initial load (empty search), fetch immediately without debounce
+      // For search queries, use small debounce
+      if (debouncedSearch === "" && participants.length === 0) {
+        // Initial load - fetch immediately for fastest experience
         fetchParticipantsDebounced();
-      }, 10);
+      } else {
+        // Search query change - small debounce
+        fetchParticipantsTimeoutRef.current = setTimeout(() => {
+          fetchParticipantsDebounced();
+        }, 10);
+      }
     }
 
     return () => {
@@ -503,7 +436,8 @@ export default function ParticipantsPage() {
         clearTimeout(fetchParticipantsTimeoutRef.current);
       }
     };
-  }, [isSearchActive, debouncedSearch, fetchParticipantsDebounced]);
+  }, [debouncedSearch, fetchParticipantsDebounced, participants.length]);
+
 
   // Fetch initial data only once on mount
   useEffect(() => {
@@ -512,6 +446,13 @@ export default function ParticipantsPage() {
       return;
     }
     hasFetchedInitialDataRef.current = true;
+    
+    // If we already have participants from cache, don't show loading
+    // Just refresh in background silently
+    if (hasLoadedFromCacheRef.current && participants.length > 0) {
+      // We have cached data, refresh silently in background
+      // Don't set loading to true
+    }
 
     let isMounted = true;
     let fetchPromise: Promise<void> | null = null;
@@ -523,11 +464,25 @@ export default function ParticipantsPage() {
       }
 
       fetchPromise = (async () => {
-        // Fetch count and tasks in parallel
-        await Promise.all([
-          fetchPresentTodayCount(),
-          fetchTasks()
-        ]);
+        // If we have cached participants, refresh them silently in background
+        // Don't block or show loading if we already have data
+        if (hasLoadedFromCacheRef.current && participants.length > 0) {
+          // Refresh in background - don't wait for it, don't block
+          fetchParticipantsDebounced().catch(() => {
+            // Silently fail - we have cached data
+          });
+          // Still fetch tasks and other data
+          await fetchTasks();
+        } else {
+          // No cache - fetch participants FIRST (most important feature)
+          const participantsPromise = fetchParticipantsDebounced();
+          
+          // Fetch tasks in parallel (not blocking participants)
+          const tasksPromise = fetchTasks();
+          
+          // Wait for both but participants is priority
+          await Promise.all([participantsPromise, tasksPromise]);
+        }
 
         // Fetch status updates if user is a manager
         if (isMounted) {
@@ -616,7 +571,10 @@ export default function ParticipantsPage() {
   const handleCloseSearch = () => {
     setIsSearchActive(false);
     setSearch("");
-    setParticipants([]);
+    // Update debouncedSearch immediately and reset ref to trigger refetch
+    setDebouncedSearch("");
+    lastFetchedSearchRef.current = "force-refetch"; // Set to different value to force change detection
+    // The useEffect will detect the change and fetch the default list (active participants only)
   };
 
   // Keep search active if there's text
@@ -786,15 +744,6 @@ export default function ParticipantsPage() {
         }
       }
 
-      // Refresh count after a delay to ensure DB is updated
-      // Use debounce to prevent multiple rapid calls
-      if (fetchCountTimeoutRef.current) {
-        clearTimeout(fetchCountTimeoutRef.current);
-      }
-      fetchCountTimeoutRef.current = setTimeout(async () => {
-        await fetchPresentTodayCount();
-      }, 500);
-
       // Refresh participants list if there's a search query to ensure consistency
       if (search && search.trim() !== "") {
         fetchParticipantsDebounced();
@@ -822,12 +771,7 @@ export default function ParticipantsPage() {
 
 
   return (
-      <motion.main 
-    className={styles.container}
-    initial={{ opacity: 0, x: 50 }} // מתחיל קצת מהצד ובשקיפות
-    animate={{ opacity: 1, x: 0 }}  // חוזר למרכז ונהיה גלוי
-    transition={{ duration: 0.6, ease: "easeOut" }} // תנועה חלקה
-      >
+      <main className={styles.container}>
       {/* Navbar */}
       <div className={styles.navbarWrapper}>
         {/* <Navbar /> */}
@@ -858,14 +802,6 @@ export default function ParticipantsPage() {
             />
           </div>
         </div>
-        <div className={`${styles.headerCenter} ${isSearchActive ? styles.hidden : ''}`}>
-          {!isSearchActive && !isTasksOpen && (
-            <>
-              <div className={styles.headerNumber} suppressHydrationWarning>{presentTodayCount}</div>
-              <div className={styles.headerSubtitle}>פונים נוכחים במתחם</div>
-            </>
-          )}
-        </div>
         <div className={styles.headerSearchBar}>
           <SearchBarWithAdd
               placeholder="חיפוש פונה"
@@ -883,7 +819,7 @@ export default function ParticipantsPage() {
       </div>
 
       {/* Loading - show skeleton or minimal indicator */}
-      {loading && isSearchActive && participants.length === 0 && (
+      {loading && participants.length === 0 && (
         <div className={styles.loading} style={{ opacity: 0.5 }}>טוען...</div>
       )}
 
@@ -894,9 +830,9 @@ export default function ParticipantsPage() {
         </div>
       )}
 
-      {/* Participants List - Show when search is active */}
-      {!loading && !error && isSearchActive && (
-        <div className={styles.participantsList}>
+      {/* Participants List - Always show */}
+      {!loading && !error && (
+        <div className={`${styles.participantsList} ${isSearchActive ? styles.searchActive : ''}`}>
           {/* List Header */}
           <div className={styles.listHeader}>
             <div className={styles.headerCell}>
@@ -1240,6 +1176,6 @@ export default function ParticipantsPage() {
         </div>
       )}
 
-    </motion.main>
+    </main>
   );
 }

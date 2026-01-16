@@ -9,13 +9,15 @@ export const metadata = {
   title: "אדממי",
   description: "אפליקציה למעקב אחר צוות אדמה טובה",
   manifest: "/manifest.json",
+  themeColor: "#4D58D8",
   appleWebApp: {
     capable: true,
     title: "אדממי",
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
   },
   other: {
     "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
   },
 };
 
@@ -30,6 +32,10 @@ export default function RootLayout({
         {/* Preconnect to Google Fonts for faster loading */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Theme color for mobile status bar */}
+        <meta name="theme-color" content="#4D58D8" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
       <body>
         {/* The Script component goes inside body, usually at the top */}
