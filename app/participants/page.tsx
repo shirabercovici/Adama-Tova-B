@@ -80,6 +80,13 @@ export default function ParticipantsPage() {
       } catch (e) {
         // Ignore cache errors
       }
+      
+      // Preload tasks immediately in the background (without waiting for other data)
+      // This ensures tasks are ready when user clicks on them
+      fetchTasks().catch(err => {
+        // Silently handle errors - cache will be used if available
+        console.error("Background tasks preload failed:", err);
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount (after hydration)
@@ -666,14 +673,16 @@ export default function ParticipantsPage() {
               ...t,
               status: newStatus,
               done_by: userId,
-              done_by_user: doneByUser
+              done_by_user: doneByUser,
+              done_at: new Date().toISOString() // Set done_at for sorting
             };
           } else {
             return {
               ...t,
               status: newStatus,
               done_by: null,
-              done_by_user: null
+              done_by_user: null,
+              done_at: null
             };
           }
         }
@@ -696,15 +705,14 @@ export default function ParticipantsPage() {
         throw new Error("Failed to update task");
       }
 
-      // Only refetch if not already fetching to get the latest data from server
-      if (!isFetchingTasksRef.current) {
-      fetchTasks(true); // Force refresh after toggle
-      }
+      // Don't refetch after successful toggle to avoid changing the order
+      // The optimistic update already shows the correct state
+      // Data will be refreshed on next manual refresh or when opening tasks next time
     } catch (err) {
       console.error("Error toggling task:", err);
       // Revert optimistic update by re-fetching (only if not already fetching)
       if (!isFetchingTasksRef.current) {
-      fetchTasks(true); // Force refresh on error
+        fetchTasks(true); // Force refresh on error to revert changes
       }
     }
   };
@@ -1145,7 +1153,14 @@ export default function ParticipantsPage() {
             <div className={styles.doneSection}>
               {/* Done tasks list */}
               <ul className={`${styles.taskList} ${styles.doneTasksList}`}>
-                {tasks.filter(t => t.status === 'done').map(task => {
+                {tasks.filter(t => t.status === 'done')
+                  .sort((a, b) => {
+                    // Sort by done_at descending (most recent first), fallback to due_date if done_at is null
+                    const aTime = a.done_at ? new Date(a.done_at).getTime() : (a.due_date ? new Date(a.due_date).getTime() : 0);
+                    const bTime = b.done_at ? new Date(b.done_at).getTime() : (b.due_date ? new Date(b.due_date).getTime() : 0);
+                    return bTime - aTime; // Descending order (newest first)
+                  })
+                  .map(task => {
                   const doneByName = task.done_by_user
                     ? `${task.done_by_user.first_name || ''} ${task.done_by_user.last_name || ''}`.trim()
                     : null;

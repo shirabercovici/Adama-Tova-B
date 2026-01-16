@@ -868,6 +868,13 @@
   z-index: 1;
 }
 
+/* Hide tasksBottomLine on mobile devices */
+@media (max-width: 767px) {
+  .tasksBottomLine {
+    display: none;
+  }
+}
+
 .taskList {
   list-style: none;
   padding: 0;
