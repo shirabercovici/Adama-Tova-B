@@ -22,8 +22,13 @@ const nextConfig = {
   // Performance optimizations
   poweredByHeader: false,
   
-  // Headers for caching static assets
+  // Headers for caching static assets (only in production)
   async headers() {
+    // Only apply caching headers in production to avoid dev cache issues
+    if (process.env.NODE_ENV !== 'production') {
+      return [];
+    }
+    
     return [
       {
         source: '/:all*(svg|jpg|jpeg|png|gif|ico|webp|avif)',

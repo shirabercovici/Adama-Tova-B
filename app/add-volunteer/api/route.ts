@@ -3,13 +3,14 @@ import {
     PRIVATE_SUPABASE_SERVICE_KEY,
     PUBLIC_SUPABASE_URL,
 } from "@/lib/config";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { type Database } from "@/lib/supabase/database.types";
 import { type NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 
 // Cache the admin client to avoid recreating it on every request
-let cachedAdminClient: ReturnType<typeof createClient> | null = null;
+let cachedAdminClient: SupabaseClient<Database> | null = null;
 
 function getAdminClient() {
     // Return cached client if it exists
@@ -22,7 +23,7 @@ function getAdminClient() {
     }
     
     // Create and cache the client
-    cachedAdminClient = createClient(
+    cachedAdminClient = createClient<Database>(
         PUBLIC_SUPABASE_URL,
         PRIVATE_SUPABASE_SERVICE_KEY,
         {

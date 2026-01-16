@@ -4,11 +4,12 @@ import {
   PUBLIC_SUPABASE_URL,
   PUBLIC_SUPABASE_ANON_KEY,
 } from "@/lib/config";
-import { createClient as createDatabaseClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { type Database } from "@/lib/supabase/database.types";
 import { type NextRequest } from "next/server";
 
 // Initialize database client at module load time to avoid cold start delays
-let cachedDatabaseClient: ReturnType<typeof createDatabaseClient> | null = null;
+let cachedDatabaseClient: SupabaseClient<Database> | null = null;
 
 function getDatabaseClient() {
   // Return cached client if it exists
@@ -28,13 +29,10 @@ function getDatabaseClient() {
   }
   
   // Create and cache the client with optimized settings
-  cachedDatabaseClient = createDatabaseClient(
+  cachedDatabaseClient = createClient<Database>(
     PUBLIC_SUPABASE_URL,
     PRIVATE_SUPABASE_SERVICE_KEY,
     {
-      db: {
-        schema: 'public' as any,
-      },
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -44,7 +42,7 @@ function getDatabaseClient() {
           'x-client-info': 'supabase-js-nextjs',
         },
       },
-    } as any
+    }
   );
   
   return cachedDatabaseClient;

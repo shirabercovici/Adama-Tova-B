@@ -3,11 +3,12 @@ import {
   PRIVATE_SUPABASE_SERVICE_KEY,
   PUBLIC_SUPABASE_URL,
 } from "@/lib/config";
-import { createClient as createDatabaseClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { type Database } from "@/lib/supabase/database.types";
 import { type NextRequest } from "next/server";
 
 // Initialize database client at module load time
-let cachedDatabaseClient: ReturnType<typeof createDatabaseClient> | null = null;
+let cachedDatabaseClient: SupabaseClient<Database> | null = null;
 
 function getDatabaseClient() {
   if (cachedDatabaseClient) {
@@ -18,13 +19,10 @@ function getDatabaseClient() {
     throw new Error("Missing Supabase environment variables");
   }
   
-  cachedDatabaseClient = createDatabaseClient(
+  cachedDatabaseClient = createClient<Database>(
     PUBLIC_SUPABASE_URL,
     PRIVATE_SUPABASE_SERVICE_KEY,
     {
-      db: {
-        schema: 'public' as any,
-      },
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -34,7 +32,7 @@ function getDatabaseClient() {
           'x-client-info': 'supabase-js-nextjs',
         },
       },
-    } as any
+    }
   );
   
   return cachedDatabaseClient;
