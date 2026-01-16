@@ -9,9 +9,9 @@ export async function GET(request: Request) {
   if (code) {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-    
+
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    
+
     if (!error && data?.user) {
       const { data: existingUser } = await supabase
         .from("users")
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${requestUrl.origin}/login?error=unauthorized`);
       }
 
-      return NextResponse.redirect(`${requestUrl.origin}/homepage`);
+      return NextResponse.redirect(`${requestUrl.origin}/participants`);
     }
   }
 

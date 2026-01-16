@@ -107,21 +107,57 @@ export async function GET(request: NextRequest) {
     const databaseClient = getDatabaseClient();
     const searchParams = request.nextUrl.searchParams;
     const user_id = searchParams.get("user_id");
+    const activity_type = searchParams.get("activity_type");
     const limit = parseInt(searchParams.get("limit") || "50");
+
+    // If activity_type is specified without user_id, fetch all activities of that type
+    // This is useful for managers to see all status updates
+    if (activity_type && !user_id) {
+      let query = databaseClient
+        .from("user_activities")
+        .select("*")
+        .eq("activity_type", activity_type)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      const { data: activitiesData, error: activitiesError } = await query;
+
+      if (activitiesError) {
+        console.error("Error fetching activities:", activitiesError);
+        return Response.json(
+          { error: "Failed to fetch activities", details: activitiesError.message },
+          { status: 500 }
+        );
+      }
+
+      // Parse metadata JSON strings (only if activities exist)
+      const activities = (activitiesData || []).map((activity: any) => ({
+        ...activity,
+        metadata: activity.metadata ? JSON.parse(activity.metadata as string) : null,
+      }));
+
+      return Response.json({ activities });
+    }
 
     if (!user_id) {
       return Response.json(
-        { error: "user_id is required" },
+        { error: "user_id is required when activity_type is not specified" },
         { status: 400 }
       );
     }
 
     // Fetch all activities from user_activities table (attendance, updates, phone calls, status updates, and tasks logged as phone calls)
     // Database already orders and limits, so we just need to parse metadata
-    const { data: activitiesData, error: activitiesError } = await databaseClient
+    let query = databaseClient
       .from("user_activities")
       .select("*")
-      .eq("user_id", user_id)
+      .eq("user_id", user_id);
+
+    if (activity_type) {
+      query = query.eq("activity_type", activity_type);
+    }
+
+    const { data: activitiesData, error: activitiesError } = await query
       .order("created_at", { ascending: false })
       .limit(limit);
 
