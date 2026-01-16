@@ -139,7 +139,6 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                                 />
                             </button>
                             <div className={styles.userInfo}>
-                                <h3 className={styles.userName}>טוען...</h3>
                             </div>
                         </div>
                     </div>
