@@ -8,51 +8,53 @@ const GoogleLoginButton = () => {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-  setLoading(true);
-  
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
-    },
-  });
+    setLoading(true);
 
-  if (error) {
-    console.error("Login error:", error.message);
-    setLoading(false);
-  } else if (data?.url) {
-    // FORCE REDIRECT: Sometimes the SDK waits for a popup. 
-    // Manually pushing the window location forces a full page change.
-    window.location.href = data.url;
-  }
-};
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+
+    if (error) {
+      console.error("Login error:", error.message);
+      setLoading(false);
+    } else if (data?.url) {
+      window.location.href = data.url;
+    }
+  };
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <button
-        type="button"
-        onClick={handleLogin}
-        disabled={loading}
-        className="flex items-center justify-center gap-3 px-6 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 font-medium hover:bg-gray-50 transition-all disabled:opacity-50 w-[290px]"
-      >
-        {loading ? (
-          <span>Connecting...</span>
-        ) : (
-          <>
-            <img 
-              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-              alt="Google" 
-              className="w-5 h-5" 
-            />
-            התחבר באמצעות חשבון Google
-          </>
-        )}
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={handleLogin}
+      disabled={loading}
+      style={{
+        background: "transparent",
+        border: "none",
+        color: "#4D58D8", // Blue Adamami
+        fontFamily: "EditorSans_PRO, sans-serif",
+        fontSize: "1.875rem",
+        fontStyle: "normal",
+        fontWeight: 400,
+        textDecoration: "none",
+        cursor: "pointer",
+        padding: "10px",
+        height: "100%",
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        WebkitTapHighlightColor: "transparent", // Remove tap highlight on mobile
+      }}
+    >
+      {loading ? "מתחבר..." : "התחברות דרך Google"}
+    </button>
   );
 };
 
