@@ -221,13 +221,13 @@ export default function ProfilePage() {
               {/* Phone Number Field */}
               <div className={styles.formField}>
                 <label className={styles.fieldLabel}>מס&apos; טלפון</label>
-                <div className={styles.fieldValue} dir="ltr">{userData?.phone_number || "לא הוזן"}</div>
+                <div className={styles.fieldValue} dir="ltr" style={{ textAlign: 'right' }}>{userData?.phone_number || "לא הוזן"}</div>
               </div>
 
               {/* Email Field */}
               <div className={styles.formField}>
                 <label className={styles.fieldLabel}>מייל</label>
-                <div className={styles.fieldValue} dir="ltr">{userData?.email || "לא הוזן"}</div>
+                <div className={styles.fieldValue} dir="ltr" style={{ textAlign: 'right' }}>{userData?.email || "לא הוזן"}</div>
               </div>
             </div>
           ) : (
