@@ -76,7 +76,6 @@ export default function ProfilePage() {
               router.push("/");
             }
           }, 500);
-          setAuthChecked(true);
           return;
         }
         
@@ -84,14 +83,15 @@ export default function ProfilePage() {
         if (!authUser && initialState.userData) {
           // We have cached data, so show it and don't redirect
           // The data will be refreshed when auth loads
-          setAuthChecked(true);
           setLoading(false); // Stop loading since we have cached data
           return;
         }
-        
-        setAuthChecked(true);
 
         // First, get just the user ID (lightweight query) to start activities fetch early
+        if (!authUser || !authUser.email) {
+          return;
+        }
+        
         const { data: userWithId } = await supabase
           .from("users")
           .select("id")
