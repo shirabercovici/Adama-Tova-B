@@ -66,6 +66,20 @@ export default function ParticipantsPage() {
           hasLoadedFromStorageRef.current = true;
         }
       }
+      
+      // Load tasks from cache for instant display
+      try {
+        const cachedTasks = localStorage.getItem('tasks_cache');
+        if (cachedTasks) {
+          const { tasks: cachedTasksData, timestamp } = JSON.parse(cachedTasks);
+          // Use cache if it's less than 5 minutes old
+          if (cachedTasksData && Date.now() - timestamp < 5 * 60 * 1000) {
+            setTasks(cachedTasksData);
+          }
+        }
+      } catch (e) {
+        // Ignore cache errors
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount (after hydration)
@@ -176,23 +190,23 @@ export default function ParticipantsPage() {
   // Track last fetch time for tasks
   const lastTasksFetchTimeRef = useRef<number>(0);
   const tasksFetchPromiseRef = useRef<Promise<void> | null>(null);
-  const TASKS_FETCH_COOLDOWN = 3000; // Minimum 3 seconds between fetches
+  const TASKS_FETCH_COOLDOWN = 1000; // Reduced to 1 second for better responsiveness
 
-  const fetchTasks = useCallback(async () => {
+  const fetchTasks = useCallback(async (force = false) => {
     const now = Date.now();
 
     // If there's already a fetch in progress, return the existing promise
-    if (tasksFetchPromiseRef.current) {
+    if (tasksFetchPromiseRef.current && !force) {
       return tasksFetchPromiseRef.current;
     }
 
     // Prevent duplicate concurrent requests
-    if (isFetchingTasksRef.current) {
+    if (isFetchingTasksRef.current && !force) {
       return;
     }
 
-    // Prevent too frequent calls (cooldown)
-    if (now - lastTasksFetchTimeRef.current < TASKS_FETCH_COOLDOWN) {
+    // Prevent too frequent calls (cooldown) - but allow force refresh
+    if (!force && now - lastTasksFetchTimeRef.current < TASKS_FETCH_COOLDOWN) {
       return Promise.resolve();
     }
 
@@ -203,12 +217,24 @@ export default function ParticipantsPage() {
     tasksFetchPromiseRef.current = (async () => {
       try {
         const response = await fetch("/tasks/api", {
-          cache: 'no-store'
+          cache: 'no-store',
+          next: { revalidate: 0 }
         });
         if (response.ok) {
           const data = await response.json();
           if (data.tasks) {
             setTasks(data.tasks);
+            // Cache tasks in localStorage for instant display on next load
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('tasks_cache', JSON.stringify({
+                  tasks: data.tasks,
+                  timestamp: Date.now()
+                }));
+              } catch (e) {
+                // localStorage might be full, ignore
+              }
+            }
           }
         }
       } catch (err) {
@@ -282,13 +308,16 @@ export default function ParticipantsPage() {
       }
 
       // Only update if we have valid initials (not default 'א') and it's different from current
-      if (initials !== 'א' && initials !== userInitials) {
-        setUserInitials(initials);
-        // Save to localStorage for persistence
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('userInitials', initials);
+      setUserInitials((currentInitials) => {
+        if (initials !== 'א' && initials !== currentInitials) {
+          // Save to localStorage for persistence
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('userInitials', initials);
+          }
+          return initials;
         }
-      }
+        return currentInitials;
+      });
     } else {
       // If no user, try to fetch it directly
       const fetchUserDirectly = async () => {
@@ -338,7 +367,6 @@ export default function ParticipantsPage() {
       fetchUserDirectly();
     }
   }, [user, supabase]); // userInitials is updated via functional setState, no need in deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   // Use debounced search for fetching participants
   const fetchParticipantsDebounced = useCallback(async () => {
@@ -670,13 +698,13 @@ export default function ParticipantsPage() {
 
       // Only refetch if not already fetching to get the latest data from server
       if (!isFetchingTasksRef.current) {
-      fetchTasks();
+      fetchTasks(true); // Force refresh after toggle
       }
     } catch (err) {
       console.error("Error toggling task:", err);
       // Revert optimistic update by re-fetching (only if not already fetching)
       if (!isFetchingTasksRef.current) {
-      fetchTasks();
+      fetchTasks(true); // Force refresh on error
       }
     }
   };
@@ -1050,29 +1078,10 @@ export default function ParticipantsPage() {
                     </span>
                   </div>
                   <div className={styles.taskItemAction}>
-                    <div className={styles.taskItemVerticalLine}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="1" viewBox="0 0 1 100" fill="none" preserveAspectRatio="none">
-                        <path d="M0.5 0L0.5 100" stroke="#4D58D8" strokeLinecap="round"/>
-                      </svg>
-                    </div>
                     <div className={styles.phoneIconWrapper}>
                     {task.participant_id && (() => {
-                      const participant = participants.find(p => p.id === task.participant_id);
-                      const phoneNumber = participant?.phone;
-                      // Clean phone number - keep only digits and +, remove spaces and dashes
-                      let cleanPhone = phoneNumber ? phoneNumber.replace(/[^\d+]/g, '') : '';
-                      // If phone starts with 0, replace with +972 for international format
-                      if (cleanPhone && cleanPhone.startsWith('0')) {
-                        cleanPhone = '+972' + cleanPhone.substring(1);
-                      } else if (cleanPhone && !cleanPhone.startsWith('+')) {
-                        // If no + and starts with country code, add +
-                        if (cleanPhone.startsWith('972')) {
-                          cleanPhone = '+' + cleanPhone;
-                        } else {
-                          // Assume Israeli number, add +972
-                          cleanPhone = '+972' + cleanPhone;
-                        }
-                      }
+                      const phoneNumber = task.participant_phone;
+                      const participantName = task.participant_name || 'פונה';
                       
                       const phoneIcon = (
                         <svg 
@@ -1089,71 +1098,39 @@ export default function ParticipantsPage() {
                         >
                           <path 
                             d="M10.4756 18.8141C16.1083 24.2491 19.3586 24.9427 21.5821 25.0403C22.7576 25.092 23.9128 24.5955 24.7297 23.7488C26.6493 21.7595 25.9475 18.4805 23.2645 17.8146C21.2482 17.3141 19.1218 17.0088 17.7467 17.4284C14.4358 18.4387 10.0979 15.1873 10.7305 10.6582C10.9661 8.97128 10.7029 7.06235 10.2799 5.33084C9.62796 2.66291 6.3765 2.09745 4.46945 4.0738C3.61644 4.9578 3.17604 6.19369 3.35087 7.40963C3.70209 9.85248 4.73946 13.2792 10.4756 18.8141Z" 
+                            fill="#4D58D8"
                             stroke="#4D58D8" 
                             strokeWidth="2"
                           />
                         </svg>
                       );
 
-                      if (cleanPhone) {
+                      if (phoneNumber) {
                         return (
-                          <button
-                            type="button"
-                            onClick={async (e) => {
+                          <a 
+                            href={`tel:${phoneNumber}`}
+                            onClick={(e) => {
                               e.stopPropagation();
-                              e.preventDefault();
-                              
-                              // Open phone dialer
-                              window.location.href = `tel:${cleanPhone}`;
-                              
-                              // Log activity in background without blocking
-                              (async () => {
-                                try {
-                                  const { data: { user: authUser } } = await supabase.auth.getUser();
-                                  if (authUser) {
-                                    const { data: dbUser } = await supabase
-                                      .from('users')
-                                      .select('id')
-                                      .eq('email', authUser.email)
-                                      .single();
-                                    
-                                    if (dbUser && participant) {
-                                      await logActivity({
-                                        user_id: dbUser.id,
-                                        activity_type: 'phone_call',
-                                        participant_id: participant.id,
-                                        participant_name: participant.full_name,
-                                        description: `שיחת טלפון ${participant.full_name}`,
-                                      });
-                                    }
-                                  }
-                                } catch (error) {
-                                  console.error('Error logging phone call:', error);
-                                }
-                              })();
                             }}
                             className={styles.phoneLink}
-                            aria-label={`התקשר ל-${participant?.full_name || 'פונה'}`}
-                            style={{ 
-                              pointerEvents: 'auto', 
-                              touchAction: 'manipulation',
-                              WebkitTapHighlightColor: 'transparent',
-                              background: 'none',
-                              border: 'none',
-                              padding: 0,
-                              cursor: 'pointer'
-                            }}
+                            aria-label={`התקשר ל-${participantName}`}
                           >
                             {phoneIcon}
-                          </button>
+                          </a>
                         );
                       }
-                      return <div className={styles.phoneLink}>{phoneIcon}</div>;
+                      
+                      // אם אין מספר טלפון, מציגים את האייקון אבל לא לחיץ
+                      return (
+                        <div className={styles.phoneLink} style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                          {phoneIcon}
+                        </div>
+                      );
                     })()}
                     </div>
                   </div>
                   <div className={styles.taskItemHorizontalLine}>
-                    <svg width="23.75rem" height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#4D58D8" strokeWidth="1"/>
                     </svg>
                   </div>
@@ -1167,7 +1144,7 @@ export default function ParticipantsPage() {
             {/* Done Section */}
             <div className={styles.doneSection}>
               {/* Done tasks list */}
-              <ul className={styles.taskList}>
+              <ul className={`${styles.taskList} ${styles.doneTasksList}`}>
                 {tasks.filter(t => t.status === 'done').map(task => {
                   const doneByName = task.done_by_user
                     ? `${task.done_by_user.first_name || ''} ${task.done_by_user.last_name || ''}`.trim()
@@ -1229,7 +1206,7 @@ export default function ParticipantsPage() {
                         </div>
                       </div>
                       <div className={styles.taskItemHorizontalLine}>
-                        <svg width="23.75rem" height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#4D58D8" strokeWidth="1"/>
                         </svg>
                       </div>
@@ -1247,6 +1224,7 @@ export default function ParticipantsPage() {
           </div>
         </div>
       )}
+
     </motion.main>
   );
 }
