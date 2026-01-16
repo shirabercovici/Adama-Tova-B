@@ -16,6 +16,7 @@ interface SearchBarWithAddProps {
   onSearchActiveChange?: (active: boolean) => void;
   onCloseSearch?: () => void;
   hasResults?: boolean; // Indicates if there are results shown (e.g., participants list)
+  alwaysShowBackArrow?: boolean; // Always show back arrow instead of search icon
 }
 
 export default function SearchBarWithAdd({
@@ -30,6 +31,7 @@ export default function SearchBarWithAdd({
   onSearchActiveChange,
   onCloseSearch,
   hasResults = false,
+  alwaysShowBackArrow = false,
 }: SearchBarWithAddProps) {
   const [internalIsSearchActive, setInternalIsSearchActive] = useState(false);
   
@@ -103,7 +105,7 @@ export default function SearchBarWithAdd({
           className={styles.backArrowButton}
           aria-label={onBackClick ? "חזור" : (isSearchActive ? "סגור חיפוש" : "חיפוש")}
         >
-          {isSearchActive ? (
+          {isSearchActive || alwaysShowBackArrow ? (
             <Image
               src="/icons/right_arrow.svg"
               alt="סגור חיפוש"

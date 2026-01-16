@@ -98,6 +98,7 @@ export default function ManageVolunteersPage() {
                         onBackClick={() => router.back()}
                         addButtonLabel="הוסף איש צוות"
                         searchBarLabel="חיפוש צוות"
+                        alwaysShowBackArrow={true}
                     />
                 </div>
 
