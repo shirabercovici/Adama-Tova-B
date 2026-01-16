@@ -147,6 +147,18 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.fieldError {
+  border-bottom-color: #ef4444 !important;
+}
+
+.inputError {
+  color: #fca5a5 !important;
+}
+
+.inputError::placeholder {
+  color: rgba(248, 113, 113, 0.7) !important;
+}
+
 /* Role Selection */
 .roleSection {
   display: flex;

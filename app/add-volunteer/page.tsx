@@ -25,16 +25,47 @@ export default function AddVolunteerPage() {
         role: "volunteer" // 'volunteer' | 'manager'
     });
 
+    const [errors, setErrors] = useState<Record<string, boolean>>({});
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
+        // Clear error when user starts typing
+        if (errors[name]) {
+            setErrors((prev) => ({ ...prev, [name]: false }));
+        }
     };
 
     const handleRoleChange = (role: string) => {
         setFormData((prev) => ({ ...prev, role }));
     };
 
+    const validate = (): boolean => {
+        const newErrors: Record<string, boolean> = {};
+        
+        if (!formData.firstName.trim()) {
+            newErrors.firstName = true;
+        }
+        if (!formData.lastName.trim()) {
+            newErrors.lastName = true;
+        }
+        if (!formData.phone.trim()) {
+            newErrors.phone = true;
+        }
+        if (!formData.email.trim()) {
+            newErrors.email = true;
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handleSave = async () => {
+        // Validate before submitting
+        if (!validate()) {
+            return;
+        }
+
         setLoading(true);
         try {
             const response = await fetch("/add-volunteer/api", {
@@ -58,6 +89,7 @@ export default function AddVolunteerPage() {
                 email: "",
                 role: "volunteer"
             });
+            setErrors({});
             
             // Show success message (optional)
             alert("המתנדב נוסף בהצלחה!");
@@ -101,40 +133,40 @@ export default function AddVolunteerPage() {
                 <div className={styles.content}>
                     <div className={styles.formSection}>
                         {/* First Name */}
-                        <div className={styles.formField}>
+                        <div className={`${styles.formField} ${errors.firstName ? styles.fieldError : ''}`}>
                             <label className={styles.fieldLabel}>שם פרטי*</label>
                             <input
                                 type="text"
                                 name="firstName"
                                 value={formData.firstName}
                                 onChange={handleChange}
-                                className={styles.fieldInput}
+                                className={`${styles.fieldInput} ${errors.firstName ? styles.inputError : ''}`}
                                 placeholder="הזן שם פרטי"
                             />
                         </div>
 
                         {/* Last Name */}
-                        <div className={styles.formField}>
+                        <div className={`${styles.formField} ${errors.lastName ? styles.fieldError : ''}`}>
                             <label className={styles.fieldLabel}>שם משפחה*</label>
                             <input
                                 type="text"
                                 name="lastName"
                                 value={formData.lastName}
                                 onChange={handleChange}
-                                className={styles.fieldInput}
+                                className={`${styles.fieldInput} ${errors.lastName ? styles.inputError : ''}`}
                                 placeholder="הזן שם משפחה"
                             />
                         </div>
 
                         {/* Phone */}
-                        <div className={styles.formField}>
+                        <div className={`${styles.formField} ${errors.phone ? styles.fieldError : ''}`}>
                             <label className={styles.fieldLabel}>מס&apos; טלפון*</label>
                             <input
                                 type="tel"
                                 name="phone"
                                 value={formData.phone}
                                 onChange={handleChange}
-                                className={styles.fieldInput}
+                                className={`${styles.fieldInput} ${errors.phone ? styles.inputError : ''}`}
                                 placeholder="הזן מספר טלפון"
                                 dir="ltr"
                                 style={{ textAlign: 'right' }}
@@ -142,14 +174,14 @@ export default function AddVolunteerPage() {
                         </div>
 
                         {/* Email */}
-                        <div className={styles.formField}>
+                        <div className={`${styles.formField} ${errors.email ? styles.fieldError : ''}`}>
                             <label className={styles.fieldLabel}>מייל*</label>
                             <input
                                 type="email"
                                 name="email"
                                 value={formData.email}
                                 onChange={handleChange}
-                                className={styles.fieldInput}
+                                className={`${styles.fieldInput} ${errors.email ? styles.inputError : ''}`}
                                 placeholder="הזן כתובת מייל"
                                 dir="ltr"
                                 style={{ textAlign: 'right' }}
