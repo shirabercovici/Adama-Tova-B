@@ -229,11 +229,6 @@ export default function ProfilePage() {
                 <label className={styles.fieldLabel}>מייל</label>
                 <div className={styles.fieldValue} dir="ltr">{userData?.email || "לא הוזן"}</div>
               </div>
-
-              {/* Logout Button */}
-              <button onClick={handleSignOut} className={styles.logoutButton}>
-                התנתקות
-              </button>
             </div>
           ) : (
             /* History Tab */
@@ -330,21 +325,22 @@ export default function ProfilePage() {
         {/* Bottom Section with Action Buttons */}
         <div className={styles.bottomSection}>
           {userData?.role === "מנהל.ת" && (
-            <button
-              onClick={() => router.push('/manage-volunteers')}
-              className={styles.actionButton}
-            >
-              ניהול אנשי צוות
-            </button>
+            <>
+              <button
+                onClick={() => router.push('/manage-volunteers')}
+                className={styles.actionButton}
+              >
+                ניהול אנשי צוות
+              </button>
+              <div className={styles.separator}></div>
+            </>
           )}
-          {userData?.id && (
-            <button
-              onClick={() => router.push(`/manage-volunteers/${userData.id}`)}
-              className={styles.actionButton}
-            >
-              עריכה
-            </button>
-          )}
+          <button
+            onClick={handleSignOut}
+            className={styles.actionButton}
+          >
+            התנתקות
+          </button>
         </div>
       </div>
     </main>
