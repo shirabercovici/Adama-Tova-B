@@ -100,18 +100,6 @@ export default function Home() {
         boxSizing: "border-box",
       }}
     >
-      {/* Blue status bar area for mobile */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: `max(44px, calc(env(safe-area-inset-top, 0px) + 44px))`,
-          backgroundColor: "#4D58D8",
-          zIndex: 10000,
-        }}
-      />
       {/* Centered Content: Logo and Welcome Text */}
       <div
         style={{
