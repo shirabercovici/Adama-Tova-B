@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
         if (doneByUserIds.length > 0) {
             const { data: usersData } = await databaseClient
                 .from("users")
-                .select("id, first_name, last_name")
+                .select("id, first_name, last_name, role")
                 .in("id", doneByUserIds);
             
             if (usersData) {

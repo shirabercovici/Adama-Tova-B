@@ -114,6 +114,22 @@ export default function ParticipantCardPage() {
     const newValue = !participant.is_archived;
     setParticipant({ ...participant, is_archived: newValue });
     const { error } = await supabase.from('participants').update({ is_archived: newValue }).eq('id', id);
+    
+    // Invalidate cache so other users see the update
+    if (typeof window !== 'undefined' && !error) {
+      try {
+        // Remove cache or mark it as stale so it refreshes on next visit
+        const cachedParticipants = localStorage.getItem('participants_cache');
+        if (cachedParticipants) {
+          const cacheData = JSON.parse(cachedParticipants);
+          // Mark cache as very old so it refreshes
+          cacheData.timestamp = 0;
+          localStorage.setItem('participants_cache', JSON.stringify(cacheData));
+        }
+      } catch (e) {
+        // Ignore cache errors
+      }
+    }
     // if (!error && newValue) router.push('/participants');
   };
 
@@ -138,6 +154,22 @@ export default function ParticipantCardPage() {
       body: JSON.stringify({ id, last_attendance: newAttendance }),
     });
     setParticipant({ ...participant, last_attendance: newAttendance });
+
+    // Invalidate cache so other users see the update
+    if (typeof window !== 'undefined') {
+      try {
+        // Remove cache or mark it as stale so it refreshes on next visit
+        const cachedParticipants = localStorage.getItem('participants_cache');
+        if (cachedParticipants) {
+          const cacheData = JSON.parse(cachedParticipants);
+          // Mark cache as very old so it refreshes
+          cacheData.timestamp = 0;
+          localStorage.setItem('participants_cache', JSON.stringify(cacheData));
+        }
+      } catch (e) {
+        // Ignore cache errors
+      }
+    }
 
     // Log activity
     const { data: { user: authUser } } = await supabase.auth.getUser();
