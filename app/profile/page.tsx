@@ -54,44 +54,14 @@ export default function ProfilePage() {
     const getProfile = async () => {
       try {
         // Get authenticated user
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+        const { data: { user: authUser } } = await supabase.auth.getUser();
 
-        // Only redirect if there's a real auth error AND we don't have cached data
-        // If we have cached data, show it first and don't redirect immediately
-        if (!authUser && authError && !initialState.userData) {
-          // Small delay to avoid race conditions with session loading
-          setTimeout(() => {
-            router.push("/");
-          }, 100);
-          return;
-        }
-        
-        // If no user but also no error, might be loading - wait a bit and check again
-        // But if we have cached data, don't redirect - show cached data
-        if (!authUser && !initialState.userData) {
-          // Wait a bit for session to load, then check again
-          setTimeout(async () => {
-            const { data: { user: retryAuthUser }, error: retryError } = await supabase.auth.getUser();
-            if (!retryAuthUser && retryError) {
-              router.push("/");
-            }
-          }, 500);
-          return;
-        }
-        
-        // If we have cached data but no auth user yet, don't redirect - just wait
-        if (!authUser && initialState.userData) {
-          // We have cached data, so show it and don't redirect
-          // The data will be refreshed when auth loads
-          setLoading(false); // Stop loading since we have cached data
+        if (!authUser) {
+          router.push("/");
           return;
         }
 
         // First, get just the user ID (lightweight query) to start activities fetch early
-        if (!authUser || !authUser.email) {
-          return;
-        }
-        
         const { data: userWithId } = await supabase
           .from("users")
           .select("id")
@@ -160,6 +130,61 @@ export default function ProfilePage() {
     router.push("/");
   };
 
+  // Filter out attendance pairs (marked + removed for same participant on same day)
+  const filterAttendancePairs = (activities: any[]) => {
+    // Group attendance activities by participant and date
+    const attendanceGroups = new Map<string, any[]>();
+    
+    // First pass: collect all attendance activities by participant and date
+    activities.forEach((activity) => {
+      if (activity.activity_type === 'attendance_marked' || activity.activity_type === 'attendance_removed') {
+        if (!activity.participant_id) return;
+        
+        const date = new Date(activity.created_at).toISOString().split('T')[0]; // YYYY-MM-DD
+        const key = `${activity.participant_id}_${date}`;
+        
+        if (!attendanceGroups.has(key)) {
+          attendanceGroups.set(key, []);
+        }
+        
+        attendanceGroups.get(key)!.push(activity);
+      }
+    });
+    
+    // For each group, match pairs (marked + removed) and exclude them
+    const excludeIds = new Set<string>();
+    
+    attendanceGroups.forEach((groupActivities) => {
+      // Sort by created_at to process chronologically
+      groupActivities.sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      
+      // Match pairs: mark each marked/removed pair for exclusion
+      const markedStack: any[] = [];
+      const removedStack: any[] = [];
+      
+      groupActivities.forEach((activity) => {
+        if (activity.activity_type === 'attendance_marked') {
+          markedStack.push(activity);
+        } else {
+          removedStack.push(activity);
+        }
+      });
+      
+      // Pair up marked and removed activities (match them)
+      while (markedStack.length > 0 && removedStack.length > 0) {
+        const marked = markedStack.shift()!;
+        const removed = removedStack.shift()!;
+        excludeIds.add(marked.id);
+        excludeIds.add(removed.id);
+      }
+    });
+    
+    // Filter out activities that are part of a pair
+    return activities.filter((activity) => !excludeIds.has(activity.id));
+  };
+
   useEffect(() => {
     setMounted(true);
     document.body.classList.add('profile-page');
@@ -171,8 +196,7 @@ export default function ProfilePage() {
   // Note: Cached data is now loaded synchronously in useState initializer above
   // This useEffect is kept for cases where we need to refresh from cache
 
-  // Don't show loading screen if we have cached data - show it immediately
-  if (loading && !initialState.userData) {
+  if (loading) {
     return (
       <main className={styles.main} dir="rtl">
         <div className={styles.container}>
@@ -274,7 +298,7 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className={styles.activityList}>
-                  {activities.map((activity, index) => {
+                  {filterAttendancePairs(activities).map((activity, index) => {
                     const activityDate = new Date(activity.created_at);
                     const formattedDate = activityDate.toLocaleDateString("he-IL", {
                       day: "numeric",
