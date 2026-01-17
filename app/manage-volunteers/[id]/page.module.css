@@ -42,6 +42,14 @@
   gap: 0.5rem;
 }
 
+.header.loading {
+  background: var(--color-primary);
+}
+
+.header.loading .backButton {
+  color: var(--color-background);
+}
+
 .headerTop {
   display: flex;
   justify-content: flex-start;

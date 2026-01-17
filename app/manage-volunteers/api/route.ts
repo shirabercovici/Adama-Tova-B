@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
         if (id) {
             const { data: user, error } = await adminClient
                 .from("users")
-                .select("*")
+                .select("first_name, last_name, phone_number, email, role")
                 .eq("id", id)
                 .single();
 
