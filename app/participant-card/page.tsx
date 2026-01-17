@@ -73,6 +73,25 @@ export default function ParticipantCardPage() {
     if (id) fetchParticipant();
   }, [id, fetchParticipant]);
 
+  useEffect(() => {
+    // Dynamically update the theme-color meta tag for mobile browsers
+    const metaThemeColor = document.querySelector("meta[name='theme-color']");
+    if (metaThemeColor) {
+      if (participant?.is_archived) {
+        metaThemeColor.setAttribute("content", "#949ADD");
+      } else {
+        metaThemeColor.setAttribute("content", "#4D58D8");
+      }
+    }
+
+    // Cleanup function to reset the color when leaving the page
+    return () => {
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute("content", "#4D58D8");
+      }
+    };
+  }, [participant?.is_archived]);
+
   const handleAddUpdate = async () => {
     if (newUpdateText.trim() === '') return;
     const today = new Date();
@@ -114,7 +133,7 @@ export default function ParticipantCardPage() {
     const newValue = !participant.is_archived;
     setParticipant({ ...participant, is_archived: newValue });
     const { error } = await supabase.from('participants').update({ is_archived: newValue }).eq('id', id);
-    
+
     // Invalidate cache so other users see the update
     if (typeof window !== 'undefined' && !error) {
       try {
@@ -227,13 +246,16 @@ export default function ParticipantCardPage() {
 
   const allEvents = getAllEvents();
   const displayName = isEditing ? editForm.full_name : (participant ? participant.full_name : urlName);
-  const InfoRow = ({ label, value }: { label: string, value: any }) => (
-    <div style={{ padding: '10px 0' }}>
-      <div style={{ color: '#4D58D8', fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.5rem', fontStyle: 'normal', marginBottom: '5px' }}>{label}</div>
-      <div style={{ color: '#4D58D8', fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.25rem', fontStyle: 'normal' }}>{value || '---'}</div>
-      <div style={{ borderBottom: '1px solid rgba(77, 88, 216, 0.3)', marginTop: '10px' }}></div>
-    </div>
-  );
+  const InfoRow = ({ label, value }: { label: string, value: any }) => {
+    const textColor = participant?.is_archived ? '#949ADD' : '#4D58D8';
+    return (
+      <div style={{ padding: '10px 0' }}>
+        <div style={{ color: textColor, fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.5rem', fontStyle: 'normal', marginBottom: '5px' }}>{label}</div>
+        <div style={{ color: textColor, fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.25rem', fontStyle: 'normal' }}>{value || '---'}</div>
+        <div style={{ borderBottom: '1px solid rgba(77, 88, 216, 0.3)', marginTop: '10px' }}></div>
+      </div>
+    );
+  };
   return (
     <div style={{
       direction: 'rtl',
@@ -320,9 +342,17 @@ export default function ParticipantCardPage() {
             {!isEditing && participant?.is_archived && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                 <img
-                  src="/Group 281.png"
+                  src="/archive.svg"
                   alt="ארכיון"
-                  style={{ width: '25px', height: '25px', objectFit: 'contain' }}
+                  style={{
+                    display: 'flex',
+                    width: '1.6875rem',
+                    height: '1.6875rem',
+                    padding: '0.0625rem',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    objectFit: 'contain'
+                  }}
                 />
                 <span style={{ fontSize: '0.7rem', color: 'white' }}></span>
               </div>
@@ -572,9 +602,9 @@ export default function ParticipantCardPage() {
 
                   <div style={{ padding: '10px', display: 'flex', justifyContent: 'center' }}>
                     <img
-                      src="/popup archive.png"
+                      src="/archive-image.svg"
                       alt="שחזור מארכיון"
-                      style={{ width: '120px', height: 'auto', objectFit: 'contain' }}
+                      style={{ width: '13.375rem', height: '10.6875rem', objectFit: 'contain' }}
                     />
                   </div>
 
