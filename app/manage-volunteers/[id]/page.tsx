@@ -1,18 +1,57 @@
 "use client";
 
-import { useEffect, useState, ChangeEvent } from "react";
+import { useEffect, useState, ChangeEvent, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import styles from "./page.module.css";
 
+const CACHE_KEY = 'manage-volunteers-cache';
+
 export default function EditVolunteerPage({ params }: { params: { id: string } }) {
     const router = useRouter();
-    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [mounted, setMounted] = useState(false);
 
-    const [formData, setFormData] = useState({
+    // Try to get cached data first for instant display
+    const getCachedUser = () => {
+        if (typeof window === 'undefined') return null;
+        try {
+            // First, try to get from individual user cache
+            const cached = sessionStorage.getItem(`${CACHE_KEY}-user-${params.id}`);
+            if (cached) {
+                const user = JSON.parse(cached);
+                return {
+                    firstName: user.first_name || "",
+                    lastName: user.last_name || "",
+                    phone: user.phone_number || "",
+                    email: user.email || "",
+                    role: user.role === "מנהל.ת" ? "manager" : "volunteer"
+                };
+            }
+            
+            // If not found, try to get from users list cache (for header name/role)
+            const usersCache = sessionStorage.getItem(`${CACHE_KEY}-users`);
+            if (usersCache) {
+                const users: Array<{id: string; first_name: string; last_name: string; role: string}> = JSON.parse(usersCache);
+                const userFromList = users.find(u => u.id === params.id);
+                if (userFromList) {
+                    return {
+                        firstName: userFromList.first_name || "",
+                        lastName: userFromList.last_name || "",
+                        phone: "",
+                        email: "",
+                        role: userFromList.role === "מנהל.ת" ? "manager" : "volunteer"
+                    };
+                }
+            }
+        } catch (e) {
+            // Ignore cache errors
+        }
+        return null;
+    };
+
+    const [formData, setFormData] = useState(() => getCachedUser() || {
         firstName: "",
         lastName: "",
         phone: "",
@@ -36,24 +75,44 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                     const data = await response.json();
                     const user = data.user;
                     if (user) {
-                        setFormData({
+                        const newFormData = {
                             firstName: user.first_name || "",
                             lastName: user.last_name || "",
                             phone: user.phone_number || "",
                             email: user.email || "",
                             role: user.role === "מנהל.ת" ? "manager" : "volunteer"
+                        };
+                        
+                        // Update form data (only if different from cached to avoid flicker)
+                        setFormData(prev => {
+                            const hasChanged = 
+                                prev.firstName !== newFormData.firstName ||
+                                prev.lastName !== newFormData.lastName ||
+                                prev.phone !== newFormData.phone ||
+                                prev.email !== newFormData.email ||
+                                prev.role !== newFormData.role;
+                            
+                            return hasChanged ? newFormData : prev;
                         });
+                        
+                        // Cache the user data for future navigation
+                        if (typeof window !== 'undefined') {
+                            try {
+                                sessionStorage.setItem(`${CACHE_KEY}-user-${params.id}`, JSON.stringify(user));
+                            } catch (e) {
+                                // Ignore cache errors
+                            }
+                        }
                     }
                 } else {
                     alert("שגיאה בטעינת הנתונים");
                 }
             } catch (error) {
                 console.error("Error fetching user:", error);
-            } finally {
-                setLoading(false);
             }
         };
 
+        // Always fetch to ensure data is fresh, but UI shows cached data immediately
         fetchUser();
     }, [params.id]);
 
@@ -86,7 +145,9 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                 throw new Error(data.error || "Failed to update user");
             }
 
-            router.push("/manage-volunteers");
+            startTransition(() => {
+                router.push("/manage-volunteers");
+            });
         } catch (error: any) {
             alert(error.message);
         } finally {
@@ -101,7 +162,9 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
             });
 
             if (response.ok) {
+                startTransition(() => {
                 router.push("/manage-volunteers");
+            });
             } else {
                 alert("שגיאה במחיקת המשתמש");
             }
@@ -117,40 +180,8 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
 
     const getFullName = () => {
         const name = `${formData.firstName} ${formData.lastName}`.trim();
-        return name || "טוען...";
+        return name || "";
     };
-
-    if (loading) {
-        return (
-            <main className={styles.main} dir="rtl">
-                <div className={styles.container}>
-                    <div className={styles.header}>
-                        <div className={styles.headerTop}>
-                            <button 
-                                onClick={() => router.back()}
-                                className={styles.backButton}
-                                aria-label="חזור"
-                            >
-                                <Image
-                                    src="/icons/right_arrow.svg"
-                                    alt="חזור"
-                                    width={17}
-                                    height={21}
-                                />
-                            </button>
-                            <div className={styles.userInfo}>
-                            </div>
-                        </div>
-                    </div>
-                    <div className={styles.content}>
-                        <div className={styles.loadingContainer}>
-                            <div className={styles.loadingText}>טוען...</div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        );
-    }
 
     return (
         <main className={styles.main} dir="rtl">
@@ -301,11 +332,9 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                         <h3 className={styles.modalTitle}>למחוק פרופיל?</h3>
                         
                         <div className={styles.modalIllustration}>
-                            <Image
+                            <img
                                 src="/icons/delete_profile.svg"
                                 alt="Delete profile illustration"
-                                width={180}
-                                height={160}
                                 className={styles.plantIcon}
                             />
                         </div>

@@ -206,6 +206,9 @@
   flex-direction: column;
   gap: 0.3125rem;
   border-bottom: 0.0625rem solid var(--color-background);
+  cursor: pointer;
+  text-decoration: none;
+  width: 100%;
 }
 
 .teamMemberItem:last-child {

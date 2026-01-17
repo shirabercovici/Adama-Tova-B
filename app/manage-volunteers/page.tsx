@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import SearchBarWithAdd from "@/lib/components/SearchBarWithAdd";
 import styles from "./page.module.css";
@@ -15,22 +16,42 @@ interface User {
     role: string;
 }
 
+const CACHE_KEY = 'manage-volunteers-cache';
+
 export default function ManageVolunteersPage() {
     const router = useRouter();
     const supabase = useMemo(() => createClient(), []);
     const hasFetchedUserRef = useRef(false);
-    const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
+    
+    // Try to get cached users first for instant display
+    const getCachedUsers = (): User[] => {
+        if (typeof window === 'undefined') return [];
+        try {
+            const cached = sessionStorage.getItem(`${CACHE_KEY}-users`);
+            if (cached) {
+                return JSON.parse(cached);
+            }
+        } catch (e) {
+            // Ignore cache errors
+        }
+        return [];
+    };
+
+    const [users, setUsers] = useState<User[]>(getCachedUsers);
     const [search, setSearch] = useState("");
 
     useEffect(() => {
-        // Prevent multiple fetches
-        if (hasFetchedUserRef.current) {
-            return;
+        // If we have cached users, show them immediately and fetch in background
+        if (users.length > 0) {
+            fetchUsers(); // Update in background
+        } else {
+            // Only prevent multiple fetches if we don't have cached data
+            if (hasFetchedUserRef.current) {
+                return;
+            }
+            hasFetchedUserRef.current = true;
+            fetchUsers();
         }
-        hasFetchedUserRef.current = true;
-        
-        fetchUsers();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -46,12 +67,20 @@ export default function ManageVolunteersPage() {
             const response = await fetch("/manage-volunteers/api");
             if (response.ok) {
                 const data = await response.json();
-                setUsers(data.users || []);
+                const fetchedUsers = data.users || [];
+                setUsers(fetchedUsers);
+                
+                // Cache the users for instant loading on return
+                if (typeof window !== 'undefined') {
+                    try {
+                        sessionStorage.setItem(`${CACHE_KEY}-users`, JSON.stringify(fetchedUsers));
+                    } catch (e) {
+                        // Ignore cache errors
+                    }
+                }
             }
         } catch (error) {
             console.error("Error fetching users:", error);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -72,18 +101,6 @@ export default function ManageVolunteersPage() {
     const managerCount = users.filter(
         (user) => user.role === "מנהל.ת" || user.role === "מנהל" || user.role === "מנהלת" || (user.role && user.role.includes("מנהל"))
     ).length;
-
-    if (loading) {
-        return (
-            <main className={styles.main} dir="rtl">
-                <div className={styles.container}>
-                    <div className={styles.loadingContainer}>
-                        <div className={styles.loadingText}>טוען...</div>
-                    </div>
-                </div>
-            </main>
-        );
-    }
 
     return (
         <main className={styles.main} dir="rtl">
@@ -120,11 +137,11 @@ export default function ManageVolunteersPage() {
                     ) : (
                         <div className={styles.teamList}>
                             {filteredUsers.map((user, index) => (
-                                <div
+                                <Link
                                     key={user.id}
+                                    href={`/manage-volunteers/${user.id}`}
                                     className={styles.teamMemberItem}
-                                    onClick={() => router.push(`/manage-volunteers/${user.id}`)}
-                                    style={{ cursor: 'pointer' }}
+                                    prefetch={true}
                                 >
                                     <div className={styles.memberName}>
                                         {user.first_name} {user.last_name}
@@ -132,7 +149,7 @@ export default function ManageVolunteersPage() {
                                     <div className={styles.memberRole}>
                                         {user.role || "מתנדב.ת"}
                                     </div>
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     )}
