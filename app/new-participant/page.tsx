@@ -7,7 +7,7 @@ export default function NewParticipantPage() {
     const router = useRouter();
     const [name, setName] = useState('');
     const [fullName, setFullName] = useState('');
-    const [circle, setCircle] = useState<string>('מעגל 1');
+    const [circle, setCircle] = useState<string>('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [description, setDescription] = useState('');
@@ -16,15 +16,28 @@ export default function NewParticipantPage() {
     const [error, setError] = useState<string | null>(null);
     const [createdId, setCreatedId] = useState<string | null>(null);
     const [isChecked, setIsChecked] = useState(false);
+    const [errors, setErrors] = useState<Record<string, boolean>>({});
 
     const supabase = createClient();
 
     const handleSave = async () => {
+        // Validation
+        const newErrors: Record<string, boolean> = {};
+        if (!name.trim()) newErrors.name = true;
+        if (!phone.trim()) newErrors.phone = true;
+        if (!email.trim()) newErrors.email = true;
+        if (!circle) newErrors.circle = true;
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
         setIsSubmitting(true);
         setError(null);
 
         try {
-            if (!name || !circle) throw new Error('שם ומעגל הם שדות חובה');
+            // Validation already handled above
 
             const { data, error: insertError } = await supabase
                 .from('participants')
@@ -88,6 +101,22 @@ export default function NewParticipantPage() {
 
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background-color: #4D58D8;
+        }
+        
+        .input-error {
+            color: #fca5a5 !important;
+        }
+        
+        .input-error::placeholder {
+            color: rgba(248, 113, 113, 0.7) !important;
+            opacity: 1;
+        }
+
+        ::placeholder {
+            font-family: 'EditorSans_PRO';
+            font-style: italic;
+            color: #949ADD;
+            opacity: 0.7;
         }
       `}} />
 
@@ -187,36 +216,165 @@ export default function NewParticipantPage() {
 
                         <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', width: '100%', gap: '0.625rem' }}>
                             <label style={{ display: 'block', fontFamily: 'EditorSans_PRO', fontSize: '1.5rem', fontWeight: 'normal', margin: 0, color: 'var(--color-primary)', textAlign: 'right' }}>שם מלא*</label>
-                            <input type="text" value={name} onChange={(e) => setName(e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', borderRadius: 0, fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', fontStyle: 'italic', color: '#949ADD', textAlign: 'right' }} />
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => {
+                                    setName(e.target.value);
+                                    if (errors.name) setErrors(prev => ({ ...prev, name: false }));
+                                }}
+                                className={errors.name ? 'input-error' : ''}
+                                placeholder="הזן שם מלא"
+                                style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: errors.name ? '0.0625rem solid #ef4444' : '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', borderRadius: 0, fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', fontStyle: 'italic', color: errors.name ? '#fca5a5' : '#949ADD', textAlign: 'right' }}
+                            />
                         </div>
 
                         <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', width: '100%', gap: '0.625rem' }}>
                             <label style={{ display: 'block', fontFamily: 'EditorSans_PRO', fontSize: '1.5rem', fontWeight: 'normal', margin: 0, color: 'var(--color-primary)', textAlign: 'right' }}>מס&apos; טלפון*</label>
-                            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', borderRadius: 0, fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', fontStyle: 'italic', color: '#949ADD', textAlign: 'right' }} />
+                            <input
+                                type="tel"
+                                value={phone}
+                                onChange={(e) => {
+                                    setPhone(e.target.value);
+                                    if (errors.phone) setErrors(prev => ({ ...prev, phone: false }));
+                                }}
+                                className={errors.phone ? 'input-error' : ''}
+                                placeholder="הזן מספר טלפון"
+                                style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: errors.phone ? '0.0625rem solid #ef4444' : '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', borderRadius: 0, fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', fontStyle: 'italic', color: errors.phone ? '#fca5a5' : '#949ADD', textAlign: 'right' }}
+                            />
                         </div>
 
                         <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', width: '100%', gap: '0.625rem' }}>
                             <label style={{ display: 'block', fontFamily: 'EditorSans_PRO', fontSize: '1.5rem', fontWeight: 'normal', margin: 0, color: 'var(--color-primary)', textAlign: 'right' }}>מייל*</label>
-                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', borderRadius: 0, fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', fontStyle: 'italic', color: '#949ADD', textAlign: 'right' }} />
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => {
+                                    setEmail(e.target.value);
+                                    if (errors.email) setErrors(prev => ({ ...prev, email: false }));
+                                }}
+                                className={errors.email ? 'input-error' : ''}
+                                placeholder="הזן כתובת מייל"
+                                style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: errors.email ? '0.0625rem solid #ef4444' : '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', borderRadius: 0, fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', fontStyle: 'italic', color: errors.email ? '#fca5a5' : '#949ADD', textAlign: 'right' }}
+                            />
                         </div>
 
                         <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', width: '100%', gap: '0.625rem' }}>
                             <label style={{ display: 'block', fontFamily: 'EditorSans_PRO', fontSize: '1.5rem', fontWeight: 'normal', margin: 0, color: 'var(--color-primary)', textAlign: 'right' }}>מעגל*</label>
-                            <select value={circle} onChange={(e) => setCircle(e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', borderRadius: 0, fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', fontStyle: 'italic', color: '#949ADD', textAlign: 'right', cursor: 'pointer', appearance: 'none', backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23949ADD%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'left 0px center', backgroundSize: '12px' }}>
-                                {['מעגל 1', 'מעגל 2', 'מעגל 3', 'מעגל 4'].map((c) => (
-                                    <option key={c} value={c}>{c}</option>
-                                ))}
-                            </select>
+                            <div style={{ display: 'flex', flexDirection: 'row', width: '100%', gap: '15px', borderBottom: errors.circle ? '0.0625rem solid #ef4444' : '0.0625rem solid #4D58D8', paddingBottom: '10px' }}>
+                                {/* Right Column (in RTL) */}
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                    <div
+                                        onClick={() => {
+                                            setCircle('מעגל 1');
+                                            if (errors.circle) setErrors(prev => ({ ...prev, circle: false }));
+                                        }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', justifyContent: 'flex-start' }}
+                                    >
+                                        <div style={{
+                                            width: '20px',
+                                            height: '20px',
+                                            borderRadius: '50%',
+                                            border: '1.5px solid #4D58D8',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            flexShrink: 0
+                                        }}>
+                                            {circle === 'מעגל 1' && (
+                                                <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#4D58D8' }} />
+                                            )}
+                                        </div>
+                                        <span style={{ fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', color: '#4D58D8' }}>מעגל 1</span>
+                                    </div>
+                                    <div
+                                        onClick={() => {
+                                            setCircle('מעגל 3');
+                                            if (errors.circle) setErrors(prev => ({ ...prev, circle: false }));
+                                        }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', justifyContent: 'flex-start' }}
+                                    >
+                                        <div style={{
+                                            width: '20px',
+                                            height: '20px',
+                                            borderRadius: '50%',
+                                            border: '1.5px solid #4D58D8',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            flexShrink: 0
+                                        }}>
+                                            {circle === 'מעגל 3' && (
+                                                <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#4D58D8' }} />
+                                            )}
+                                        </div>
+                                        <span style={{ fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', color: '#4D58D8' }}>מעגל 3</span>
+                                    </div>
+                                </div>
+
+                                {/* Divider */}
+                                <div style={{ width: '1px', backgroundColor: '#949ADD', opacity: 0.5 }}></div>
+
+                                {/* Left Column (in RTL) */}
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                    <div
+                                        onClick={() => {
+                                            setCircle('מעגל 2');
+                                            if (errors.circle) setErrors(prev => ({ ...prev, circle: false }));
+                                        }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', justifyContent: 'flex-start' }}
+                                    >
+                                        <div style={{
+                                            width: '20px',
+                                            height: '20px',
+                                            borderRadius: '50%',
+                                            border: '1.5px solid #4D58D8',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            flexShrink: 0
+                                        }}>
+                                            {circle === 'מעגל 2' && (
+                                                <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#4D58D8' }} />
+                                            )}
+                                        </div>
+                                        <span style={{ fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', color: '#4D58D8' }}>מעגל 2</span>
+                                    </div>
+                                    <div
+                                        onClick={() => {
+                                            setCircle('מעגל 4');
+                                            if (errors.circle) setErrors(prev => ({ ...prev, circle: false }));
+                                        }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', justifyContent: 'flex-start' }}
+                                    >
+                                        <div style={{
+                                            width: '20px',
+                                            height: '20px',
+                                            borderRadius: '50%',
+                                            border: '1.5px solid #4D58D8',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            flexShrink: 0
+                                        }}>
+                                            {circle === 'מעגל 4' && (
+                                                <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#4D58D8' }} />
+                                            )}
+                                        </div>
+                                        <span style={{ fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', color: '#4D58D8' }}>מעגל 4</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', width: '100%', gap: '0.625rem' }}>
                             <label style={{ display: 'block', fontFamily: 'EditorSans_PRO', fontSize: '1.5rem', fontWeight: 'normal', margin: 0, color: 'var(--color-primary)', textAlign: 'right' }}>קשר</label>
-                            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', borderRadius: 0, fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', fontStyle: 'italic', color: '#949ADD', textAlign: 'right' }} />
+                            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="הוסף קשר" style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', borderRadius: 0, fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', fontStyle: 'italic', color: '#949ADD', textAlign: 'right' }} />
                         </div>
 
                         <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', width: '100%', gap: '0.625rem' }}>
                             <label style={{ display: 'block', fontFamily: 'EditorSans_PRO', fontSize: '1.5rem', fontWeight: 'normal', margin: 0, color: 'var(--color-primary)', textAlign: 'right' }}>תיאור</label>
-                            <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', borderRadius: 0, fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', fontStyle: 'italic', color: '#949ADD', textAlign: 'right', resize: 'none', minHeight: '60px' }} />
+                            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="הוסף תיאור" style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', borderRadius: 0, fontFamily: 'EditorSans_PRO', fontSize: '1.25rem', fontStyle: 'italic', color: '#949ADD', textAlign: 'right', resize: 'none', minHeight: '60px' }} />
                             <div style={{ textAlign: 'left', fontSize: '1rem', color: '#949ADD', marginTop: '5px', fontFamily: 'EditorSans_PRO', fontStyle: 'italic' }}>
                                 עד 50 מילים
                             </div>
