@@ -71,7 +71,8 @@ export default function ProfilePage() {
         // Start fetching activities immediately if we have the ID
         if (userWithId?.id) {
           // Fetch activities in parallel with profile
-          fetch(`/api/activities?user_id=${userWithId.id}&limit=50`)
+          // Fetch more items to account for filtered attendance pairs
+          fetch(`/api/activities?user_id=${userWithId.id}&limit=100`)
             .then(async (activitiesResponse) => {
               if (activitiesResponse.ok) {
                 const activitiesData = await activitiesResponse.json();
@@ -298,7 +299,7 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className={styles.activityList}>
-                  {filterAttendancePairs(activities).map((activity, index) => {
+                  {filterAttendancePairs(activities).slice(0, 20).map((activity, index) => {
                     const activityDate = new Date(activity.created_at);
                     const formattedDate = activityDate.toLocaleDateString("he-IL", {
                       day: "numeric",
@@ -349,10 +350,16 @@ export default function ProfilePage() {
                     let updateDetails = '';
                     
                     if (isStatusUpdate) {
-                      const colonIndex = activity.description.indexOf(':');
-                      if (colonIndex !== -1) {
-                        mainDescription = activity.description.substring(0, colonIndex + 1);
-                        updateDetails = activity.description.substring(colonIndex + 1).trim();
+                      // Use update_content column if available, otherwise parse from description for backward compatibility
+                      if (activity.update_content) {
+                        updateDetails = activity.update_content;
+                      } else {
+                        // Fallback: parse from description for older entries
+                        const colonIndex = activity.description.indexOf(':');
+                        if (colonIndex !== -1) {
+                          mainDescription = activity.description.substring(0, colonIndex + 1);
+                          updateDetails = activity.description.substring(colonIndex + 1).trim();
+                        }
                       }
                     }
 

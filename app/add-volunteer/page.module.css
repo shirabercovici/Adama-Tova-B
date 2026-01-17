@@ -36,10 +36,12 @@
 .header {
   width: 100%;
   padding: 3rem 1.5rem 1.5rem;
+  padding-top: max(3rem, env(safe-area-inset-top, 0px) + 3rem);
   background: var(--color-background);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  margin-top: calc(-1 * env(safe-area-inset-top, 0px));
 }
 
 .headerTop {
@@ -373,6 +375,8 @@
   
   .header {
     padding: 1.5rem 1rem 1rem;
+    padding-top: max(1.5rem, env(safe-area-inset-top, 0px) + 1.5rem);
+    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
   }
   
   .content {
