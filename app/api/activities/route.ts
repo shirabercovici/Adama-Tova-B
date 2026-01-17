@@ -56,9 +56,33 @@ export async function POST(request: NextRequest) {
       participant_id,
       participant_name,
       description,
-      metadata
+      metadata,
+      activity_id,
+      is_read
     } = body;
 
+    // If activity_id and is_read are provided, update the read status
+    if (activity_id && is_read !== undefined) {
+      const updateData: any = {
+        is_read: is_read === true
+      };
+
+      const { data, error } = await databaseClient
+        .from("user_activities")
+        .update(updateData)
+        .eq("id", activity_id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating read status:", error);
+        return Response.json({ error: error.message }, { status: 500 });
+      }
+
+      return Response.json({ activity: data });
+    }
+
+    // Otherwise, insert new activity
     if (!user_id || !activity_type || !description) {
       return Response.json(
         { error: "Missing required fields: user_id, activity_type, description" },
@@ -111,6 +135,7 @@ export async function GET(request: NextRequest) {
     // If activity_type is specified without user_id, fetch all activities of that type
     // This is useful for managers to see all status updates
     if (activity_type && !user_id) {
+      // Fetch all status_update activities first
       let query = databaseClient
         .from("user_activities")
         .select("*")
@@ -128,11 +153,59 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Parse metadata JSON strings (only if activities exist)
-      const activities = (activitiesData || []).map((activity: any) => ({
-        ...activity,
-        metadata: activity.metadata ? JSON.parse(activity.metadata as string) : null,
-      }));
+      // Filter out activities without update_content (IS NOT NULL check)
+      const filteredActivities = (activitiesData || []).filter((activity: any) => {
+        if (activity_type === 'status_update') {
+          // Check if update_content exists and is not empty (IS NOT NULL)
+          return activity.update_content && 
+            (typeof activity.update_content === 'string' ? activity.update_content.trim() !== '' : activity.update_content !== null);
+        }
+        return true;
+      });
+
+      // Fetch user names separately (more reliable than join)
+      const userIds = Array.from(new Set(filteredActivities.map((a: any) => a.user_id).filter(Boolean)));
+      const usersMap: Record<string, any> = {};
+      
+      if (userIds.length > 0) {
+        const { data: usersData, error: usersError } = await databaseClient
+          .from("users")
+          .select("id, first_name, last_name, role")
+          .in("id", userIds);
+        
+        if (!usersError && usersData) {
+          usersData.forEach((user: any) => {
+            usersMap[user.id] = user;
+          });
+        }
+      }
+
+      // Format user info (only if activities exist)
+      const activities = filteredActivities.map((activity: any) => {
+        const user = usersMap[activity.user_id];
+        const firstName = user?.first_name || '';
+        const userRole = user?.role || '';
+        const userDisplayName = firstName ? `${firstName} ${userRole}` : '';
+        
+        // Use update_content directly from the field (it exists in the table)
+        const updateContent = activity.update_content;
+        
+        // Return the activity with all fields
+        return {
+          id: activity.id,
+          activity_type: activity.activity_type,
+          participant_name: activity.participant_name,
+          participant_id: activity.participant_id,
+          update_content: updateContent, // This is the message content from update_content field
+          created_at: activity.created_at,
+          is_public: activity.is_public,
+          is_read: activity.is_read || false,
+          user_id: activity.user_id,
+          user_name: firstName,
+          user_role: userRole,
+          user_display_name: userDisplayName,
+        };
+      });
 
       return Response.json({ activities });
     }

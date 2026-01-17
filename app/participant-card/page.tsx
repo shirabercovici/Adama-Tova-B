@@ -7,6 +7,109 @@ import { createClient } from '@/lib/supabase/client';
 import { Participant } from '@/app/participants/types';
 import { logActivity } from '@/lib/activity-logger';
 
+const InfoRow = ({ label, value, children }: { label: string, value: any, children?: React.ReactNode }) => (
+  <div style={{ padding: '10px 0', position: 'relative' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div>
+        <div style={{ color: '#4D58D8', fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.5rem', fontStyle: 'normal', marginBottom: '5px' }}>{label}</div>
+        <div style={{ color: '#4D58D8', fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.25rem', fontStyle: 'normal' }}>{value || '---'}</div>
+      </div>
+      {/* כאן ייכנס הכפתור אם נשלח אותו */}
+      <div style={{ marginLeft: '20px' }}>{children}</div> 
+    </div>
+    <div style={{ borderBottom: '1px solid rgba(77, 88, 216, 0.3)', marginTop: '10px' }}></div>
+  </div>
+);
+
+  const ArchiveConfirmPopup = ({ isArchived, onConfirm, onCancel }: { isArchived: boolean, onConfirm: () => void, onCancel: () => void }) => (
+  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
+    <div style={{
+      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center',
+      width: '21.6875rem', maxWidth: '90vw', height: '28.75rem', maxHeight: '80vh',
+      paddingTop: '0.625rem', backgroundColor: '#FEFCE8', borderRadius: '15px', overflow: 'hidden', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+    }}>
+      <div style={{ padding: '25px 20px 10px 20px', width: '100%', boxSizing: 'border-box' }}>
+        <h3 style={{ margin: 0, color: '#4D58D8', fontSize: '1.875rem', fontFamily: "'EditorSans_PRO', sans-serif", fontWeight: 'normal' }}>
+          {isArchived ? 'להוציא מהארכיון?' : 'להעביר לארכיון?'}
+        </h3>
+      </div>
+      <div style={{ padding: '10px', display: 'flex', justifyContent: 'center' }}>
+        <img src={isArchived ? "/popup archive.png" : "/archive-image.png"} alt="ארכיון" style={{ width: '120px', height: 'auto', objectFit: 'contain' }} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#FFF2A8', width: '100%' }}>
+        <button onClick={onConfirm} style={{ width: '100%', height: '4.375rem', border: 'none', borderBottom: '1px solid rgba(77, 88, 216, 0.2)', backgroundColor: 'transparent', color: '#4D58D8', fontSize: '1.875rem', fontFamily: "'EditorSans_PRO', sans-serif", cursor: 'pointer' }}>כן</button>
+        <button onClick={onCancel} style={{ width: '100%', height: '4.375rem', border: 'none', backgroundColor: 'transparent', color: '#4D58D8', fontSize: '1.875rem', fontFamily: "'EditorSans_PRO', sans-serif", cursor: 'pointer' }}>ביטול</button>
+      </div>
+    </div>
+  </div>
+);
+
+const ParticipantInfoTab = ({ participant }: { participant: any }) => (
+  <div style={{
+    width: '100%',
+    maxWidth: '27.5rem',
+    margin: '0 auto',
+    padding: '0.625rem 1.25rem',
+    boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column',
+    textAlign: 'right'
+  }}>
+    <InfoRow label="מס' טלפון" value={participant?.phone}>
+      {participant?.phone && (
+        <a href={`tel:${participant.phone}`} style={{ 
+          color: '#4D58D8', 
+          width: '40px', 
+          height: '40px', 
+          borderRadius: '50%', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          marginRight: '15px' // דוחף את הכפתור פנימה מהקצה הימני
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+          </svg>
+        </a>
+      )}
+    </InfoRow>
+
+    <InfoRow label="מעגל" value={participant?.bereavement_circle} />
+    <InfoRow label="מייל" value={participant?.email} />
+    <InfoRow label="קשר" value={participant?.bereavement_detail} />
+    <InfoRow label="תיאור" value={participant?.general_notes} />
+  </div>
+);
+
+  const containerStyle: React.CSSProperties = {
+  direction: 'rtl',
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  zIndex: 50,
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  backgroundColor: '#FEFCE8'
+};
+
+const getTabStyle = (isActive: boolean, isLast: boolean): React.CSSProperties => ({
+  flex: 1,
+  height: '100%',
+  border: 'none',
+  borderLeft: !isLast ? '1px solid rgba(255,255,255,0.2)' : 'none',
+  backgroundColor: isActive ? '#FEFCE8' : 'transparent',
+  color: isActive ? '#4D58D8' : 'white',
+  fontFamily: "'EditorSans_PRO', sans-serif",
+  fontSize: '1rem',
+  cursor: 'pointer',
+  borderRadius: '0',
+  outline: 'none',
+  padding: 0
+});
+
 export default function ParticipantCardPage() {
   const [isSuccessMessageOpen, setIsSuccessMessageOpen] = useState(false);
   const searchParams = useSearchParams();
@@ -111,7 +214,26 @@ const triggerLog = useCallback(async (type: any, description: string) => {
     if (id) fetchParticipant();
   }, [id, fetchParticipant]);
 
-const handleAddUpdate = async () => {
+  useEffect(() => {
+    // Dynamically update the theme-color meta tag for mobile browsers
+    const metaThemeColor = document.querySelector("meta[name='theme-color']");
+    if (metaThemeColor) {
+      if (participant?.is_archived) {
+        metaThemeColor.setAttribute("content", "#949ADD");
+      } else {
+        metaThemeColor.setAttribute("content", "#4D58D8");
+      }
+    }
+
+    // Cleanup function to reset the color when leaving the page
+    return () => {
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute("content", "#4D58D8");
+      }
+    };
+  }, [participant?.is_archived]);
+
+  const handleAddUpdate = async () => {
     if (newUpdateText.trim() === '') return;
     
     const today = new Date();
@@ -149,6 +271,22 @@ const handleAddUpdate = async () => {
     const newValue = !participant.is_archived;
     setParticipant({ ...participant, is_archived: newValue });
     const { error } = await supabase.from('participants').update({ is_archived: newValue }).eq('id', id);
+
+    // Invalidate cache so other users see the update
+    if (typeof window !== 'undefined' && !error) {
+      try {
+        // Remove cache or mark it as stale so it refreshes on next visit
+        const cachedParticipants = localStorage.getItem('participants_cache');
+        if (cachedParticipants) {
+          const cacheData = JSON.parse(cachedParticipants);
+          // Mark cache as very old so it refreshes
+          cacheData.timestamp = 0;
+          localStorage.setItem('participants_cache', JSON.stringify(cacheData));
+        }
+      } catch (e) {
+        // Ignore cache errors
+      }
+    }
     // if (!error && newValue) router.push('/participants');
   };
 
@@ -163,6 +301,22 @@ const handleAddUpdate = async () => {
       body: JSON.stringify({ id, last_attendance: newAttendance }),
     });
     setParticipant({ ...participant, last_attendance: newAttendance });
+
+    // Invalidate cache so other users see the update
+    if (typeof window !== 'undefined') {
+      try {
+        // Remove cache or mark it as stale so it refreshes on next visit
+        const cachedParticipants = localStorage.getItem('participants_cache');
+        if (cachedParticipants) {
+          const cacheData = JSON.parse(cachedParticipants);
+          // Mark cache as very old so it refreshes
+          cacheData.timestamp = 0;
+          localStorage.setItem('participants_cache', JSON.stringify(cacheData));
+        }
+      } catch (e) {
+        // Ignore cache errors
+      }
+    }
 
     // Log activity
     const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -200,6 +354,22 @@ const handleAddUpdate = async () => {
     if (diffDays < 7) return `לפני ${diffDays} ימים`;
     return `לפני ${Math.floor(diffDays / 7)} שבועות`;
   };
+  const getLastAttendanceText = () => {
+  if (!participant?.last_attendance) return "לא נמצאה נוכחות אחרונה";
+  
+  const lastDate = new Date(participant.last_attendance);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const diffDays = Math.floor((today.getTime() - lastDate.setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return "היום";
+  if (diffDays === 1) return "אתמול";
+  if (diffDays < 7) return `לפני ${diffDays} ימים`;
+  
+  const weeks = Math.floor(diffDays / 7);
+  return weeks === 1 ? "לפני שבוע" : `לפני ${weeks} שבועות`;
+};
 
 const getLastAttendanceText = () => {
   if (!participant?.last_attendance) return "טרם נרשמה נוכחות";
@@ -252,20 +422,20 @@ const displayName = isEditing ? editForm.full_name : (participant?.full_name || 
       <div style={{ borderBottom: '1px solid rgba(77, 88, 216, 0.3)', marginTop: '10px' }}></div>
     </div>
   );
+  const allEvents = getAllEvents();
+  const displayName = isEditing ? editForm.full_name : (participant ? participant.full_name : urlName);
+  const InfoRow = ({ label, value }: { label: string, value: any }) => {
+    const textColor = participant?.is_archived ? '#949ADD' : '#4D58D8';
+    return (
+      <div style={{ padding: '10px 0' }}>
+        <div style={{ color: textColor, fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.5rem', fontStyle: 'normal', marginBottom: '5px' }}>{label}</div>
+        <div style={{ color: textColor, fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.25rem', fontStyle: 'normal' }}>{value || '---'}</div>
+        <div style={{ borderBottom: '1px solid rgba(77, 88, 216, 0.3)', marginTop: '10px' }}></div>
+      </div>
+    );
+  };
   return (
-    <div style={{
-      direction: 'rtl',
-      position: 'fixed', // עוקף את הגבלות ה-Layout
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 50, // מבטיח שזה מעל הכל
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-      backgroundColor: '#FEFCE8'
-    }}>
+    <div style={containerStyle}>
       <style jsx global>{`
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
@@ -311,23 +481,19 @@ const displayName = isEditing ? editForm.full_name : (participant?.full_name || 
                 style={{ fontSize: '1.875rem', fontFamily: "'EditorSans_PRO', sans-serif", fontStyle: 'normal', flex: 1, textAlign: 'right', border: 'none', outline: 'none', color: 'white', background: 'transparent' }}
               />
             ) : (
-<div style={{ flex: 1, textAlign: 'right' }}>
-  <h2 style={{ fontSize: '1.875rem', fontFamily: "'EditorSans_PRO', sans-serif", fontStyle: 'normal', fontWeight: 'normal', margin: 0, color: 'white' }}>
-    {displayName}
-  </h2>
-  
-  {/* אם הפונה בארכיון - הצג הודעת ארכיון */}
-  {participant?.is_archived ? (
-    <div style={{ fontSize: '1rem', fontFamily: "'EditorSans_PRO', sans-serif", color: 'rgba(255, 255, 255, 0.8)', marginTop: '4px' }}>
-      נמצא.ת בארכיון
-    </div>
-  ) : (
-    /* אם הפונה לא בארכיון - הצג נוכחות אחרונה */
-    <div style={{ fontSize: '1rem', fontFamily: "'EditorSans_PRO', sans-serif", color: 'rgba(255, 255, 255, 0.8)', marginTop: '4px' }}>
-      נוכחות אחרונה: {getLastAttendanceText()}
-    </div>
-  )}
+              <div style={{ flex: 1, textAlign: 'right' }}>
+                <h2 style={{ fontSize: '1.875rem', fontFamily: "'EditorSans_PRO', sans-serif", fontStyle: 'normal', fontWeight: 'normal', margin: 0, color: 'white' }}>
+                  {displayName}
+                </h2>
+                <div style={{ fontSize: '0.9rem', opacity: 0.9, marginTop: '4px' }}>
+  נוכחות אחרונה: {getLastAttendanceText()}
 </div>
+                {participant?.is_archived && (
+                  <div style={{ fontSize: '1rem', fontFamily: "'EditorSans_PRO', sans-serif", color: 'rgba(255, 255, 255, 0.8)', marginTop: '4px' }}>
+                    נמצא.ת בארכיון
+                  </div>
+                )}
+              </div>
             )}
 
             {!isEditing && !participant?.is_archived && (
@@ -345,9 +511,17 @@ const displayName = isEditing ? editForm.full_name : (participant?.full_name || 
             {!isEditing && participant?.is_archived && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                 <img
-                  src="/Group 281.png"
+                  src="/archive.svg"
                   alt="ארכיון"
-                  style={{ width: '25px', height: '25px', objectFit: 'contain' }}
+                  style={{
+                    display: 'flex',
+                    width: '1.6875rem',
+                    height: '1.6875rem',
+                    padding: '0.0625rem',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    objectFit: 'contain'
+                  }}
                 />
                 <span style={{ fontSize: '0.7rem', color: 'white' }}></span>
               </div>
@@ -370,28 +544,15 @@ const displayName = isEditing ? editForm.full_name : (participant?.full_name || 
             height: '4.375rem',
             alignItems: 'center',
           }}>
-            {['תיק פונה', 'עדכון חדש', 'היסטוריה'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                style={{
-                  flex: 1,
-                  height: '100%',
-                  border: 'none',
-                  borderLeft: tab !== 'היסטוריה' ? '1px solid rgba(255,255,255,0.2)' : 'none',
-                  backgroundColor: activeTab === tab ? '#FEFCE8' : 'transparent',
-                  color: activeTab === tab ? '#4D58D8' : 'white',
-                  fontFamily: "'EditorSans_PRO', sans-serif",
-                  fontSize: '1rem',
-                  cursor: 'pointer',
-                  borderRadius: '0',
-                  outline: 'none',
-                  padding: 0
-                }}
-              >
-                {tab}
-              </button>
-            ))}
+{['תיק פונה', 'עדכון חדש', 'היסטוריה'].map((tab, index, array) => (
+  <button
+    key={tab}
+    onClick={() => setActiveTab(tab)}
+    style={getTabStyle(activeTab === tab, index === array.length - 1)}
+  >
+    {tab}
+  </button>
+))}
           </div>
         </div>
       </div>
@@ -829,9 +990,9 @@ const displayName = isEditing ? editForm.full_name : (participant?.full_name || 
 
                   <div style={{ padding: '10px', display: 'flex', justifyContent: 'center' }}>
                     <img
-                      src="/popup archive.png"
+                      src="/archive-image.svg"
                       alt="שחזור מארכיון"
-                      style={{ width: '120px', height: 'auto', objectFit: 'contain' }}
+                      style={{ width: '13.375rem', height: '10.6875rem', objectFit: 'contain' }}
                     />
                   </div>
 
@@ -945,6 +1106,13 @@ const displayName = isEditing ? editForm.full_name : (participant?.full_name || 
           </div>
         )
       }
+  {isArchiveConfirmOpen && (
+  <ArchiveConfirmPopup 
+    isArchived={!!participant?.is_archived} 
+    onConfirm={() => { handleArchive(); setIsArchiveConfirmOpen(false); }} 
+    onCancel={() => setIsArchiveConfirmOpen(false)} 
+  />
+)}
 
     </div > // זה ה-div שסוגר את הכל
   );

@@ -29,6 +29,7 @@ export interface Task {
     id: string;
     first_name: string;
     last_name: string;
+    role: string;
   } | null;
   participant_phone?: string | null;
   participant_name?: string | null;

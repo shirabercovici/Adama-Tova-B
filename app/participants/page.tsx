@@ -13,7 +13,7 @@ export default function ParticipantsPage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [loading, setLoading] = useState(false); // Start with false, will load from cache first
+  const [loading, setLoading] = useState(true); // Start with true, will be set to false if cache is found
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -48,6 +48,12 @@ export default function ParticipantsPage() {
       const savedInitials = localStorage.getItem('userInitials');
       if (savedInitials && savedInitials !== 'א') {
         setUserInitials(savedInitials);
+      }
+      
+      // Load user role from cache for instant display
+      const savedUserRole = localStorage.getItem('userRole');
+      if (savedUserRole) {
+        setUserRole(savedUserRole);
       }
       
       // Load participants from cache FIRST for instant display (most important feature)
@@ -91,10 +97,25 @@ export default function ParticipantsPage() {
         // Ignore cache errors
       }
       
+      // Load status updates from cache for instant display (for managers)
+      try {
+        const cachedStatusUpdates = localStorage.getItem('statusUpdates_cache');
+        if (cachedStatusUpdates) {
+          const { statusUpdates: cachedStatusUpdatesData, timestamp } = JSON.parse(cachedStatusUpdates);
+          // Use cache if it's less than 5 minutes old
+          if (cachedStatusUpdatesData && Date.now() - timestamp < 5 * 60 * 1000) {
+            setStatusUpdates(cachedStatusUpdatesData);
+          }
+        }
+      } catch (e) {
+        // Ignore cache errors
+      }
+      
       // Start fetching participants immediately if we don't have cached data
       // This is the most important feature - load it ASAP
       if (!hasLoadedFromCacheRef.current) {
-        // No cache - trigger fetch immediately (will be handled by useEffect)
+        // No cache - set loading to true and trigger fetch immediately
+        setLoading(true);
         setDebouncedSearch("");
       }
       
@@ -104,6 +125,9 @@ export default function ParticipantsPage() {
         // Silently handle errors - cache will be used if available
         console.error("Background tasks preload failed:", err);
       });
+      
+      // Preload status updates will be called after fetchStatusUpdates is defined
+      // This is handled in the useEffect that fetches initial data
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount (after hydration)
@@ -214,11 +238,28 @@ export default function ParticipantsPage() {
       const response = await fetch("/api/activities?activity_type=status_update&limit=50", {
         cache: 'no-store'
       });
+      
       if (response.ok) {
         const data = await response.json();
-        if (data.activities) {
+        
+        if (data.activities && Array.isArray(data.activities)) {
           setStatusUpdates(data.activities);
+          // Save to cache for instant loading next time
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('statusUpdates_cache', JSON.stringify({
+                statusUpdates: data.activities,
+                timestamp: Date.now()
+              }));
+            } catch (e) {
+              // Ignore cache errors (e.g., quota exceeded)
+            }
+          }
+        } else {
+          setStatusUpdates([]);
         }
+      } else {
+        setStatusUpdates([]);
       }
     } catch (err) {
       console.error("Error fetching status updates:", err);
@@ -226,6 +267,59 @@ export default function ParticipantsPage() {
       isFetchingStatusUpdatesRef.current = false;
     }
   }, [isManager]);
+
+  // Update read status for a status update
+  const updateStatusUpdateReadStatus = useCallback(async (updateId: string, isRead: boolean) => {
+    if (!updateId) {
+      console.error("Missing update ID");
+      return;
+    }
+
+    // Optimistic update
+    setStatusUpdates((prev) =>
+      prev.map((update) =>
+        update.id === updateId
+          ? { ...update, is_read: isRead }
+          : update
+      )
+    );
+
+    try {
+      const response = await fetch("/api/activities", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          activity_id: updateId,
+          is_read: isRead,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error updating read status:", errorData);
+        // Revert optimistic update on error
+        setStatusUpdates((prev) =>
+          prev.map((update) =>
+            update.id === updateId
+              ? { ...update, is_read: !isRead }
+              : update
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Error updating read status:", err);
+      // Revert optimistic update on error
+      setStatusUpdates((prev) =>
+        prev.map((update) =>
+          update.id === updateId
+            ? { ...update, is_read: !isRead }
+            : update
+        )
+      );
+    }
+  }, []);
 
   // Update initials when user data changes (in case data loads later)
   useEffect(() => {
@@ -277,6 +371,10 @@ export default function ParticipantsPage() {
               setUser(dbUser);
               if (dbUser.role) {
                 setUserRole(dbUser.role);
+                // Cache user role for instant display on next visit
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('userRole', dbUser.role);
+                }
               }
               const firstName = (dbUser.first_name || '').trim();
               const lastName = (dbUser.last_name || '').trim();
@@ -438,6 +536,55 @@ export default function ParticipantsPage() {
     };
   }, [debouncedSearch, fetchParticipantsDebounced, participants.length]);
 
+  // Refresh data when page becomes visible (user returns from another page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // User returned to the page - refresh data to see latest changes
+        // Only refresh if cache is older than 30 seconds to avoid too many requests
+        if (typeof window !== 'undefined') {
+          try {
+            const cachedParticipants = localStorage.getItem('participants_cache');
+            if (cachedParticipants) {
+              const { timestamp } = JSON.parse(cachedParticipants);
+              // If cache is older than 30 seconds, refresh
+              if (Date.now() - timestamp > 30 * 1000) {
+                fetchParticipantsDebounced();
+              }
+            } else {
+              // No cache, fetch immediately
+              fetchParticipantsDebounced();
+            }
+          } catch (e) {
+            // Ignore cache errors, just refresh
+            fetchParticipantsDebounced();
+          }
+        }
+      }
+    };
+
+    const handleFocus = () => {
+      // Also refresh when window gains focus
+      handleVisibilityChange();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchParticipantsDebounced]);
+
+  // Fetch status updates when userRole is loaded and user is a manager
+  useEffect(() => {
+    if (userRole && isManager() && !isFetchingStatusUpdatesRef.current) {
+      fetchStatusUpdates().catch(err => {
+        console.error('Error fetching status updates:', err);
+      });
+    }
+  }, [userRole, isManager, fetchStatusUpdates]);
 
   // Fetch initial data only once on mount
   useEffect(() => {
@@ -507,6 +654,10 @@ export default function ParticipantsPage() {
             // Set user role
             if (dbUser?.role) {
               setUserRole(dbUser.role);
+              // Cache user role for instant display on next visit
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('userRole', dbUser.role);
+              }
             }
 
             // Extract initials from first_name and last_name from users table
@@ -596,7 +747,7 @@ export default function ParticipantsPage() {
 
       // Get current user info for optimistic update
       let userId: string | null = null;
-      let doneByUser: { id: string; first_name: string; last_name: string } | null = null;
+      let doneByUser: { id: string; first_name: string; last_name: string; role: string } | null = null;
 
       if (newStatus === 'done') {
         // Get user ID and name
@@ -604,7 +755,7 @@ export default function ParticipantsPage() {
         if (authUser) {
           const { data: dbUser } = await supabase
             .from('users')
-            .select('id, first_name, last_name')
+            .select('id, first_name, last_name, role')
             .eq('email', authUser.email)
             .single();
           if (dbUser) {
@@ -616,7 +767,8 @@ export default function ParticipantsPage() {
               doneByUser = {
                 id: dbUser.id,
                 first_name: firstName,
-                last_name: lastName
+                last_name: lastName,
+                role: dbUser.role || ''
               };
             }
           }
@@ -744,8 +896,30 @@ export default function ParticipantsPage() {
         }
       }
 
+      // Update cache with new data
+      if (typeof window !== 'undefined') {
+        try {
+          const updatedParticipants = participants.map(p =>
+            p.id === participantId
+              ? { ...p, last_attendance: newAttendance }
+              : p
+          );
+          const filterType = (search && search.trim() !== "") ? 'search' : 'active';
+          localStorage.setItem('participants_cache', JSON.stringify({
+            participants: updatedParticipants,
+            timestamp: Date.now(),
+            filterType: filterType
+          }));
+        } catch (e) {
+          // Ignore cache errors
+        }
+      }
+
       // Refresh participants list if there's a search query to ensure consistency
       if (search && search.trim() !== "") {
+        fetchParticipantsDebounced();
+      } else {
+        // Even without search, refresh to ensure all users see the update
         fetchParticipantsDebounced();
       }
     } catch (err) {
@@ -772,6 +946,18 @@ export default function ParticipantsPage() {
 
   return (
       <main className={styles.container}>
+      {/* Blue status bar area for mobile */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: `max(44px, calc(env(safe-area-inset-top, 0px) + 44px))`,
+          backgroundColor: "#4D58D8",
+          zIndex: 0,
+        }}
+      />
       {/* Navbar */}
       <div className={styles.navbarWrapper}>
         {/* <Navbar /> */}
@@ -818,9 +1004,26 @@ export default function ParticipantsPage() {
         </div>
       </div>
 
-      {/* Loading - show skeleton or minimal indicator */}
+      {/* Loading - show loading screen with image */}
       {loading && participants.length === 0 && (
-        <div className={styles.loading} style={{ opacity: 0.5 }}>טוען...</div>
+        <div className={styles.loadingContainer}>
+          <div style={{ 
+            position: 'relative', 
+            width: '20.375rem', 
+            height: '17.375rem',
+            flexShrink: 0,
+            aspectRatio: '163/139'
+          }}>
+            <Image
+              src="/icons/loading.png"
+              alt="טוען..."
+              fill
+              style={{ objectFit: 'contain' }}
+              priority
+            />
+          </div>
+          <div className={styles.loadingText}>רק רגע...</div>
+        </div>
       )}
 
       {/* Error */}
@@ -830,8 +1033,8 @@ export default function ParticipantsPage() {
         </div>
       )}
 
-      {/* Participants List - Always show */}
-      {!loading && !error && (
+      {/* Participants List - Only show when not loading and no error */}
+      {!loading && !error && participants.length > 0 && (
         <div className={`${styles.participantsList} ${isSearchActive ? styles.searchActive : ''}`}>
           {/* List Header */}
           <div className={styles.listHeader}>
@@ -948,81 +1151,193 @@ export default function ParticipantsPage() {
                 </div>
               );
             });
-          })() : (
-            <div className={styles.emptyContainer}>
-              <Image
-                src="/icons/noponim.png"
-                alt="לא נמצאו פונים"
-                width={200}
-                height={200}
-                className={styles.emptyImage}
-              />
-              <div className={styles.empty}>לא נמצאו פונים</div>
-            </div>
-          )}
+          })() : null}
+        </div>
+      )}
+
+      {/* Empty state - show only when not loading, no error, and no participants */}
+      {!loading && !error && participants.length === 0 && (
+        <div className={styles.emptyContainer}>
+          <Image
+            src="/icons/noponim.png"
+            alt="לא נמצאו פונים"
+            width={200}
+            height={200}
+            className={styles.emptyImage}
+          />
+          <div className={styles.empty}>לא נמצאו פונים</div>
         </div>
       )}
 
       {/* Status Updates Drawer - Show only for managers when NOT searching */}
       {!isSearchActive && isManager() && (
-        <div className={`${styles.statusUpdatesDrawer} ${isStatusUpdatesOpen ? styles.open : styles.closed}`}>
+        <div className={`${styles.statusUpdatesDrawer} ${isStatusUpdatesOpen ? styles.open : styles.closed} ${isTasksOpen ? styles.hidden : ''}`}>
           <div className={styles.tasksLine}>
             <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
               <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round"/>
             </svg>
           </div>
-          <div className={styles.tasksHandle} onClick={() => setIsStatusUpdatesOpen(!isStatusUpdatesOpen)}>
+          <div className={`${styles.tasksHandle} ${isStatusUpdatesOpen ? styles.open : ''}`} onClick={() => setIsStatusUpdatesOpen(!isStatusUpdatesOpen)}>
             <div className={styles.tasksTitle}>
-              <div className={styles.tasksArrow}>
-                {isStatusUpdatesOpen ? (
-                  <svg width="21" height="17" viewBox="0 0 21 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1.50024 1.50024L8.78526 13.6419C9.56207 14.9366 11.4384 14.9366 12.2152 13.6419L19.5002 1.50024" stroke="#4D58D8" strokeWidth="3" strokeLinecap="round"/>
-                  </svg>
-                ) : (
-                  <svg width="21" height="17" viewBox="0 0 21 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M19.5002 14.6127L12.2152 2.47098C11.4384 1.1763 9.56206 1.1763 8.78526 2.47098L1.50024 14.6127" stroke="#4D58D8" strokeWidth="3" strokeLinecap="round"/>
-                  </svg>
-                )}
-              </div>
-              <span className={styles.tasksTitleText}>עדכוני סטטוס</span>
+              <div className={styles.tasksTopLine}></div>
+              <span className={styles.tasksTitleText}>הודעות</span>
             </div>
           </div>
 
           <div className={styles.tasksContent}>
             <ul className={styles.taskList}>
-              {statusUpdates.length > 0 ? (
-                statusUpdates.map((update, index) => {
-                  const colonIndex = update.description.indexOf(':');
-                  const participantName = colonIndex !== -1 ? update.description.substring(0, colonIndex).replace('עדכון סטטוס ', '') : '';
-                  const updateText = colonIndex !== -1 ? update.description.substring(colonIndex + 1).trim() : update.description;
-                  const updateDate = new Date(update.created_at);
-                  const formattedDate = `${updateDate.getDate()}/${updateDate.getMonth() + 1}`;
+              {statusUpdates && statusUpdates.length > 0 ? (
+                <>
+                  {/* Active (unread) status updates */}
+                  {(() => {
+                    const unreadUpdates = statusUpdates.filter(update => !update.is_read);
+                    return unreadUpdates.map((update, index) => {
+                      const participantName = update.participant_name || '';
+                      const updateText = update.update_content || '';
+                      const updateDate = new Date(update.created_at);
+                      const formattedDate = `${updateDate.getDate()}/${updateDate.getMonth() + 1}`;
+                      const userDisplayName = update.user_display_name || update.user_name || '';
+                      const isPublic = update.is_public === true;
+                      const updateId = update.id;
+                      const isRead = update.is_read || false;
+                      const isLastUnread = index === unreadUpdates.length - 1;
+                      
+                      if (!updateId) return null; // Skip if no ID
+                      
+                      return (
+                        <li key={updateId} className={`${styles.statusUpdateItem} ${isLastUnread ? styles.lastUnreadItem : ''}`}>
+                          <div className={styles.statusUpdateContent}>
+                            <div className={styles.statusUpdateHeader}>
+                              <span className={styles.statusUpdateParticipant}>{participantName} {formattedDate}</span>
+                              {userDisplayName && (
+                                <>
+                                  <span className={styles.statusUpdateSeparator}>-</span>
+                                  <span className={styles.statusUpdateUser}>ע&quot;י {userDisplayName}</span>
+                                </>
+                              )}
+                            </div>
+                            <div className={styles.statusUpdateTextContainer}>
+                              <div className={styles.statusUpdateCheckboxContainer}>
+                                <input
+                                  type="checkbox"
+                                  className={styles.taskCheckbox}
+                                  checked={isRead}
+                                  onChange={(e) => {
+                                    if (updateId) {
+                                      updateStatusUpdateReadStatus(updateId, e.target.checked);
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <div className={styles.statusUpdateVerticalLine}></div>
+                              <div className={styles.statusUpdateText}>{updateText}</div>
+                            </div>
+                            {!isPublic && (
+                              <div className={styles.statusUpdateNotPublic}>לא ציבורי</div>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    });
+                  })()}
                   
-                  return (
-                    <li key={update.id || index} className={styles.statusUpdateItem}>
-                      <div className={styles.statusUpdateContent}>
-                        <div className={styles.statusUpdateHeader}>
-                          <span className={styles.statusUpdateParticipant}>{participantName}</span>
-                          <span className={styles.statusUpdateDate}>{formattedDate}</span>
-                        </div>
-                        <div className={styles.statusUpdateText}>{updateText}</div>
+                  {/* Full width line before done section */}
+                  {statusUpdates.filter(update => update.is_read).length > 0 && (
+                    <li className={styles.statusUpdateItem} style={{ borderBottom: 'none', padding: 0 }}>
+                      <div className={styles.tasksFullWidthLine}>
+                        <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                          <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round"/>
+                        </svg>
                       </div>
                     </li>
-                  );
-                })
+                  )}
+                  
+                  {/* Done (read) status updates */}
+                  <div className={styles.doneSection}>
+                    <ul className={`${styles.taskList} ${styles.doneTasksList}`}>
+                      {statusUpdates
+                        .filter(update => update.is_read)
+                        .sort((a, b) => {
+                          const aTime = new Date(a.created_at).getTime();
+                          const bTime = new Date(b.created_at).getTime();
+                          return bTime - aTime; // Descending order (newest first)
+                        })
+                        .map((update, index) => {
+                          const participantName = update.participant_name || '';
+                          const updateText = update.update_content || '';
+                          const updateDate = new Date(update.created_at);
+                          const formattedDate = `${updateDate.getDate()}/${updateDate.getMonth() + 1}`;
+                          const userDisplayName = update.user_display_name || update.user_name || '';
+                          const isPublic = update.is_public === true;
+                          const updateId = update.id;
+                          const isRead = update.is_read || false;
+                          
+                          if (!updateId) return null; // Skip if no ID
+                          
+                          return (
+                            <li key={updateId} className={`${styles.statusUpdateItem} ${styles.readStatusUpdateItem}`}>
+                              <div className={styles.statusUpdateContent}>
+                                <div className={styles.statusUpdateHeader}>
+                                  <span className={styles.statusUpdateParticipant}>{participantName} {formattedDate}</span>
+                                  {userDisplayName && (
+                                    <>
+                                      <span className={styles.statusUpdateSeparator}>-</span>
+                                      <span className={styles.statusUpdateUser}>ע&quot;י {userDisplayName}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <div className={styles.statusUpdateTextContainer}>
+                                  <div className={styles.statusUpdateCheckboxContainer}>
+                                    <input
+                                      type="checkbox"
+                                      className={styles.taskCheckbox}
+                                      checked={isRead}
+                                      onChange={(e) => {
+                                        if (updateId) {
+                                          updateStatusUpdateReadStatus(updateId, e.target.checked);
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                  <div className={styles.statusUpdateVerticalLine}></div>
+                                  <div className={styles.statusUpdateText}>{updateText}</div>
+                                </div>
+                                {!isPublic && (
+                                  <div className={styles.statusUpdateNotPublic}>לא ציבורי</div>
+                                )}
+                              </div>
+                              <div className={styles.taskItemHorizontalLine}>
+                                <svg height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#949ADD" strokeWidth="1"/>
+                                </svg>
+                              </div>
+                            </li>
+                          );
+                        })}
+                    </ul>
+                  </div>
+                  
+                  {statusUpdates.filter(update => !update.is_read).length === 0 && 
+                   statusUpdates.filter(update => update.is_read).length === 0 && (
+                    <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
+                      <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין עדכוני סטטוס</span>
+                    </li>
+                  )}
+                </>
               ) : (
                 <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
                   <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין עדכוני סטטוס</span>
                 </li>
               )}
             </ul>
+            <div className={styles.tasksBottomLine}></div>
           </div>
         </div>
       )}
 
       {/* Tasks Drawer - Show only when NOT searching */}
       {!isSearchActive && (
-        <div className={`${styles.tasksDrawer} ${isTasksOpen ? styles.open : styles.closed}`}>
+        <div className={`${styles.tasksDrawer} ${isTasksOpen ? styles.open : styles.closed} ${isStatusUpdatesOpen ? styles.hidden : ''}`}>
           <div className={styles.tasksLine}>
             <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
               <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round"/>
@@ -1154,9 +1469,16 @@ export default function ParticipantsPage() {
                     return bTime - aTime; // Descending order (newest first)
                   })
                   .map(task => {
-                  const doneByName = task.done_by_user
-                    ? `${task.done_by_user.first_name || ''} ${task.done_by_user.last_name || ''}`.trim()
-                    : null;
+                  let doneByName = null;
+                  let doneByRole = null;
+                  if (task.done_by_user) {
+                    const name = (task.done_by_user.first_name || '').trim();
+                    const role = task.done_by_user.role || '';
+                    if (name) {
+                      doneByName = name;
+                      doneByRole = role;
+                    }
+                  }
                   return (
                     <li key={task.id} className={styles.taskItem} style={{ opacity: 0.7 }}>
                       <div className={styles.taskItemContent}>
@@ -1208,7 +1530,7 @@ export default function ParticipantsPage() {
                           </span>
                           {doneByName && (
                             <div className={styles.taskDoneBy}>
-                              <span>בוצע ע&quot;י {doneByName}</span>
+                              <span>בוצע ע&quot;י {doneByName}{doneByRole ? ` ${doneByRole}` : ''}</span>
                             </div>
                           )}
                         </div>
