@@ -176,6 +176,7 @@
   overflow-x: hidden;
   background: var(--color-primary);
   padding: 0 1rem 1.25rem 1.25rem;
+  padding-bottom: 8rem;
   -webkit-overflow-scrolling: touch;
 }
 
