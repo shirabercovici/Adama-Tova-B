@@ -8,6 +8,7 @@ export default function AddVolunteerPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -90,12 +91,12 @@ export default function AddVolunteerPage() {
             });
             setErrors({});
             
-            // Show success message (optional)
-            alert("המתנדב נוסף בהצלחה!");
+            // Show success modal
+            setShowSuccessModal(true);
+            setLoading(false);
         } catch (error: any) {
             console.error("Error creating user:", error);
             alert(`שגיאה ביצירת המשתמש: ${error.message || "Unknown error"}`);
-        } finally {
             setLoading(false);
         }
     };
@@ -229,10 +230,36 @@ export default function AddVolunteerPage() {
                         disabled={loading}
                         className={styles.saveButton}
                     >
-                        {loading ? "שומר..." : "שמירה"}
+                        שמירה
                     </button>
                 </div>
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent}>
+                        <h3 className={styles.modalTitle}>איש הצוות נוסף בהצלחה!</h3>
+                        
+                        <div className={styles.modalIllustration}>
+                            <img
+                                src="/icons/add_new.svg"
+                                alt="Success illustration"
+                                className={styles.plantIcon}
+                            />
+                        </div>
+
+                        <div className={styles.modalButtons}>
+                            <button
+                                onClick={() => router.push("/manage-volunteers")}
+                                className={styles.confirmButton}
+                            >
+                                אישור
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

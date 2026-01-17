@@ -320,7 +320,7 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                         disabled={saving}
                         className={styles.saveButton}
                     >
-                        {saving ? "שומר..." : "שמירה"}
+                        שמירה
                     </button>
                 </div>
             </div>
