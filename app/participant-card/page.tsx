@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Participant } from '@/app/participants/types';
 import { logActivity } from '@/lib/activity-logger';
 
+
 const InfoRow = ({ label, value, children }: { label: string, value: any, children?: React.ReactNode }) => (
   <div style={{ padding: '10px 0', position: 'relative' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -115,8 +116,9 @@ export default function ParticipantCardPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const supabase = createClient();
-const [updateTarget, setUpdateTarget] = useState('כולם');
   const id = searchParams.get('id');
+  const urlName = searchParams.get('name') || ''; // הוספת השורה הזו
+const [updateTarget, setUpdateTarget] = useState('כולם');
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [activities, setActivities] = useState<any[]>([]);
@@ -371,69 +373,47 @@ const triggerLog = useCallback(async (type: any, description: string) => {
   return weeks === 1 ? "לפני שבוע" : `לפני ${weeks} שבועות`;
 };
 
-const getLastAttendanceText = () => {
-  if (!participant?.last_attendance) return "טרם נרשמה נוכחות";
-  
-  const lastDate = new Date(participant.last_attendance);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const diffDays = Math.floor((today.getTime() - lastDate.setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24));
-  
-  if (diffDays === 0) return "היום";
-  if (diffDays === 1) return "אתמול";
-  if (diffDays < 7) return `לפני ${diffDays} ימים`;
-  return `לפני ${Math.floor(diffDays / 7)} שבועות`;
-};
-
 const allEvents = useMemo(() => {
-  const events = [];
-  
-  // הוספת עדכונים
-  activities.forEach(act => {
-    const parts = act.date.split('/');
-    events.push({ 
-      type: 'status', 
-      text: act.text, 
-      date: act.date, 
-      originalDate: new Date(2024, Number(parts[1]) - 1, Number(parts[0])) 
+    const events: any[] = [];
+    
+    // 1. הוספת עדכוני סטטוס מטבלת המשתתף
+    activities.forEach(act => {
+      const parts = (act.date || "").split('/');
+      events.push({ 
+        type: 'status', 
+        text: act.text, 
+        date: act.date, 
+        originalDate: parts.length === 2 ? new Date(2024, Number(parts[1]) - 1, Number(parts[0])) : new Date()
+      });
     });
-  });
 
-  // הוספת נוכחות
-  if (participant?.last_attendance) {
-    const d = new Date(participant.last_attendance);
-    events.push({ type: 'attendance', text: 'נוכחות', date: `${d.getDate()}/${d.getMonth() + 1}`, originalDate: d });
-  }
+    // 2. הוספת אירוע נוכחות
+    if (participant?.last_attendance) {
+      const d = new Date(participant.last_attendance);
+      events.push({ 
+        type: 'attendance', 
+        text: 'נוכחות', 
+        date: `${d.getDate()}/${d.getMonth() + 1}`, 
+        originalDate: d 
+      });
+    }
 
-  // הוספת שיחת טלפון
-  if (participant?.last_phone_call) {
-    const d = new Date(participant.last_phone_call);
-    events.push({ type: 'phone', text: 'שיחת טלפון', date: `${d.getDate()}/${d.getMonth() + 1}`, originalDate: d });
-  }
+    // 3. הוספת אירוע שיחת טלפון
+    if (participant?.last_phone_call) {
+      const d = new Date(participant.last_phone_call);
+      events.push({ 
+        type: 'phone', 
+        text: 'שיחת טלפון', 
+        date: `${d.getDate()}/${d.getMonth() + 1}`, 
+        originalDate: d 
+      });
+    }
 
-  return events.sort((a, b) => b.originalDate.getTime() - a.originalDate.getTime());
-}, [activities, participant?.last_attendance, participant?.last_phone_call]);
-
-const displayName = isEditing ? editForm.full_name : (participant?.full_name || 'טוען...');  const InfoRow = ({ label, value }: { label: string, value: any }) => (
-    <div style={{ padding: '10px 0' }}>
-      <div style={{ color: '#4D58D8', fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.5rem', fontStyle: 'normal', marginBottom: '5px' }}>{label}</div>
-      <div style={{ color: '#4D58D8', fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.25rem', fontStyle: 'normal' }}>{value || '---'}</div>
-      <div style={{ borderBottom: '1px solid rgba(77, 88, 216, 0.3)', marginTop: '10px' }}></div>
-    </div>
-  );
-  const allEvents = getAllEvents();
+    // מיון מהחדש לישן
+    return events.sort((a, b) => b.originalDate.getTime() - a.originalDate.getTime());
+  }, [activities, participant?.last_attendance, participant?.last_phone_call]);
   const displayName = isEditing ? editForm.full_name : (participant ? participant.full_name : urlName);
-  const InfoRow = ({ label, value }: { label: string, value: any }) => {
-    const textColor = participant?.is_archived ? '#949ADD' : '#4D58D8';
-    return (
-      <div style={{ padding: '10px 0' }}>
-        <div style={{ color: textColor, fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.5rem', fontStyle: 'normal', marginBottom: '5px' }}>{label}</div>
-        <div style={{ color: textColor, fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.25rem', fontStyle: 'normal' }}>{value || '---'}</div>
-        <div style={{ borderBottom: '1px solid rgba(77, 88, 216, 0.3)', marginTop: '10px' }}></div>
-      </div>
-    );
-  };
+
   return (
     <div style={containerStyle}>
       <style jsx global>{`
