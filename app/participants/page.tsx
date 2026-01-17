@@ -949,7 +949,16 @@ export default function ParticipantsPage() {
               );
             });
           })() : (
-            <div className={styles.empty}>לא נמצאו פונים</div>
+            <div className={styles.emptyContainer}>
+              <Image
+                src="/icons/noponim.png"
+                alt="לא נמצאו פונים"
+                width={200}
+                height={200}
+                className={styles.emptyImage}
+              />
+              <div className={styles.empty}>לא נמצאו פונים</div>
+            </div>
           )}
         </div>
       )}
