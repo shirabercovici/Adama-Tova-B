@@ -342,12 +342,12 @@ export default function ParticipantsPage() {
     setError(null);
     try {
       const params = new URLSearchParams();
-      // Show only active participants by default, all when searching
+      // Show all participants (including archived)
       if (debouncedSearch && debouncedSearch.trim() !== "") {
         params.append("filterArchived", "all");
         params.append("search", debouncedSearch.trim());
       } else {
-        params.append("filterArchived", "active");
+        params.append("filterArchived", "all");
       }
 
       const response = await fetch(`/participants/api?${params.toString()}`, {
@@ -843,64 +843,112 @@ export default function ParticipantsPage() {
             </div>
           </div>
 
-          {participants.length > 0 ? participants.map((participant) => {
-            const attendedToday = isToday(participant.last_attendance);
+          {participants.length > 0 ? (() => {
+            // Sort participants by first name (first word in full_name)
+            const sortedParticipants = [...participants].sort((a, b) => {
+              const aFirstName = (a.full_name.split(' ')[0] || '').trim();
+              const bFirstName = (b.full_name.split(' ')[0] || '').trim();
+              return aFirstName.localeCompare(bFirstName, 'he');
+            });
 
-            return (
-              <div
-                key={participant.id}
-                className={`${styles.participantCard} ${participant.is_archived ? styles.archived : ""}`}
-                onClick={(e) => {
-                  // Only navigate if click was not on checkbox
-                  if (!(e.target as HTMLElement).closest(`.${styles.attendanceCheckboxContainer}`)) {
-                    router.push(`/participant-card?id=${participant.id}`);
-                  }
-                }}
-                style={{ cursor: 'pointer' }}
-              >
-                {/* Attendance Checkbox Container */}
-                <div className={styles.attendanceCheckboxContainer}>
-                  <div className={styles.attendanceCheckbox}>
-                    <input
-                      type="checkbox"
-                      checked={attendedToday}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleMarkAttendance(participant.id, participant.last_attendance);
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                      className={styles.checkbox}
-                    />
-                  </div>
-                </div>
+            // Group by first letter of first name
+            const groupedParticipants = sortedParticipants.reduce((groups, participant) => {
+              const firstName = (participant.full_name.split(' ')[0] || '').trim();
+              const firstLetter = firstName.charAt(0) || 'א';
+              if (!groups[firstLetter]) {
+                groups[firstLetter] = [];
+              }
+              groups[firstLetter].push(participant);
+              return groups;
+            }, {} as Record<string, typeof sortedParticipants>);
 
-                {/* Divider */}
-                <div className={styles.checkboxDivider}></div>
-
-                {/* Name, Bereavement Detail and Phone */}
-                <div
-                  className={styles.participantInfo}
-                >
-                  <div className={styles.participantName}>{participant.full_name}</div>
-                  {(participant.phone || participant.bereavement_detail) && (
-                    <div className={styles.participantDetails}>
-                      {participant.bereavement_detail && (
-                        <>
-                          <span className={styles.bereavementDetail}>{participant.bereavement_detail}</span>
-                          {participant.phone && <span className={styles.detailSeparator}> | </span>}
-                        </>
-                      )}
-                      {participant.phone && (
-                        <span className={styles.participantPhone}>{participant.phone}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+            // Get sorted letters
+            const sortedLetters = Object.keys(groupedParticipants).sort((a, b) => 
+              a.localeCompare(b, 'he')
             );
-          }) : (
+
+            return sortedLetters.map((letter) => {
+              const letterParticipants = groupedParticipants[letter];
+              const lastIndex = letterParticipants.length - 1;
+              
+              return (
+                <div key={letter} className={styles.letterGroup}>
+                  {/* Letter Header */}
+                  <div className={styles.letterHeader}>
+                    {letter}
+                  </div>
+                  {/* Participants for this letter */}
+                  {letterParticipants.map((participant, index) => {
+                    const attendedToday = isToday(participant.last_attendance);
+                    const isLast = index === lastIndex;
+                    
+                    return (
+                      <div
+                        key={participant.id}
+                        className={`${styles.participantCard} ${participant.is_archived ? styles.archived : ""} ${isLast ? styles.lastParticipant : ""}`}
+                      onClick={(e) => {
+                        // Only navigate if click was not on checkbox
+                        if (!(e.target as HTMLElement).closest(`.${styles.attendanceCheckboxContainer}`)) {
+                          router.push(`/participant-card?id=${participant.id}`);
+                        }
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {/* Attendance Checkbox Container */}
+                      <div className={styles.attendanceCheckboxContainer}>
+                        {participant.is_archived ? (
+                          <div className={styles.archiveIcon}>
+                            <Image
+                              src="/icons/arcive.svg"
+                              alt="ארכיון"
+                              width={27}
+                              height={27}
+                            />
+                          </div>
+                        ) : (
+                          <div className={styles.attendanceCheckbox}>
+                            <input
+                              type="checkbox"
+                              checked={attendedToday}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleMarkAttendance(participant.id, participant.last_attendance);
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                              className={styles.checkbox}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Name, Bereavement Detail and Phone */}
+                      <div
+                        className={styles.participantInfo}
+                      >
+                        <div className={styles.participantName}>{participant.full_name}</div>
+                        {(participant.phone || participant.bereavement_detail) && (
+                          <div className={styles.participantDetails}>
+                            {participant.bereavement_detail && (
+                              <>
+                                <span className={styles.bereavementDetail}>{participant.bereavement_detail}</span>
+                                {participant.phone && <span className={styles.detailSeparator}> | </span>}
+                              </>
+                            )}
+                            {participant.phone && (
+                              <span className={styles.participantPhone}>{participant.phone}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                  })}
+                </div>
+              );
+            });
+          })() : (
             <div className={styles.empty}>לא נמצאו פונים</div>
           )}
         </div>

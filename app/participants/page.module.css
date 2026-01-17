@@ -340,11 +340,22 @@
   display: grid;
   grid-template-columns: 1fr auto; /* Name | Attendance */
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 1.1rem 2.25rem;
   background: #FFFCE5;
   align-items: center;
   gap: 1rem;
-  border-bottom: 1px solid #4D58D8;
+  position: relative;
+}
+
+.listHeader::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 1px;
+  background-color: #4D58D8;
 }
 
 .headerCell {
@@ -374,29 +385,62 @@
   font-family: 'EditorSans_PRO', sans-serif;
   font-weight: 400;
   font-style: normal;
-  font-size: 24px;
-  line-height: 100%;
+  font-size: 1.25rem !important; /* Small */
+  line-height: 98% !important; /* 1.225rem */
   letter-spacing: 0%;
   text-align: left;
-  color: #4D58D8;
+  color: var(--Blue-Adamami, #4D58D8) !important;
 }
 
 .headerName {
   font-family: 'EditorSans_PRO', sans-serif;
   font-weight: 400;
   font-style: normal;
-  font-size: 24px;
-  line-height: 100%;
+  font-size: 1.25rem !important; /* Small */
+  line-height: 98% !important; /* 1.225rem */
   letter-spacing: 0%;
   text-align: right;
-  color: #4D58D8;
+  color: var(--Blue-Adamami, #4D58D8) !important;
   width: 100%;
+}
+
+/* Letter Group Container */
+.letterGroup {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+
+/* Letter Header */
+.letterHeader {
+  padding: 0.5rem 2.25rem;
+  padding-bottom: 0;
+  background: #FFFCE5;
+  font-family: 'EditorSans_PRO', sans-serif;
+  font-weight: 400;
+  font-size: 1.25rem !important;
+  color: #4D58D8;
+  text-align: right;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+
+.letterHeader::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 2.25rem;
+  width: 23.75rem;
+  max-width: calc(100% - 4.5rem);
+  height: 1px;
+  background-color: #4D58D8;
 }
 
 /* Participants List */
 .participantsList {
-  width: 100vw;
-  max-width: 100vw;
+  width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   position: relative;
   z-index: 200;
@@ -415,21 +459,54 @@
 
 .participantCard {
   display: grid;
-  grid-template-columns: auto 1px 1fr; /* Checkbox | Divider | Info */
+  grid-template-columns: auto 1fr; /* Checkbox | Info */
   align-items: flex-start;
   width: 100%;
-  padding: 1rem;
+  padding: 0.63rem 1rem;
+  padding-right: 2.25rem;
+  padding-bottom: 0;
   background: #FFFCE5;
   gap: 0.94rem;
   transition: background-color 0.2s;
   position: relative;
-  border-left: 1px solid #4D58D8;
-  border-bottom: 1px solid #4D58D8;
   padding-left: calc(1rem + 30px);
   margin-left: 0;
   direction: ltr;
-  z-index: 201;
+  z-index: 1;
   pointer-events: auto;
+}
+
+/* Vertical line for each participant card */
+.participantCard::before {
+  content: "";
+  position: absolute;
+  left: calc(1rem + 30px + 1.6875rem + 9px + 1.25rem - 0.2rem);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #4D58D8;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.participantCard::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 2.25rem;
+  width: 23.75rem;
+  max-width: calc(100% - 4.5rem);
+  height: 1px;
+  background-color: #4D58D8;
+}
+
+.participantCard.lastParticipant::after {
+  display: none;
+}
+
+.participantCard.lastParticipant::before {
+  bottom: 0;
 }
 
 .participantCard.archived {
@@ -451,6 +528,9 @@
   flex-direction: column;
   gap: 0.25rem;
   text-align: right;
+  position: relative;
+  background: transparent;
+  padding-bottom: 0.63rem;
 }
 
 .participantName {
@@ -524,6 +604,8 @@
   z-index: 102;
   position: relative;
   pointer-events: auto;
+  margin-top: 0.75rem;
+  transform: translateX(0.3rem);
 }
 
 /* Attendance Checkbox */
@@ -533,6 +615,20 @@
   align-items: center;
 }
 
+/* Archive Icon */
+.archiveIcon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 1.6875rem;
+  height: 1.6875rem;
+}
+
+.archiveIcon img {
+  width: 1.6875rem;
+  height: 1.6875rem;
+}
+
 .checkbox {
   width: 1.6875rem;
   height: 1.6875rem;
@@ -540,26 +636,25 @@
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  border: 2px solid #4D58D8;
-  border-radius: 9px;
+  border: 2px solid var(--Blue-Adamami, #4D58D8);
+  border-radius: 0.3125rem;
   background: transparent;
   position: relative;
   margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .checkbox:checked {
-  background: #4D58D8;
+  background-color: #4D58D8;
 }
 
 .checkbox:checked::after {
   content: '✓';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   color: white;
   font-size: 16px;
-  font-weight: bold;
 }
 
 .checkbox:disabled {

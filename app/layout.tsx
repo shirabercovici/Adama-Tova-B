@@ -1,6 +1,6 @@
 import "@/styles/global.css";
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import Footer from "@/lib/components/Footer";
 import Script from "next/script";
@@ -9,7 +9,6 @@ export const metadata = {
   title: "אדממי",
   description: "אפליקציה למעקב אחר צוות אדמה טובה",
   manifest: "/manifest.json",
-  themeColor: "#4D58D8",
   appleWebApp: {
     capable: true,
     title: "אדממי",
@@ -19,6 +18,10 @@ export const metadata = {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#4D58D8",
 };
 
 export default function RootLayout({
