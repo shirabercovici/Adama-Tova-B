@@ -1,0 +1,17 @@
+added last attendtance update and phone button
+
+# Conflicts:
+#	app/participant-card/page.tsx
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# interactive rebase in progress; onto a2ef261
+# Last command done (1 command done):
+#    pick a9f8db3 # added last attendtance update and phone button
+# No commands remaining.
+# You are currently rebasing branch 'main' on 'a2ef261'.
+#
+# Changes to be committed:
+#	modified:   app/participant-card/page.tsx
+#
