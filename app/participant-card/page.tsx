@@ -10,25 +10,86 @@ import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 
 const InfoRow = ({ label, value, children }: { label: string, value: any, children?: React.ReactNode }) => (
-  <div style={{ padding: '10px 0', position: 'relative' }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div>
-        <div style={{ color: '#4D58D8', fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.5rem', fontStyle: 'normal', marginBottom: '5px' }}>{label}</div>
-        <div style={{ color: '#4D58D8', fontFamily: "'EditorSans_PRO', sans-serif", fontSize: '1.25rem', fontStyle: 'normal' }}>{value || '---'}</div>
+  <div style={{ 
+    display: 'flex',
+    marginTop: '-0.3rem',
+    padding: '0.8rem 0', // הגדלתי מעט את הריווח האנכי לטובת התוכן המוגדל
+    flexDirection: 'column',
+    alignItems: 'flex-start', 
+    gap: '0.300rem',
+    flex: '1 0 0',
+    width: '100%',
+    position: 'relative'
+  }}>
+    
+    <div style={{
+      display: 'flex',
+      width: '100%',
+      maxWidth: '17.11794rem', 
+      padding: '0 0.3125rem', 
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'flex-start', 
+      gap: '0.1rem' // הגדלתי מעט את הרווח בין הכותרת לתוכן המוגדל
+    }}>
+      
+      {/* כותרת השדה - כעת בבולד */}
+      <div style={{ 
+        color: '#4D58D8', 
+        fontFamily: "'EditorSans_PRO', sans-serif", 
+        fontSize: '1.3rem', 
+        fontStyle: 'normal',
+        fontWeight: '450', // הדגשת הכותרת
+        lineHeight: '1.2',
+        textAlign: 'right'
+      }}>
+        {label}
       </div>
-      {/* כאן ייכנס הכפתור אם נשלח אותו */}
-      <div style={{ marginLeft: '20px' }}>{children}</div>
+
+      {/* ערך השדה - הגדלתי את הפונט מ-1.25rem ל-1.4rem */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        width: '100%',
+        direction: 'rtl'
+      }}>
+        <div style={{ 
+          color: '#4D58D8', 
+          fontFamily: "'EditorSans_PRO', sans-serif", 
+          fontSize: '1.2rem', // הגדלת התוכן
+          fontStyle: 'normal',
+          fontWeight: '400', // הוספת עובי בינוני לתוכן כדי שיהיה קריא יותר
+          lineHeight: '1.2',
+          textAlign: 'right'
+        }}>
+          {value || '---'}
+        </div>
+        
+        {children && (
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', // מירכוז פנימי של האייקון
+            justifyContent: 'center'
+          }}>
+            {children}
+          </div>
+        )}
+      </div>
     </div>
-    <div style={{ borderBottom: '1px solid rgba(77, 88, 216, 0.3)', marginTop: '10px' }}></div>
+
+    <div style={{ 
+      width: '100%',
+      borderBottom: '1px solid'
+          }}></div>
   </div>
 );
-
 const ArchiveConfirmPopup = ({ isArchived, onConfirm, onCancel }: { isArchived: boolean, onConfirm: () => void, onCancel: () => void }) => (
   <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(77, 88, 216, 0.50)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
     <div style={{
       display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'center',
       width: '21.6875rem', maxWidth: '90vw', height: '28.75rem', maxHeight: '80vh',
-      paddingTop: '0.625rem', backgroundColor: '#FEFCE8', borderRadius: '0', overflow: 'hidden', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+      paddingTop: '0.625rem', backgroundColor: '#FFFCE5', borderRadius: '0', overflow: 'hidden', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
     }}>
       <div style={{ padding: '25px 20px 10px 20px', width: '100%', boxSizing: 'border-box' }}>
         <h3 style={{ margin: 0, color: '#4D58D8', fontSize: '1.875rem', fontFamily: "'EditorSans_PRO', sans-serif", fontWeight: 'normal' }}>
@@ -94,7 +155,7 @@ const containerStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
-  backgroundColor: '#FEFCE8'
+  backgroundColor: '#FFFCE5'
 };
 
 const getTabStyle = (isActive: boolean, isLast: boolean): React.CSSProperties => ({
@@ -102,10 +163,10 @@ const getTabStyle = (isActive: boolean, isLast: boolean): React.CSSProperties =>
   height: '100%',
   border: 'none',
   borderLeft: !isLast ? '1px solid rgba(255,255,255,0.2)' : 'none',
-  backgroundColor: isActive ? '#FEFCE8' : 'transparent',
+  backgroundColor: isActive ? '#FFFCE5' : 'transparent',
   color: isActive ? '#4D58D8' : 'white',
   fontFamily: "'EditorSans_PRO', sans-serif",
-  fontSize: '1rem',
+  fontSize: '1.15rem',
   cursor: 'pointer',
   borderRadius: '0',
   outline: 'none',
@@ -451,7 +512,7 @@ export default function ParticipantCardPage() {
                 <h2 style={{ fontSize: '1.875rem', fontFamily: "'EditorSans_PRO', sans-serif", fontStyle: 'normal', fontWeight: 'normal', margin: 0, color: 'white' }}>
                   {displayName}
                 </h2>
-                <div style={{ fontSize: '0.9rem', opacity: 0.9, marginTop: '4px' }}>
+                <div style={{ fontSize: '1.15rem', opacity: 0.9, marginTop: '-10px',fontStyle: 'italic', lineHeight: '1' }}>
                   נוכחות אחרונה: {getLastAttendanceText()}
                 </div>
                 {participant?.is_archived && (
@@ -526,7 +587,7 @@ export default function ParticipantCardPage() {
             display: 'flex',
             width: '100%',
             maxWidth: '27.5rem',
-            height: '4.375rem',
+            height: '4rem',
             alignItems: 'center',
             borderTop: '1px solid rgba(255,255,255,0.2)',
           }}>
@@ -583,7 +644,6 @@ export default function ParticipantCardPage() {
               left: 0,
               width: '100%',
               backgroundColor: '#FFF2A8',
-              boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
               display: 'flex',
               justifyContent: 'center',
               zIndex: 1000
@@ -605,14 +665,21 @@ export default function ParticipantCardPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    border: 'none',
-                    borderBottom: '1px solid rgba(77, 88, 216, 0.2)',
+                   
                     backgroundColor: 'transparent',
                     color: '#4D58D8',
-                    fontSize: '1.875rem',
+              border: '1px solid #4D58D8', // הוספת קו גבול מסביב
+               borderBottom: 'none',
+                    borderLeft: 'none',
+                    borderRight: 'none',
+borderRadius: '0',
+                    fontSize: '1.7rem',
                     fontFamily: "'EditorSans_PRO', sans-serif",
                     fontStyle: 'normal',
+                                        fontWeight: "500",
+
                     cursor: 'pointer'
+                    
                   }}
                 >
                   {participant?.is_archived ? 'הוצאה מהארכיון' : 'העברה לארכיון'}
@@ -627,12 +694,17 @@ export default function ParticipantCardPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    border: 'none',
+              border: '1px solid #4D58D8', // הוספת קו גבול מסביב
+               borderBottom: 'none',
+                    borderLeft: 'none',
+                    borderRight: 'none',
                     backgroundColor: 'transparent',
+borderRadius: '0',
                     color: '#4D58D8',
-                    fontSize: '1.875rem',
+                    fontSize: '1.7rem',
                     fontFamily: "'EditorSans_PRO', sans-serif",
                     fontStyle: 'normal',
+                    fontWeight: "500",
                     cursor: 'pointer'
                   }}
                 >
@@ -785,7 +857,7 @@ export default function ParticipantCardPage() {
           </>
         )}
         {activeTab === 'היסטוריה' && (
-          <div style={{ width: '100%', padding: '1.25rem', display: 'flex', flexDirection: 'column', backgroundColor: '#FEFCE8', minHeight: '100vh' }}>
+          <div style={{ width: '100%', padding: '1.25rem', display: 'flex', flexDirection: 'column', backgroundColor: '#FFFCE5', minHeight: '100vh' }}>
             {loading ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: '#4D58D8' }}>טוען...</div>
             ) : allEvents.length === 0 ? (
@@ -804,7 +876,7 @@ export default function ParticipantCardPage() {
                     </div>
 
                     {/* אייקון */}
-                    <div style={{ color: '#4D58D8', width: '1.25rem', order: 2, display: 'flex', justifyContent: 'center', zIndex: 1, backgroundColor: '#FEFCE8', padding: '2px 0' }}>
+                    <div style={{ color: '#4D58D8', width: '1.25rem', order: 2, display: 'flex', justifyContent: 'center', zIndex: 1, backgroundColor: '#FFFCE5', padding: '2px 0' }}>
                       {/* כאן האייקון שלך מופיע */}
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     </div>
@@ -863,7 +935,7 @@ export default function ParticipantCardPage() {
               height: '28.75rem',
               maxHeight: '80vh',
               paddingTop: '0.625rem',
-              backgroundColor: '#FEFCE8',
+              backgroundColor: '#FFFCE5',
               borderRadius: '15px',
               overflow: 'hidden',
               textAlign: 'center',
