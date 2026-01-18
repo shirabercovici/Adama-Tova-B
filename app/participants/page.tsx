@@ -23,11 +23,21 @@ export default function ParticipantsPage() {
   const [isDoneTasksOpen, setIsDoneTasksOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoadingRole, setIsLoadingRole] = useState(true); // Track role loading state
   const [userInitials, setUserInitials] = useState<string>('א');
   const [isHydrated, setIsHydrated] = useState(false);
   const [isStatusUpdatesOpen, setIsStatusUpdatesOpen] = useState(false);
-  const [statusUpdates, setStatusUpdates] = useState<any[]>([]);
+  // Initialize statusUpdates as empty - clear any cached data immediately
+  const [statusUpdates, setStatusUpdates] = useState<any[]>(() => {
+    // Clear cache immediately on component mount to prevent showing data from previous user
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('statusUpdates_cache');
+    }
+    return [];
+  });
+  const [statusUpdatesReady, setStatusUpdatesReady] = useState(false); // Track if status updates have been loaded/cleared
   const isFetchingStatusUpdatesRef = useRef(false);
+  const hasPreloadedStatusUpdatesRef = useRef(false); // Track if we already preloaded from initial useEffect
   const isFetchingTasksRef = useRef(false);
   const hasFetchedInitialDataRef = useRef(false);
   const searchAbortControllerRef = useRef<AbortController | null>(null);
@@ -49,17 +59,112 @@ export default function ParticipantsPage() {
   useEffect(() => {
     // This runs only on client after hydration
     setIsHydrated(true);
+    
+    // CRITICAL: Fetch user role from server FIRST, before anything else
+    // This ensures we know if user is manager or volunteer before loading any data
+    const determineUserRole = async (): Promise<string | null> => {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const { data: dbUser } = await supabase
+            .from('users')
+            .select('role')
+            .eq('email', authUser.email)
+            .single();
+          
+          if (dbUser?.role) {
+            setUserRole(dbUser.role);
+            // Cache user role for next time
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('userRole', dbUser.role);
+            }
+            setIsLoadingRole(false); // Role is now known
+            return dbUser.role;
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user role:', err);
+      }
+      setIsLoadingRole(false); // Even on error, mark as done loading
+      return null;
+    };
+    
     if (typeof window !== 'undefined') {
       const savedInitials = localStorage.getItem('userInitials');
       if (savedInitials && savedInitials !== 'א') {
         setUserInitials(savedInitials);
       }
 
-      // Load user role from cache for instant display
-      const savedUserRole = localStorage.getItem('userRole');
-      if (savedUserRole) {
-        setUserRole(savedUserRole);
-      }
+      // DON'T load user role from cache - always fetch from server first
+      // This prevents using wrong role when switching accounts
+      // const savedUserRole = localStorage.getItem('userRole'); // NOT using cache
+      const savedUserRole = null; // Always start with null, fetch from server
+
+      // Helper function to check if a role string is a manager (used before isManager callback is defined)
+      const isManagerRole = (role: string | null) => {
+        return role === "מנהל.ת" || role === "מנהל" || role === "מנהלת" || (role && role.includes("מנהל"));
+      };
+
+      // CRITICAL: Clear status updates state FIRST, before any cache loading
+      // This prevents showing messages from previous user when switching accounts
+      setStatusUpdates([]);
+      setStatusUpdatesReady(false); // Reset ready state when component mounts (user might have changed)
+      
+      // CRITICAL: Fetch role from server FIRST and WAIT for it before handling statusUpdates
+      // This ensures we know the correct role before loading status updates
+      determineUserRole().then((role) => {
+        // After role is determined, handle status updates
+        const isManagerRole = (r: string | null) => {
+          return r === "מנהל.ת" || r === "מנהל" || r === "מנהלת" || (r && r.includes("מנהל"));
+        };
+        
+        if (!role || !isManagerRole(role)) {
+          // Volunteer - clear cache and mark as ready
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('statusUpdates_cache');
+          }
+          setStatusUpdatesReady(true);
+        } else {
+          // Manager - load from cache or fetch
+          try {
+            const cachedStatusUpdates = localStorage.getItem('statusUpdates_cache');
+            if (cachedStatusUpdates) {
+              const { statusUpdates: cachedData, timestamp } = JSON.parse(cachedStatusUpdates);
+              if (cachedData && Array.isArray(cachedData) && Date.now() - timestamp < 5 * 60 * 1000) {
+                setStatusUpdates(cachedData);
+                setStatusUpdatesReady(true);
+                return;
+              }
+            }
+          } catch (e) {
+            // Ignore cache errors
+          }
+          
+          // No cache or expired - fetch from server
+          fetch("/api/activities?activity_type=status_update&limit=50", { cache: 'no-store' })
+            .then(async (response) => {
+              if (response.ok) {
+                const data = await response.json();
+                if (data.activities && Array.isArray(data.activities)) {
+                  setStatusUpdates(data.activities);
+                  try {
+                    localStorage.setItem('statusUpdates_cache', JSON.stringify({
+                      statusUpdates: data.activities,
+                      timestamp: Date.now()
+                    }));
+                  } catch (e) {
+                    // Ignore cache errors
+                  }
+                }
+              }
+              setStatusUpdatesReady(true);
+            })
+            .catch((err) => {
+              console.error("Background status updates preload failed:", err);
+              setStatusUpdatesReady(true);
+            });
+        }
+      });
 
       // Load participants from cache FIRST for instant display (most important feature)
       // This MUST be synchronous and happen immediately - no delays
@@ -102,19 +207,8 @@ export default function ParticipantsPage() {
         // Ignore cache errors
       }
 
-      // Load status updates from cache for instant display (for managers)
-      try {
-        const cachedStatusUpdates = localStorage.getItem('statusUpdates_cache');
-        if (cachedStatusUpdates) {
-          const { statusUpdates: cachedStatusUpdatesData, timestamp } = JSON.parse(cachedStatusUpdates);
-          // Use cache if it's less than 5 minutes old
-          if (cachedStatusUpdatesData && Date.now() - timestamp < 5 * 60 * 1000) {
-            setStatusUpdates(cachedStatusUpdatesData);
-          }
-        }
-      } catch (e) {
-        // Ignore cache errors
-      }
+      // Status updates handling is now done inside determineUserRole().then() above
+      // This ensures we know the role from server before loading status updates
 
       // Start fetching participants immediately if we don't have cached data
       // This is the most important feature - load it ASAP
@@ -131,8 +225,8 @@ export default function ParticipantsPage() {
         console.error("Background tasks preload failed:", err);
       });
 
-      // Preload status updates will be called after fetchStatusUpdates is defined
-      // This is handled in the useEffect that fetches initial data
+      // Status updates are handled inside determineUserRole().then() above
+      // No need for duplicate handling here
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount (after hydration)
@@ -249,7 +343,7 @@ export default function ParticipantsPage() {
 
         if (data.activities && Array.isArray(data.activities)) {
           setStatusUpdates(data.activities);
-          // Save to cache for instant loading next time
+          // Save to cache for instant loading next time (only for managers)
           if (typeof window !== 'undefined') {
             try {
               localStorage.setItem('statusUpdates_cache', JSON.stringify({
@@ -257,7 +351,7 @@ export default function ParticipantsPage() {
                 timestamp: Date.now()
               }));
             } catch (e) {
-              // Ignore cache errors (e.g., quota exceeded)
+              // Ignore cache errors
             }
           }
         } else {
@@ -583,11 +677,26 @@ export default function ParticipantsPage() {
   }, [fetchParticipantsDebounced]);
 
   // Fetch status updates when userRole is loaded and user is a manager
+  // This is a fallback for cases where userRole wasn't in cache or loaded later
+  // If we already preloaded in the initial useEffect, skip this to avoid duplicate requests
   useEffect(() => {
-    if (userRole && isManager() && !isFetchingStatusUpdatesRef.current) {
-      fetchStatusUpdates().catch(err => {
+    if (userRole && isManager() && !isFetchingStatusUpdatesRef.current && !hasPreloadedStatusUpdatesRef.current) {
+      // Only fetch if we haven't already preloaded in the initial useEffect
+      fetchStatusUpdates().then(() => {
+        setStatusUpdatesReady(true);
+      }).catch(err => {
         console.error('Error fetching status updates:', err);
+        setStatusUpdatesReady(true); // Mark as ready even on error
       });
+    } else if (userRole && !isManager()) {
+      // Explicitly clear status updates for non-managers to prevent any flash
+      // Do this immediately, even if statusUpdates is already empty
+      setStatusUpdates([]);
+      setStatusUpdatesReady(true); // Mark as ready since we've cleared them
+    } else if (userRole === null) {
+      // If userRole is still null after some time, ensure statusUpdates is cleared
+      // This prevents showing cached messages when role hasn't loaded yet
+      setStatusUpdates([]);
     }
   }, [userRole, isManager, fetchStatusUpdates]);
 
@@ -656,7 +765,7 @@ export default function ParticipantsPage() {
             // Use dbUser if available, otherwise fallback to authUser
             const userData = dbUser || authUser;
             setUser(userData);
-            // Set user role
+            // Set user role - CRITICAL: This updates the role from server
             if (dbUser?.role) {
               setUserRole(dbUser.role);
               // Cache user role for instant display on next visit
@@ -1009,8 +1118,9 @@ export default function ParticipantsPage() {
         </div>
       </div>
 
-      {/* Loading - show loading screen with image */}
-      {loading && participants.length === 0 && (
+      {/* Loading - show loading screen until role is determined AND status updates are ready */}
+      {/* CRITICAL: Never show UI until we know the role and status updates are ready */}
+      {(isLoadingRole || (loading && participants.length === 0) || !statusUpdatesReady) && (
         <div className={styles.loadingContainer}>
           <div style={{
             position: 'relative',
@@ -1038,8 +1148,8 @@ export default function ParticipantsPage() {
         </div>
       )}
 
-      {/* Participants List - Only show when not loading and no error */}
-      {!loading && !error && participants.length > 0 && (
+      {/* Participants List - Only show when role is determined, status updates ready, not loading and no error */}
+      {userRole !== null && statusUpdatesReady && !loading && !error && participants.length > 0 && (
         <div className={`${styles.participantsList} ${isSearchActive ? styles.searchActive : ''}`}>
           {/* List Header */}
           <div className={styles.listHeader}>
@@ -1174,8 +1284,9 @@ export default function ParticipantsPage() {
         </div>
       )}
 
-      {/* Status Updates Drawer - Show only for managers when NOT searching */}
-      {!isSearchActive && isManager() && (
+      {/* Status Updates Drawer - Only render if role is loaded and user is manager */}
+      {/* CRITICAL: Never render this component until we know the role - no hiding, no CSS tricks */}
+      {!isLoadingRole && !isSearchActive && isManager() && statusUpdatesReady && (
         <div className={`${styles.statusUpdatesDrawer} ${isStatusUpdatesOpen ? styles.open : styles.closed} ${isTasksOpen ? styles.hidden : ''}`}>
           <div className={styles.tasksLine}>
             <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">

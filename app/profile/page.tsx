@@ -36,7 +36,7 @@ export default function ProfilePage() {
 
   const initialState = getInitialState();
   const [userData, setUserData] = useState<any>(initialState.userData);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with true to show loading screen
   const [activities, setActivities] = useState<any[]>(initialState.activities);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -89,6 +89,7 @@ export default function ProfilePage() {
           
           // Update state immediately
           setUserData(finalUserData);
+          setLoading(false); // Mark as loaded
           
           // Save to localStorage for next time
           if (typeof window !== 'undefined') {
@@ -121,6 +122,7 @@ export default function ProfilePage() {
           if (authUser) {
             setUserData(authUser);
           }
+          setLoading(false); // Mark as loaded even on error
         }
       };
 
@@ -279,9 +281,28 @@ export default function ProfilePage() {
   // Note: Cached data is now loaded synchronously in useState initializer above
   // This useEffect is kept for cases where we need to refresh from cache
 
-  // Don't render content until we have userData
-  if (!userData) {
-    return null;
+  // Show loading screen while loading userData
+  if (loading || !userData) {
+    return (
+      <div className={styles.loadingContainer}>
+        <div style={{
+          position: 'relative',
+          width: '20.375rem',
+          height: '17.375rem',
+          flexShrink: 0,
+          aspectRatio: '163/139'
+        }}>
+          <Image
+            src="/icons/loading.png"
+            alt="טוען..."
+            fill
+            style={{ objectFit: 'contain' }}
+            priority
+          />
+        </div>
+        <div className={styles.loadingText}>רק רגע...</div>
+      </div>
+    );
   }
 
   return (
