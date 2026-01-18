@@ -9,6 +9,9 @@ export const metadata = {
   title: "אדממי",
   description: "אפליקציה למעקב אחר צוות אדמה טובה",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/chrome_logo_adamami.svg",
+  },
   appleWebApp: {
     capable: true,
     title: "אדממי",
@@ -39,9 +42,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#4D58D8" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        {/* Favicon for all browsers - no white background */}
+        <link rel="icon" href="/chrome_logo_adamami.svg" type="image/svg+xml" />
       </head>
       <body>
-        {/* The Script component goes inside body, usually at the top */}
         {/* <Script
           src="https://accounts.google.com/gsi/client"
           strategy="beforeInteractive"
