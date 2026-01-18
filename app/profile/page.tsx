@@ -422,6 +422,11 @@ export default function ProfilePage() {
                           updateDetails = activity.description.substring(colonIndex + 1).trim();
                         }
                       }
+                      
+                      // Add participant_name to the main description for status updates
+                      if (activity.participant_name) {
+                        mainDescription = `${mainDescription} ${activity.participant_name}`;
+                      }
                     }
 
                     return (
