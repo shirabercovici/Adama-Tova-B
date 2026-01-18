@@ -291,10 +291,9 @@ export default function ProfilePage() {
                 <div className={styles.activityList}>
                   {filterAttendancePairs(activities).slice(0, 20).map((activity, index) => {
                     const activityDate = new Date(activity.created_at);
-                    const formattedDate = activityDate.toLocaleDateString("he-IL", {
-                      day: "numeric",
-                      month: "numeric",
-                    });
+                    const day = activityDate.getDate();
+                    const month = String(activityDate.getMonth() + 1).padStart(2, '0');
+                    const formattedDate = `${day}/${month}`;
 
                     // Get icon based on activity type
                     const getActivityIcon = () => {

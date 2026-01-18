@@ -124,7 +124,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--color-primary);
-  padding: 2rem 1rem 1.25rem 1.25rem;
+  padding: 2rem 1.88rem 1.25rem 1.88rem;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -471,7 +471,6 @@
   }
   
   .content {
-    padding: 1rem;
-    padding-bottom: 200px;
+    padding: 1rem 1.88rem 200px 1.88rem;
   }
 }

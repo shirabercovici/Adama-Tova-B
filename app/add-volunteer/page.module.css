@@ -126,7 +126,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--color-primary);
-  padding: 2rem 1rem 1.25rem 1.25rem;
+  padding: 2rem 1.88rem 1.25rem 1.88rem;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -350,7 +350,7 @@
   margin: 0;
   text-align: center;
   padding: 0 2rem;
-  line-height: 1;
+  line-height: 1; 
 }
 
 .modalSubtitle {
@@ -449,7 +449,6 @@
   }
   
   .content {
-    padding: 1rem;
-    padding-bottom: 200px;
+    padding: 1rem 1.88rem 200px 1.88rem;
   }
 }
