@@ -17,6 +17,17 @@ export default function AddVolunteerPage() {
             document.body.classList.remove('profile-page');
         };
     }, []);
+
+    // Auto-dismiss success modal after 2.5 seconds
+    useEffect(() => {
+        if (showSuccessModal) {
+            const timer = setTimeout(() => {
+                setShowSuccessModal(false);
+                router.push("/manage-volunteers");
+            }, 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [showSuccessModal, router]);
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -243,19 +254,10 @@ export default function AddVolunteerPage() {
                         
                         <div className={styles.modalIllustration}>
                             <img
-                                src="/icons/add_new.svg"
+                                src="/icons/approve_saving.svg"
                                 alt="Success illustration"
                                 className={styles.plantIcon}
                             />
-                        </div>
-
-                        <div className={styles.modalButtons}>
-                            <button
-                                onClick={() => router.push("/manage-volunteers")}
-                                className={styles.confirmButton}
-                            >
-                                אישור
-                            </button>
                         </div>
                     </div>
                 </div>

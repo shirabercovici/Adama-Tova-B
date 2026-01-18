@@ -11,7 +11,9 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
     const router = useRouter();
     const [saving, setSaving] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Try to get cached data first for instant display
     const getCachedUser = () => {
@@ -51,13 +53,16 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
         return null;
     };
 
-    const [formData, setFormData] = useState(() => getCachedUser() || {
+    const cachedUser = getCachedUser();
+    const [formData, setFormData] = useState(() => cachedUser || {
         firstName: "",
         lastName: "",
         phone: "",
         email: "",
         role: "volunteer" // 'volunteer' or 'manager'
     });
+    // If we have cached data, we don't need to wait for loading
+    const [hasInitialData] = useState(() => !!cachedUser);
 
     useEffect(() => {
         setMounted(true);
@@ -66,6 +71,17 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
             document.body.classList.remove('profile-page');
         };
     }, []);
+
+    // Auto-dismiss success modal after 2.5 seconds
+    useEffect(() => {
+        if (showSuccessModal) {
+            const timer = setTimeout(() => {
+                setShowSuccessModal(false);
+                router.push("/manage-volunteers");
+            }, 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [showSuccessModal, router]);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -109,12 +125,21 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                 }
             } catch (error) {
                 console.error("Error fetching user:", error);
+            } finally {
+                setIsLoading(false);
             }
         };
 
         // Always fetch to ensure data is fresh, but UI shows cached data immediately
-        fetchUser();
-    }, [params.id]);
+        if (hasInitialData) {
+            // If we have cached data, fetch in background but don't block UI
+            fetchUser();
+            setIsLoading(false);
+        } else {
+            // If no cache, wait for data before showing form
+            fetchUser();
+        }
+    }, [params.id, hasInitialData]);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -145,9 +170,8 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                 throw new Error(data.error || "Failed to update user");
             }
 
-            startTransition(() => {
-                router.push("/manage-volunteers");
-            });
+            // Show success modal instead of navigating immediately
+            setShowSuccessModal(true);
         } catch (error: any) {
             alert(error.message);
         } finally {
@@ -182,6 +206,11 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
         const name = `${formData.firstName} ${formData.lastName}`.trim();
         return name || "";
     };
+
+    // Don't show the form until we have data (either from cache or fetch)
+    if (isLoading && !hasInitialData) {
+        return null;
+    }
 
     return (
         <main className={styles.main} dir="rtl">
@@ -324,6 +353,23 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                     </button>
                 </div>
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.successModalContent}>
+                        <h3 className={styles.modalTitle}>נשמר בהצלחה!</h3>
+                        
+                        <div className={styles.modalIllustration}>
+                            <img
+                                src="/icons/approve_saving.svg"
+                                alt="Success illustration"
+                                className={styles.plantIcon}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
