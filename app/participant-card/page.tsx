@@ -463,14 +463,33 @@ export default function ParticipantCardPage() {
             )}
 
             {!isEditing && !participant?.is_archived && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                <input
-                  type="checkbox"
-                  checked={attendedToday}
-                  onChange={handleMarkAttendance}
-                  style={{ width: '25px', height: '25px', cursor: 'pointer' }}
-                />
-                <span style={{ fontSize: '0.7rem', color: 'white' }}></span>
+              <div
+                onClick={handleMarkAttendance}
+                style={{
+                  display: 'flex',
+                  height: '1.6875rem',
+                  padding: '0 1.25rem 0 0.625rem',
+                  alignItems: 'center',
+                  gap: '0.625rem',
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{
+                  width: '1.5rem',
+                  height: '1.5rem',
+                  borderRadius: '6px',
+                  border: '2px solid white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: attendedToday ? 'white' : 'transparent'
+                }}>
+                  {attendedToday && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4D58D8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  )}
+                </div>
               </div>
             )}
 
@@ -509,6 +528,7 @@ export default function ParticipantCardPage() {
             maxWidth: '27.5rem',
             height: '4.375rem',
             alignItems: 'center',
+            borderTop: '1px solid rgba(255,255,255,0.2)',
           }}>
             {['תיק פונה', 'עדכון חדש', 'היסטוריה'].map((tab, index, array) => (
               <button
@@ -543,9 +563,9 @@ export default function ParticipantCardPage() {
 
               <div style={{ position: 'relative' }}>
                 <InfoRow label="מס' טלפון" value={participant?.phone} />
-                {participant?.phone && (
-                  <a href={`tel:${participant.phone}`} style={{ position: 'absolute', left: '20px', top: '25px', color: '#4D58D8', width: '35px', height: '35px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                {!participant?.is_archived && participant?.phone && (
+                  <a href={`tel:${participant.phone}`} style={{ position: 'absolute', left: '20px', top: '25px', width: '1.6875rem', height: '1.6875rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src="/TELL.svg" alt="Call" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   </a>
                 )}
               </div>
