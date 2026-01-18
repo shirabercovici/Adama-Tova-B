@@ -8,6 +8,7 @@ import SearchBarWithAdd from "@/lib/components/SearchBarWithAdd";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
 import { logActivity } from "@/lib/activity-logger";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function ParticipantsPage() {
   const router = useRouter();
@@ -33,21 +34,16 @@ export default function ParticipantsPage() {
   const hasLoadedFromCacheRef = useRef(false);
 
   // Add class to body to hide navbar and make full width
+  // Add class to body to hide navbar and make full width
   useEffect(() => {
     document.body.classList.add('participants-page');
-    // Update theme-color to match purple header background (#4D58D8)
-    const metaThemeColor = document.querySelector("meta[name='theme-color']");
-    if (metaThemeColor) {
-      metaThemeColor.setAttribute("content", "#4D58D8");
-    }
     return () => {
       document.body.classList.remove('participants-page');
-      // Reset theme-color when leaving page
-      if (metaThemeColor) {
-        metaThemeColor.setAttribute("content", "#4D58D8");
-      }
     };
   }, []);
+
+  // Set theme color
+  useThemeColor('#4D58D8');
 
   // Mark as hydrated and load initials from localStorage
   useEffect(() => {
@@ -58,13 +54,13 @@ export default function ParticipantsPage() {
       if (savedInitials && savedInitials !== 'א') {
         setUserInitials(savedInitials);
       }
-      
+
       // Load user role from cache for instant display
       const savedUserRole = localStorage.getItem('userRole');
       if (savedUserRole) {
         setUserRole(savedUserRole);
       }
-      
+
       // Load participants from cache FIRST for instant display (most important feature)
       // This MUST be synchronous and happen immediately - no delays
       try {
@@ -73,15 +69,15 @@ export default function ParticipantsPage() {
           const { participants: cachedParticipantsData, timestamp, filterType } = JSON.parse(cachedParticipants);
           // Use cache if it's less than 5 minutes old (increased for better UX)
           // Always use cache if available, even if slightly old - better than loading
-          if (cachedParticipantsData && Array.isArray(cachedParticipantsData) && 
-              Date.now() - timestamp < 5 * 60 * 1000 && 
-              filterType === 'active') {
+          if (cachedParticipantsData && Array.isArray(cachedParticipantsData) &&
+            Date.now() - timestamp < 5 * 60 * 1000 &&
+            filterType === 'active') {
             // Set immediately - no async, no delays
             setParticipants(cachedParticipantsData);
             setLoading(false); // We have cached data, no loading needed
             hasLoadedFromCacheRef.current = true;
-          } else if (cachedParticipantsData && Array.isArray(cachedParticipantsData) && 
-                     filterType === 'active') {
+          } else if (cachedParticipantsData && Array.isArray(cachedParticipantsData) &&
+            filterType === 'active') {
             // Even if cache is old, use it for instant display - refresh in background
             setParticipants(cachedParticipantsData);
             setLoading(false);
@@ -91,7 +87,7 @@ export default function ParticipantsPage() {
       } catch (e) {
         // Ignore cache errors
       }
-      
+
       // Load tasks from cache for instant display
       try {
         const cachedTasks = localStorage.getItem('tasks_cache');
@@ -105,7 +101,7 @@ export default function ParticipantsPage() {
       } catch (e) {
         // Ignore cache errors
       }
-      
+
       // Load status updates from cache for instant display (for managers)
       try {
         const cachedStatusUpdates = localStorage.getItem('statusUpdates_cache');
@@ -119,7 +115,7 @@ export default function ParticipantsPage() {
       } catch (e) {
         // Ignore cache errors
       }
-      
+
       // Start fetching participants immediately if we don't have cached data
       // This is the most important feature - load it ASAP
       if (!hasLoadedFromCacheRef.current) {
@@ -127,14 +123,14 @@ export default function ParticipantsPage() {
         setLoading(true);
         setDebouncedSearch("");
       }
-      
+
       // Preload tasks immediately in the background (without waiting for other data)
       // This ensures tasks are ready when user clicks on them
       fetchTasks().catch(err => {
         // Silently handle errors - cache will be used if available
         console.error("Background tasks preload failed:", err);
       });
-      
+
       // Preload status updates will be called after fetchStatusUpdates is defined
       // This is handled in the useEffect that fetches initial data
     }
@@ -247,10 +243,10 @@ export default function ParticipantsPage() {
       const response = await fetch("/api/activities?activity_type=status_update&limit=50", {
         cache: 'no-store'
       });
-      
+
       if (response.ok) {
         const data = await response.json();
-        
+
         if (data.activities && Array.isArray(data.activities)) {
           setStatusUpdates(data.activities);
           // Save to cache for instant loading next time
@@ -480,7 +476,7 @@ export default function ParticipantsPage() {
       const fetchedParticipants = data.participants || [];
       setParticipants(fetchedParticipants);
       setError(null);
-      
+
       // Save to cache for instant loading next time (most important feature)
       if (typeof window !== 'undefined') {
         try {
@@ -602,7 +598,7 @@ export default function ParticipantsPage() {
       return;
     }
     hasFetchedInitialDataRef.current = true;
-    
+
     // If we already have participants from cache, don't show loading
     // Just refresh in background silently
     if (hasLoadedFromCacheRef.current && participants.length > 0) {
@@ -632,10 +628,10 @@ export default function ParticipantsPage() {
         } else {
           // No cache - fetch participants FIRST (most important feature)
           const participantsPromise = fetchParticipantsDebounced();
-          
+
           // Fetch tasks in parallel (not blocking participants)
           const tasksPromise = fetchTasks();
-          
+
           // Wait for both but participants is priority
           await Promise.all([participantsPromise, tasksPromise]);
         }
@@ -647,19 +643,19 @@ export default function ParticipantsPage() {
 
         // Fetch user data from users table
         if (isMounted) {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+          const { data: { user: authUser } } = await supabase.auth.getUser();
 
           if (authUser && isMounted) {
             // Fetch user data from users table
             const { data: dbUser, error: dbError } = await supabase
-          .from('users')
+              .from('users')
               .select('first_name, last_name, email, role')
-          .eq('email', authUser.email)
-          .single();
-        
+              .eq('email', authUser.email)
+              .single();
+
             // Use dbUser if available, otherwise fallback to authUser
-        const userData = dbUser || authUser;
-        setUser(userData);
+            const userData = dbUser || authUser;
+            setUser(userData);
             // Set user role
             if (dbUser?.role) {
               setUserRole(dbUser.role);
@@ -692,7 +688,7 @@ export default function ParticipantsPage() {
 
             // Only update if we have valid initials (not default 'א') and it's different from current
             if (initials !== 'א' && initials !== userInitials) {
-        setUserInitials(initials);
+              setUserInitials(initials);
               // Save to localStorage for persistence across page navigations
               if (typeof window !== 'undefined') {
                 localStorage.setItem('userInitials', initials);
@@ -890,14 +886,14 @@ export default function ParticipantsPage() {
             .select('id')
             .eq('email', authUser.email)
             .single();
-          
+
           if (dbUser) {
             await logActivity({
               user_id: dbUser.id,
               activity_type: newAttendance ? 'attendance_marked' : 'attendance_removed',
               participant_id: participantId,
               participant_name: participant.full_name,
-              description: newAttendance 
+              description: newAttendance
                 ? `נוכחות ${participant.full_name}`
                 : `הוסרה נוכחות ${participant.full_name}`,
             });
@@ -954,7 +950,7 @@ export default function ParticipantsPage() {
 
 
   return (
-      <main className={styles.container}>
+    <main className={styles.container}>
       {/* Blue status bar area for mobile */}
       <div
         style={{
@@ -974,7 +970,7 @@ export default function ParticipantsPage() {
       {/* Purple Header */}
       <div className={styles.purpleHeader}>
         <div className={styles.headerTop}>
-          <div 
+          <div
             className={styles.headerButton}
             onClick={() => router.push('/profile')}
             style={{ cursor: 'pointer' }}
@@ -982,7 +978,7 @@ export default function ParticipantsPage() {
           >
             {isHydrated ? userInitials : 'א'}
           </div>
-          <div 
+          <div
             className={styles.logo}
             onClick={() => router.push('/participants')}
             style={{ cursor: 'pointer' }}
@@ -999,7 +995,7 @@ export default function ParticipantsPage() {
         </div>
         <div className={styles.headerSearchBar}>
           <SearchBarWithAdd
-              placeholder="חיפוש פונה"
+            placeholder="חיפוש פונה"
             searchValue={search}
             onSearchChange={setSearch}
             onAddClick={() => router.push("/new-participant")}
@@ -1016,9 +1012,9 @@ export default function ParticipantsPage() {
       {/* Loading - show loading screen with image */}
       {loading && participants.length === 0 && (
         <div className={styles.loadingContainer}>
-          <div style={{ 
-            position: 'relative', 
-            width: '20.375rem', 
+          <div style={{
+            position: 'relative',
+            width: '20.375rem',
             height: '17.375rem',
             flexShrink: 0,
             aspectRatio: '163/139'
@@ -1075,14 +1071,14 @@ export default function ParticipantsPage() {
             }, {} as Record<string, typeof sortedParticipants>);
 
             // Get sorted letters
-            const sortedLetters = Object.keys(groupedParticipants).sort((a, b) => 
+            const sortedLetters = Object.keys(groupedParticipants).sort((a, b) =>
               a.localeCompare(b, 'he')
             );
 
             return sortedLetters.map((letter) => {
               const letterParticipants = groupedParticipants[letter];
               const lastIndex = letterParticipants.length - 1;
-              
+
               return (
                 <div key={letter} className={styles.letterGroup}>
                   {/* Letter Header */}
@@ -1093,69 +1089,69 @@ export default function ParticipantsPage() {
                   {letterParticipants.map((participant, index) => {
                     const attendedToday = isToday(participant.last_attendance);
                     const isLast = index === lastIndex;
-                    
+
                     return (
                       <div
                         key={participant.id}
                         className={`${styles.participantCard} ${participant.is_archived ? styles.archived : ""} ${isLast ? styles.lastParticipant : ""}`}
-                      onClick={(e) => {
-                        // Only navigate if click was not on checkbox
-                        if (!(e.target as HTMLElement).closest(`.${styles.attendanceCheckboxContainer}`)) {
-                          router.push(`/participant-card?id=${participant.id}`);
-                        }
-                      }}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      {/* Attendance Checkbox Container */}
-                      <div className={styles.attendanceCheckboxContainer}>
-                        {participant.is_archived ? (
-                          <div className={styles.archiveIcon}>
-                            <Image
-                              src="/icons/arcive.svg"
-                              alt="ארכיון"
-                              width={27}
-                              height={27}
-                            />
-                          </div>
-                        ) : (
-                          <div className={styles.attendanceCheckbox}>
-                            <input
-                              type="checkbox"
-                              checked={attendedToday}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                handleMarkAttendance(participant.id, participant.last_attendance);
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
-                              className={styles.checkbox}
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Name, Bereavement Detail and Phone */}
-                      <div
-                        className={styles.participantInfo}
+                        onClick={(e) => {
+                          // Only navigate if click was not on checkbox
+                          if (!(e.target as HTMLElement).closest(`.${styles.attendanceCheckboxContainer}`)) {
+                            router.push(`/participant-card?id=${participant.id}`);
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
                       >
-                        <div className={styles.participantName}>{participant.full_name}</div>
-                        {(participant.phone || participant.bereavement_detail) && (
-                          <div className={styles.participantDetails}>
-                            {participant.bereavement_detail && (
-                              <>
-                                <span className={styles.bereavementDetail}>{participant.bereavement_detail}</span>
-                                {participant.phone && <span className={styles.detailSeparator}> | </span>}
-                              </>
-                            )}
-                            {participant.phone && (
-                              <span className={styles.participantPhone}>{participant.phone}</span>
-                            )}
-                          </div>
-                        )}
+                        {/* Attendance Checkbox Container */}
+                        <div className={styles.attendanceCheckboxContainer}>
+                          {participant.is_archived ? (
+                            <div className={styles.archiveIcon}>
+                              <Image
+                                src="/icons/arcive.svg"
+                                alt="ארכיון"
+                                width={27}
+                                height={27}
+                              />
+                            </div>
+                          ) : (
+                            <div className={styles.attendanceCheckbox}>
+                              <input
+                                type="checkbox"
+                                checked={attendedToday}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleMarkAttendance(participant.id, participant.last_attendance);
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                className={styles.checkbox}
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Name, Bereavement Detail and Phone */}
+                        <div
+                          className={styles.participantInfo}
+                        >
+                          <div className={styles.participantName}>{participant.full_name}</div>
+                          {(participant.phone || participant.bereavement_detail) && (
+                            <div className={styles.participantDetails}>
+                              {participant.bereavement_detail && (
+                                <>
+                                  <span className={styles.bereavementDetail}>{participant.bereavement_detail}</span>
+                                  {participant.phone && <span className={styles.detailSeparator}> | </span>}
+                                </>
+                              )}
+                              {participant.phone && (
+                                <span className={styles.participantPhone}>{participant.phone}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
+                    );
                   })}
                 </div>
               );
@@ -1183,7 +1179,7 @@ export default function ParticipantsPage() {
         <div className={`${styles.statusUpdatesDrawer} ${isStatusUpdatesOpen ? styles.open : styles.closed} ${isTasksOpen ? styles.hidden : ''}`}>
           <div className={styles.tasksLine}>
             <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-              <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round"/>
+              <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round" />
             </svg>
           </div>
           <div className={`${styles.tasksHandle} ${isStatusUpdatesOpen ? styles.open : ''}`} onClick={() => setIsStatusUpdatesOpen(!isStatusUpdatesOpen)}>
@@ -1210,9 +1206,9 @@ export default function ParticipantsPage() {
                       const updateId = update.id;
                       const isRead = update.is_read || false;
                       const isLastUnread = index === unreadUpdates.length - 1;
-                      
+
                       if (!updateId) return null; // Skip if no ID
-                      
+
                       return (
                         <li key={updateId} className={`${styles.statusUpdateItem} ${isLastUnread ? styles.lastUnreadItem : ''}`}>
                           <div className={styles.statusUpdateContent}>
@@ -1249,18 +1245,18 @@ export default function ParticipantsPage() {
                       );
                     });
                   })()}
-                  
+
                   {/* Full width line before done section */}
                   {statusUpdates.filter(update => update.is_read).length > 0 && (
                     <li className={styles.statusUpdateItem} style={{ borderBottom: 'none', padding: 0 }}>
                       <div className={styles.tasksFullWidthLine}>
                         <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-                          <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round"/>
+                          <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round" />
                         </svg>
                       </div>
                     </li>
                   )}
-                  
+
                   {/* Done (read) status updates */}
                   <div className={styles.doneSection}>
                     <ul className={`${styles.taskList} ${styles.doneTasksList}`}>
@@ -1280,9 +1276,9 @@ export default function ParticipantsPage() {
                           const isPublic = update.is_public === true;
                           const updateId = update.id;
                           const isRead = update.is_read || false;
-                          
+
                           if (!updateId) return null; // Skip if no ID
-                          
+
                           return (
                             <li key={updateId} className={`${styles.statusUpdateItem} ${styles.readStatusUpdateItem}`}>
                               <div className={styles.statusUpdateContent}>
@@ -1317,7 +1313,7 @@ export default function ParticipantsPage() {
                               </div>
                               <div className={styles.taskItemHorizontalLine}>
                                 <svg height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#949ADD" strokeWidth="1"/>
+                                  <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#949ADD" strokeWidth="1" />
                                 </svg>
                               </div>
                             </li>
@@ -1325,13 +1321,13 @@ export default function ParticipantsPage() {
                         })}
                     </ul>
                   </div>
-                  
-                  {statusUpdates.filter(update => !update.is_read).length === 0 && 
-                   statusUpdates.filter(update => update.is_read).length === 0 && (
-                    <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
-                      <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין עדכוני סטטוס</span>
-                    </li>
-                  )}
+
+                  {statusUpdates.filter(update => !update.is_read).length === 0 &&
+                    statusUpdates.filter(update => update.is_read).length === 0 && (
+                      <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
+                        <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין עדכוני סטטוס</span>
+                      </li>
+                    )}
                 </>
               ) : (
                 <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
@@ -1349,7 +1345,7 @@ export default function ParticipantsPage() {
         <div className={`${styles.tasksDrawer} ${isTasksOpen ? styles.open : styles.closed} ${isStatusUpdatesOpen ? styles.hidden : ''}`}>
           <div className={styles.tasksLine}>
             <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-              <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round"/>
+              <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round" />
             </svg>
           </div>
           <div className={`${styles.tasksHandle} ${isTasksOpen ? styles.open : ''}`} onClick={() => setIsTasksOpen(!isTasksOpen)}>
@@ -1387,7 +1383,7 @@ export default function ParticipantsPage() {
                           return (
                             <>
                               <span style={{ fontWeight: 400 }}>{prefix}</span>
-                              <span style={{ 
+                              <span style={{
                                 color: 'var(--Blue-Adamami, #4D58D8)',
                                 fontFamily: 'EditorSans_PRO, sans-serif',
                                 fontSize: '1.5rem',
@@ -1404,68 +1400,68 @@ export default function ParticipantsPage() {
                   </div>
                   <div className={styles.taskItemAction}>
                     <div className={styles.phoneIconWrapper}>
-                    {task.participant_id && (() => {
-                      const phoneNumber = task.participant_phone;
-                      const participantName = task.participant_name || 'פונה';
-                      
-                      const phoneIcon = (
-                        <svg 
-                          width="27" 
-                          height="27" 
-                          viewBox="0 0 27 27" 
-                          fill="none" 
-                          xmlns="http://www.w3.org/2000/svg"
-                          style={{ 
-                            width: '1.5rem', 
-                            height: '1.5rem',
-                            display: 'block'
-                          }}
-                        >
-                          <path 
-                            d="M10.4756 18.8141C16.1083 24.2491 19.3586 24.9427 21.5821 25.0403C22.7576 25.092 23.9128 24.5955 24.7297 23.7488C26.6493 21.7595 25.9475 18.4805 23.2645 17.8146C21.2482 17.3141 19.1218 17.0088 17.7467 17.4284C14.4358 18.4387 10.0979 15.1873 10.7305 10.6582C10.9661 8.97128 10.7029 7.06235 10.2799 5.33084C9.62796 2.66291 6.3765 2.09745 4.46945 4.0738C3.61644 4.9578 3.17604 6.19369 3.35087 7.40963C3.70209 9.85248 4.73946 13.2792 10.4756 18.8141Z" 
-                            fill="#4D58D8"
-                            stroke="#4D58D8" 
-                            strokeWidth="2"
-                          />
-                        </svg>
-                      );
+                      {task.participant_id && (() => {
+                        const phoneNumber = task.participant_phone;
+                        const participantName = task.participant_name || 'פונה';
 
-                      if (phoneNumber) {
-                        return (
-                          <a 
-                            href={`tel:${phoneNumber}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
+                        const phoneIcon = (
+                          <svg
+                            width="27"
+                            height="27"
+                            viewBox="0 0 27 27"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            style={{
+                              width: '1.5rem',
+                              height: '1.5rem',
+                              display: 'block'
                             }}
-                            className={styles.phoneLink}
-                            aria-label={`התקשר ל-${participantName}`}
                           >
-                            {phoneIcon}
-                          </a>
+                            <path
+                              d="M10.4756 18.8141C16.1083 24.2491 19.3586 24.9427 21.5821 25.0403C22.7576 25.092 23.9128 24.5955 24.7297 23.7488C26.6493 21.7595 25.9475 18.4805 23.2645 17.8146C21.2482 17.3141 19.1218 17.0088 17.7467 17.4284C14.4358 18.4387 10.0979 15.1873 10.7305 10.6582C10.9661 8.97128 10.7029 7.06235 10.2799 5.33084C9.62796 2.66291 6.3765 2.09745 4.46945 4.0738C3.61644 4.9578 3.17604 6.19369 3.35087 7.40963C3.70209 9.85248 4.73946 13.2792 10.4756 18.8141Z"
+                              fill="#4D58D8"
+                              stroke="#4D58D8"
+                              strokeWidth="2"
+                            />
+                          </svg>
                         );
-                      }
-                      
-                      // אם אין מספר טלפון, מציגים את האייקון אבל לא לחיץ
-                      return (
-                        <div className={styles.phoneLink} style={{ opacity: 0.5, cursor: 'not-allowed' }}>
-                          {phoneIcon}
-                        </div>
-                      );
-                    })()}
+
+                        if (phoneNumber) {
+                          return (
+                            <a
+                              href={`tel:${phoneNumber}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                              className={styles.phoneLink}
+                              aria-label={`התקשר ל-${participantName}`}
+                            >
+                              {phoneIcon}
+                            </a>
+                          );
+                        }
+
+                        // אם אין מספר טלפון, מציגים את האייקון אבל לא לחיץ
+                        return (
+                          <div className={styles.phoneLink} style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                            {phoneIcon}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className={styles.taskItemHorizontalLine}>
                     <svg height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#4D58D8" strokeWidth="1"/>
+                      <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#4D58D8" strokeWidth="1" />
                     </svg>
                   </div>
                 </li>
               ))}
             </ul>
-            
+
             {/* Spacing */}
             <div className={styles.tasksSpacing}></div>
-            
+
             {/* Done Section */}
             <div className={styles.doneSection}>
               {/* Done tasks list */}
@@ -1478,80 +1474,80 @@ export default function ParticipantsPage() {
                     return bTime - aTime; // Descending order (newest first)
                   })
                   .map(task => {
-                  let doneByName = null;
-                  let doneByRole = null;
-                  if (task.done_by_user) {
-                    const name = (task.done_by_user.first_name || '').trim();
-                    const role = task.done_by_user.role || '';
-                    if (name) {
-                      doneByName = name;
-                      doneByRole = role;
+                    let doneByName = null;
+                    let doneByRole = null;
+                    if (task.done_by_user) {
+                      const name = (task.done_by_user.first_name || '').trim();
+                      const role = task.done_by_user.role || '';
+                      if (name) {
+                        doneByName = name;
+                        doneByRole = role;
+                      }
                     }
-                  }
-                  return (
-                    <li key={task.id} className={styles.taskItem} style={{ opacity: 0.7 }}>
-                      <div className={styles.taskItemContent}>
-                        <input
-                          type="checkbox"
-                          className={styles.taskCheckbox}
-                          checked={task.status === 'done'}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            handleTaskToggle(task);
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
-                        />
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                          <span className={styles.taskText} style={{ textDecoration: 'line-through' }}>
-                            {(() => {
-                              const title = task.title;
-                              const prefix = "להתקשר ל";
-                              if (title.startsWith(prefix)) {
-                                const participantName = title.substring(prefix.length);
-                                return (
-                                  <>
-                                    <span style={{ 
-                                      color: '#949ADD',
-                                      textAlign: 'right',
-                                      fontFamily: 'EditorSans_PRO, sans-serif',
-                                      fontSize: '1.5rem',
-                                      fontStyle: 'italic',
-                                      fontWeight: 400,
-                                      lineHeight: '98%',
-                                      textDecorationLine: 'line-through'
-                                    }}>{prefix}</span>
-                                    <span style={{ 
-                                      color: '#949ADD',
-                                      fontFamily: 'EditorSans_PRO, sans-serif',
-                                      fontSize: '1.5rem',
-                                      fontStyle: 'italic',
-                                      fontWeight: 600,
-                                      lineHeight: '98%',
-                                      textDecorationLine: 'line-through'
-                                    }}>{participantName}</span>
-                                  </>
-                                );
-                              }
-                              return title;
-                            })()}
-                          </span>
-                          {doneByName && (
-                            <div className={styles.taskDoneBy}>
-                              <span>בוצע ע&quot;י {doneByName}{doneByRole ? ` ${doneByRole}` : ''}</span>
-                            </div>
-                          )}
+                    return (
+                      <li key={task.id} className={styles.taskItem} style={{ opacity: 0.7 }}>
+                        <div className={styles.taskItemContent}>
+                          <input
+                            type="checkbox"
+                            className={styles.taskCheckbox}
+                            checked={task.status === 'done'}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleTaskToggle(task);
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                            <span className={styles.taskText} style={{ textDecoration: 'line-through' }}>
+                              {(() => {
+                                const title = task.title;
+                                const prefix = "להתקשר ל";
+                                if (title.startsWith(prefix)) {
+                                  const participantName = title.substring(prefix.length);
+                                  return (
+                                    <>
+                                      <span style={{
+                                        color: '#949ADD',
+                                        textAlign: 'right',
+                                        fontFamily: 'EditorSans_PRO, sans-serif',
+                                        fontSize: '1.5rem',
+                                        fontStyle: 'italic',
+                                        fontWeight: 400,
+                                        lineHeight: '98%',
+                                        textDecorationLine: 'line-through'
+                                      }}>{prefix}</span>
+                                      <span style={{
+                                        color: '#949ADD',
+                                        fontFamily: 'EditorSans_PRO, sans-serif',
+                                        fontSize: '1.5rem',
+                                        fontStyle: 'italic',
+                                        fontWeight: 600,
+                                        lineHeight: '98%',
+                                        textDecorationLine: 'line-through'
+                                      }}>{participantName}</span>
+                                    </>
+                                  );
+                                }
+                                return title;
+                              })()}
+                            </span>
+                            {doneByName && (
+                              <div className={styles.taskDoneBy}>
+                                <span>בוצע ע&quot;י {doneByName}{doneByRole ? ` ${doneByRole}` : ''}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className={styles.taskItemHorizontalLine}>
-                        <svg height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#4D58D8" strokeWidth="1"/>
-                        </svg>
-                      </div>
-                    </li>
-                  );
-                })}
+                        <div className={styles.taskItemHorizontalLine}>
+                          <svg height="1" viewBox="0 0 380 1" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <line x1="0" y1="0.5" x2="380" y2="0.5" stroke="#4D58D8" strokeWidth="1" />
+                          </svg>
+                        </div>
+                      </li>
+                    );
+                  })}
                 {tasks.filter(t => t.status === 'done').length === 0 && (
                   <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
                     <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין משימות שבוצעו</span>

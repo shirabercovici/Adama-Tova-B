@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 
 
@@ -24,7 +25,11 @@ export default function EditParticipantPage() {
 
 
 
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
+
+    // Use custom hook for theme color
+    useThemeColor('#FFFCE5');
+
     // זה החלק ש"מושך" את המידע הקיים לתוך השדות
     useEffect(() => {
         const fetchParticipantData = async () => {
@@ -180,7 +185,7 @@ export default function EditParticipantPage() {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        paddingTop: '2.5rem',
+                        paddingTop: 'calc(env(safe-area-inset-top) + 2.5rem)',
                         paddingBottom: '1.25rem',
                         paddingLeft: '1.88rem',
                         paddingRight: '1.88rem',

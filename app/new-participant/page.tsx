@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import styles from './page.module.css';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function NewParticipantPage() {
     const router = useRouter();
@@ -32,19 +33,8 @@ export default function NewParticipantPage() {
         }
     }, [showSuccessModal, createdId, router]);
 
-    // Update theme-color to match cream header background (#FFFCE5)
-    useEffect(() => {
-        const metaThemeColor = document.querySelector("meta[name='theme-color']");
-        if (metaThemeColor) {
-            metaThemeColor.setAttribute("content", "#FFFCE5");
-        }
-        // Cleanup function to reset the color when leaving the page
-        return () => {
-            if (metaThemeColor) {
-                metaThemeColor.setAttribute("content", "#4D58D8");
-            }
-        };
-    }, []);
+    // Use custom hook for theme color
+    useThemeColor('#FFFCE5');
 
     const hasUnsavedChanges = () => {
         return name.trim() !== '' ||
@@ -189,7 +179,7 @@ export default function NewParticipantPage() {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        paddingTop: '2.5rem',
+                        paddingTop: 'calc(env(safe-area-inset-top) + 2.5rem)',
                         paddingBottom: '1.25rem',
                         paddingLeft: '1.88rem',
                         paddingRight: '1.88rem',
