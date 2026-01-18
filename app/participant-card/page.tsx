@@ -6,6 +6,7 @@ import BackButton from '../../components/BackButton';
 import { createClient } from '@/lib/supabase/client';
 import { Participant } from '@/app/participants/types';
 import { logActivity } from '@/lib/activity-logger';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 
 const InfoRow = ({ label, value, children }: { label: string, value: any, children?: React.ReactNode }) => (
@@ -115,7 +116,7 @@ export default function ParticipantCardPage() {
   const [isSuccessMessageOpen, setIsSuccessMessageOpen] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const id = searchParams.get('id');
   const urlName = searchParams.get('name') || ''; // הוספת השורה הזו
   const [updateTarget, setUpdateTarget] = useState('כולם');
@@ -216,24 +217,8 @@ export default function ParticipantCardPage() {
     if (id) fetchParticipant();
   }, [id, fetchParticipant]);
 
-  useEffect(() => {
-    // Dynamically update the theme-color meta tag for mobile browsers
-    const metaThemeColor = document.querySelector("meta[name='theme-color']");
-    if (metaThemeColor) {
-      if (participant?.is_archived) {
-        metaThemeColor.setAttribute("content", "#949ADD");
-      } else {
-        metaThemeColor.setAttribute("content", "#4D58D8");
-      }
-    }
-
-    // Cleanup function to reset the color when leaving the page
-    return () => {
-      if (metaThemeColor) {
-        metaThemeColor.setAttribute("content", "#4D58D8");
-      }
-    };
-  }, [participant?.is_archived]);
+  // Dynamically update the theme-color meta tag for mobile browsers
+  useThemeColor(participant?.is_archived ? "#949ADD" : "#4D58D8");
 
   const handleAddUpdate = async () => {
     if (newUpdateText.trim() === '') return;
@@ -430,6 +415,7 @@ export default function ParticipantCardPage() {
         <div style={{
           backgroundColor: participant?.is_archived ? '#949ADD' : '#4D58D8',
           padding: '1.25rem 1.875rem',
+          paddingTop: 'calc(env(safe-area-inset-top) + 1.25rem)',
           width: '100%',
           color: 'white',
           boxShadow: '0 2px 10px rgba(0,0,0,0.1)',

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function AddVolunteerPage() {
     const router = useRouter();
@@ -20,18 +21,7 @@ export default function AddVolunteerPage() {
     }, []);
 
     // Update theme-color to match cream header background (#FFFCE5)
-    useEffect(() => {
-        const metaThemeColor = document.querySelector("meta[name='theme-color']");
-        if (metaThemeColor) {
-            metaThemeColor.setAttribute("content", "#FFFCE5");
-        }
-        // Cleanup function to reset the color when leaving the page
-        return () => {
-            if (metaThemeColor) {
-                metaThemeColor.setAttribute("content", "#4D58D8");
-            }
-        };
-    }, []);
+    useThemeColor('#FFFCE5');
 
     // Auto-dismiss success modal after 2.5 seconds
     useEffect(() => {
@@ -68,7 +58,7 @@ export default function AddVolunteerPage() {
 
     const validate = (): boolean => {
         const newErrors: Record<string, boolean> = {};
-        
+
         if (!formData.firstName.trim()) {
             newErrors.firstName = true;
         }
@@ -116,7 +106,7 @@ export default function AddVolunteerPage() {
                 role: "volunteer"
             });
             setErrors({});
-            
+
             // Show success modal
             setShowSuccessModal(true);
             setLoading(false);
@@ -129,10 +119,10 @@ export default function AddVolunteerPage() {
 
     // Check if any data has been entered
     const hasData = () => {
-        return formData.firstName.trim() || 
-               formData.lastName.trim() || 
-               formData.phone.trim() || 
-               formData.email.trim();
+        return formData.firstName.trim() ||
+            formData.lastName.trim() ||
+            formData.phone.trim() ||
+            formData.email.trim();
     };
 
     const handleBack = () => {
@@ -154,7 +144,7 @@ export default function AddVolunteerPage() {
                 {/* Header with User Info */}
                 <div className={styles.header}>
                     <div className={styles.headerTop}>
-                        <button 
+                        <button
                             onClick={handleBack}
                             className={styles.closeXButton}
                             aria-label="סגור"
@@ -283,7 +273,7 @@ export default function AddVolunteerPage() {
                 <div className={styles.modalOverlay}>
                     <div className={styles.successModalContent}>
                         <h3 className={styles.modalTitle}>איש הצוות נוסף בהצלחה!</h3>
-                        
+
                         <div className={styles.modalIllustration}>
                             <img
                                 src="/icons/approve_saving.svg"
@@ -300,7 +290,7 @@ export default function AddVolunteerPage() {
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent}>
                         <h3 className={styles.modalTitle}>הנתונים לא נשמרו. לצאת בכל זאת?</h3>
-                        
+
                         <div className={styles.modalIllustration}>
                             <img
                                 src="/icons/not_saved.svg"
