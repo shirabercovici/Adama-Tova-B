@@ -32,10 +32,19 @@ export async function logActivity(activity: ActivityLog): Promise<void> {
     });
 
     if (!response.ok) {
-      console.error('Failed to log activity:', await response.text());
+      const errorText = await response.text();
+      console.error('Failed to log activity:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        activity: activity
+      });
+    } else {
+      const result = await response.json();
+      console.log('Activity logged successfully:', result);
     }
   } catch (error) {
-    console.error('Error logging activity:', error);
+    console.error('Error logging activity:', error, 'Activity data:', activity);
     // Don't throw - activity logging should not break the main flow
   }
 }

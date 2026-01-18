@@ -44,17 +44,13 @@ export default function ManageVolunteersPage() {
     const [isLoading, setIsLoading] = useState(() => cachedUsers.length === 0);
 
     useEffect(() => {
-        // If we have cached users, show them immediately and fetch in background
-        if (users.length > 0) {
-            fetchUsers(); // Update in background
-        } else {
-            // Only prevent multiple fetches if we don't have cached data
-            if (hasFetchedUserRef.current) {
-                return;
-            }
-            hasFetchedUserRef.current = true;
-            fetchUsers();
+        // If we have cached users, fetch in background for updates but show immediately
+        // If no cache, wait for data before showing anything
+        if (hasFetchedUserRef.current) {
+            return;
         }
+        hasFetchedUserRef.current = true;
+        fetchUsers();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -110,6 +106,11 @@ export default function ManageVolunteersPage() {
         (user) => user.role === "מנהל.ת" || user.role === "מנהל" || user.role === "מנהלת" || (user.role && user.role.includes("מנהל"))
     ).length;
 
+    // Don't render anything until data is loaded (either from cache or fetch)
+    if (isLoading && users.length === 0) {
+        return null;
+    }
+
     return (
         <main className={styles.main} dir="rtl">
             <div className={styles.container}>
@@ -128,42 +129,38 @@ export default function ManageVolunteersPage() {
                 </div>
 
                 <div className={styles.content}>
-                    {/* Team Summary - only show when data is loaded */}
-                    {!isLoading && (
-                        <div className={styles.teamSummary}>
-                            {volunteerCount} מתנדבים.ות{managerCount > 0 ? `, ${managerCount} מנהלים.ות` : ""}
+                    {/* Team Summary */}
+                    <div className={styles.teamSummary}>
+                        {volunteerCount} מתנדבים.ות{managerCount > 0 ? `, ${managerCount} מנהלים.ות` : ""}
+                    </div>
+
+                    <hr className={styles.divider} />
+
+                    {/* Team Members List */}
+                    {filteredUsers.length === 0 ? (
+                        <div className={styles.emptyState}>
+                            <div className={styles.emptyStateText}>
+                                {search ? "לא נמצאו תוצאות" : "אין אנשי צוות"}
+                            </div>
                         </div>
-                    )}
-
-                    {!isLoading && <hr className={styles.divider} />}
-
-                    {/* Team Members List - only show when data is loaded */}
-                    {!isLoading && (
-                        filteredUsers.length === 0 ? (
-                            <div className={styles.emptyState}>
-                                <div className={styles.emptyStateText}>
-                                    {search ? "לא נמצאו תוצאות" : "אין אנשי צוות"}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className={styles.teamList}>
-                                {filteredUsers.map((user, index) => (
-                                    <Link
-                                        key={user.id}
-                                        href={`/manage-volunteers/${user.id}`}
-                                        className={styles.teamMemberItem}
-                                        prefetch={true}
-                                    >
-                                        <div className={styles.memberName}>
-                                            {user.first_name} {user.last_name}
-                                        </div>
-                                        <div className={styles.memberRole}>
-                                            {user.role || "מתנדב.ת"}
-                                        </div>
-                                    </Link>
-                                ))}
-                            </div>
-                        )
+                    ) : (
+                        <div className={styles.teamList}>
+                            {filteredUsers.map((user, index) => (
+                                <Link
+                                    key={user.id}
+                                    href={`/manage-volunteers/${user.id}`}
+                                    className={styles.teamMemberItem}
+                                    prefetch={true}
+                                >
+                                    <div className={styles.memberName}>
+                                        {user.first_name} {user.last_name}
+                                    </div>
+                                    <div className={styles.memberRole}>
+                                        {user.role || "מתנדב.ת"}
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>

@@ -36,9 +36,9 @@ export default function ProfilePage() {
 
   const initialState = getInitialState();
   const [userData, setUserData] = useState<any>(initialState.userData);
-  const [loading, setLoading] = useState(!initialState.userData);
+  const [loading, setLoading] = useState(false);
   const [activities, setActivities] = useState<any[]>(initialState.activities);
-  const [activitiesLoading, setActivitiesLoading] = useState(!initialState.activities.length);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'personal' | 'history'>('personal');
   const router = useRouter();
@@ -46,86 +46,78 @@ export default function ProfilePage() {
   const hasFetchedProfileRef = useRef(false);
 
   useEffect(() => {
-    // Only fetch after component is mounted to avoid hydration issues
-    if (!mounted || hasFetchedProfileRef.current) {
-      return;
-    }
-    hasFetchedProfileRef.current = true;
+    // Fetch immediately if we don't have cached data
+    if (!initialState.userData && !hasFetchedProfileRef.current) {
+      hasFetchedProfileRef.current = true;
+      
+      const getProfile = async () => {
+        try {
+          // Get authenticated user
+          const { data: { user: authUser } } = await supabase.auth.getUser();
 
-    const getProfile = async () => {
-      try {
-        // Get authenticated user
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (!authUser) {
+            router.push("/");
+            return;
+          }
 
-        if (!authUser) {
-          router.push("/");
-          return;
-        }
+          // Fetch full user details first (single query is faster than two)
+          const { data: dbUser, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("email", authUser.email)
+            .single();
 
-        // First, get just the user ID (lightweight query) to start activities fetch early
-        const { data: userWithId } = await supabase
-          .from("users")
-          .select("id")
-          .eq("email", authUser.email)
-          .single();
+          const finalUserData = (!error && dbUser) ? dbUser : authUser;
+          
+          // Update state immediately
+          setUserData(finalUserData);
+          
+          // Save to localStorage for next time
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('userProfileData', JSON.stringify(finalUserData));
+          }
 
-        // Start fetching activities immediately if we have the ID
-        if (userWithId?.id) {
-          // Fetch activities in parallel with profile
-          // Fetch more items to account for filtered attendance pairs
-          fetch(`/api/activities?user_id=${userWithId.id}&limit=100`)
-            .then(async (activitiesResponse) => {
-              if (activitiesResponse.ok) {
-                const activitiesData = await activitiesResponse.json();
-                const fetchedActivities = activitiesData.activities || [];
-                setActivities(fetchedActivities);
-                // Cache activities for next time
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem(`userActivities_${userWithId.id}`, JSON.stringify(fetchedActivities));
+          // Fetch activities in parallel
+          const userId = dbUser?.id || authUser?.id;
+          if (userId) {
+            fetch(`/api/activities?user_id=${userId}&limit=100`)
+              .then(async (activitiesResponse) => {
+                if (activitiesResponse.ok) {
+                  const activitiesData = await activitiesResponse.json();
+                  const fetchedActivities = activitiesData.activities || [];
+                  setActivities(fetchedActivities);
+                  // Cache activities for next time
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem(`userActivities_${userId}`, JSON.stringify(fetchedActivities));
+                  }
                 }
-              }
-            })
-            .catch((err) => {
-              console.error("Error fetching activities:", err);
-            })
-            .finally(() => {
-              setActivitiesLoading(false);
-            });
-        } else {
-          setActivitiesLoading(false);
+              })
+              .catch((err) => {
+                console.error("Error fetching activities:", err);
+              });
+          }
+        } catch (err) {
+          console.error("Error fetching profile:", err);
+          // Try to get user from auth as fallback
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser) {
+            setUserData(authUser);
+          }
         }
+      };
 
-        // Now fetch full user details
-        const { data: dbUser, error } = await supabase
-          .from("users")
-          .select("*")
-          .eq("email", authUser.email)
-          .single();
-
-        const finalUserData = (!error && dbUser) ? dbUser : authUser;
-
-        // Update state immediately
-        setUserData(finalUserData);
-
-        // Save to localStorage for next time
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('userProfileData', JSON.stringify(finalUserData));
-        }
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-        // Try to get user from auth as fallback
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-          setUserData(authUser);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getProfile();
+      getProfile();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted]); // Run when mounted
+  }, []); // Run once on mount
+
+  useEffect(() => {
+    setMounted(true);
+    document.body.classList.add('profile-page');
+    return () => {
+      document.body.classList.remove('profile-page');
+    };
+  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -187,39 +179,15 @@ export default function ProfilePage() {
     return activities.filter((activity) => !excludeIds.has(activity.id));
   };
 
-  useEffect(() => {
-    setMounted(true);
-    document.body.classList.add('profile-page');
-    return () => {
-      document.body.classList.remove('profile-page');
-    };
-  }, []);
-
   // Update theme-color to match purple header background (#4D58D8)
   useThemeColor('#4D58D8');
 
   // Note: Cached data is now loaded synchronously in useState initializer above
   // This useEffect is kept for cases where we need to refresh from cache
 
-  if (loading) {
-    return (
-      <main className={styles.main} dir="rtl">
-        <div className={styles.container}>
-          <div className={styles.backButtonWrapper}>
-            <button
-              onClick={() => router.back()}
-              className={styles.closeXButton}
-              aria-label="סגור"
-            >
-              ×
-            </button>
-          </div>
-          <div className={styles.loadingContainer}>
-            <div className={styles.loadingText}>טוען...</div>
-          </div>
-        </div>
-      </main>
-    );
+  // Don't render content until we have userData
+  if (!userData) {
+    return null;
   }
 
   return (
@@ -239,9 +207,9 @@ export default function ProfilePage() {
         <div className={styles.header}>
           <div className={styles.userInfo}>
             <h3 className={styles.userName}>
-              {userData?.first_name || "לא הוזן"} {userData?.last_name || ""}
+              {userData.first_name || ""} {userData.last_name || ""}
             </h3>
-            <p className={styles.userRole}>{userData?.role || "לא הוזן"}</p>
+            <p className={styles.userRole}>{userData.role || ""}</p>
           </div>
         </div>
 
@@ -269,35 +237,31 @@ export default function ProfilePage() {
               {/* First Name Field */}
               <div className={styles.formField}>
                 <label className={styles.fieldLabel}>שם פרטי</label>
-                <div className={styles.fieldValue}>{userData?.first_name || "לא הוזן"}</div>
+                <div className={styles.fieldValue}>{userData.first_name || ""}</div>
               </div>
 
               {/* Last Name Field */}
               <div className={styles.formField}>
                 <label className={styles.fieldLabel}>שם משפחה</label>
-                <div className={styles.fieldValue}>{userData?.last_name || "לא הוזן"}</div>
+                <div className={styles.fieldValue}>{userData.last_name || ""}</div>
               </div>
 
               {/* Phone Number Field */}
               <div className={styles.formField}>
                 <label className={styles.fieldLabel}>מס&apos; טלפון</label>
-                <div className={styles.fieldValue} dir="ltr" style={{ textAlign: 'right' }}>{userData?.phone_number || "לא הוזן"}</div>
+                <div className={styles.fieldValue} dir="ltr" style={{ textAlign: 'right' }}>{userData.phone_number || ""}</div>
               </div>
 
               {/* Email Field */}
               <div className={styles.formField}>
                 <label className={styles.fieldLabel}>מייל</label>
-                <div className={styles.fieldValue} dir="ltr" style={{ textAlign: 'right' }}>{userData?.email || "לא הוזן"}</div>
+                <div className={styles.fieldValue} dir="ltr" style={{ textAlign: 'right' }}>{userData.email || ""}</div>
               </div>
             </div>
           ) : (
             /* History Tab */
             <div className={styles.historySection}>
-              {activitiesLoading ? (
-                <div className={styles.loadingState}>
-                  <div className={styles.loadingStateText}>טוען...</div>
-                </div>
-              ) : activities.length === 0 ? (
+              {activities.length === 0 ? (
                 <div className={styles.emptyState}>
                   <div className={styles.emptyStateText}>אין פעילויות עדיין</div>
                 </div>
@@ -305,10 +269,9 @@ export default function ProfilePage() {
                 <div className={styles.activityList}>
                   {filterAttendancePairs(activities).slice(0, 20).map((activity, index) => {
                     const activityDate = new Date(activity.created_at);
-                    const formattedDate = activityDate.toLocaleDateString("he-IL", {
-                      day: "numeric",
-                      month: "numeric",
-                    });
+                    const day = activityDate.getDate();
+                    const month = String(activityDate.getMonth() + 1).padStart(2, '0');
+                    const formattedDate = `${day}/${month}`;
 
                     // Get icon based on activity type
                     const getActivityIcon = () => {

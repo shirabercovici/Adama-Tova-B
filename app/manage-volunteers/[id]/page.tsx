@@ -15,7 +15,6 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showUnsavedModal, setShowUnsavedModal] = useState(false);
     const [mounted, setMounted] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
 
     // Try to get cached data first for instant display
     const getCachedUser = () => {
@@ -56,6 +55,9 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
     };
 
     const cachedUser = getCachedUser();
+    // Only consider it complete cached data if we have it from individual user cache (has phone/email)
+    // Users list cache only has name/role, which is incomplete
+    const hasCompleteCachedData = typeof window !== 'undefined' && sessionStorage.getItem(`${CACHE_KEY}-user-${params.id}`) !== null;
     const initialFormData = cachedUser || {
         firstName: "",
         lastName: "",
@@ -65,8 +67,9 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
     };
     const [formData, setFormData] = useState(() => initialFormData);
     const [originalFormData, setOriginalFormData] = useState(() => initialFormData);
-    // If we have cached data, we don't need to wait for loading
-    const [hasInitialData] = useState(() => !!cachedUser);
+    // If we have complete cached data (from individual user cache), we don't need to wait for loading
+    const [hasInitialData] = useState(() => hasCompleteCachedData);
+    const [isLoading, setIsLoading] = useState(() => !hasCompleteCachedData);
 
     useEffect(() => {
         setMounted(true);
