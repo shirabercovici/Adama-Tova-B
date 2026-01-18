@@ -36,7 +36,7 @@ export default function ProfilePage() {
 
   const initialState = getInitialState();
   const [userData, setUserData] = useState<any>(initialState.userData);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with true to show loading screen
   const [activities, setActivities] = useState<any[]>(initialState.activities);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -46,8 +46,8 @@ export default function ProfilePage() {
   const hasFetchedProfileRef = useRef(false);
 
   useEffect(() => {
-    // Fetch immediately if we don't have cached data
-    if (!initialState.userData && !hasFetchedProfileRef.current) {
+    // Always verify the cached user matches the authenticated user
+    if (!hasFetchedProfileRef.current) {
       hasFetchedProfileRef.current = true;
       
       const getProfile = async () => {
@@ -58,6 +58,24 @@ export default function ProfilePage() {
           if (!authUser) {
             router.push("/");
             return;
+          }
+
+          // Check if cached data belongs to the current user
+          const cachedData = initialState.userData;
+          const cachedEmail = cachedData?.email;
+          const currentEmail = authUser.email;
+
+          // If cached data exists but belongs to a different user, clear it
+          if (cachedData && cachedEmail !== currentEmail) {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('userProfileData');
+              // Also clear activities cache for the old user
+              if (cachedData.id) {
+                localStorage.removeItem(`userActivities_${cachedData.id}`);
+              }
+            }
+            setUserData(null);
+            setActivities([]);
           }
 
           // Fetch full user details first (single query is faster than two)
@@ -71,6 +89,7 @@ export default function ProfilePage() {
           
           // Update state immediately
           setUserData(finalUserData);
+          setLoading(false); // Mark as loaded
           
           // Save to localStorage for next time
           if (typeof window !== 'undefined') {
@@ -103,6 +122,7 @@ export default function ProfilePage() {
           if (authUser) {
             setUserData(authUser);
           }
+          setLoading(false); // Mark as loaded even on error
         }
       };
 
@@ -119,7 +139,83 @@ export default function ProfilePage() {
     };
   }, []);
 
+  // Listen for auth state changes (e.g., when user switches accounts)
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        // User has signed in or switched accounts, refresh profile data
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        
+        if (authUser) {
+          // Clear old cache
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('userProfileData');
+            if (userData?.id) {
+              localStorage.removeItem(`userActivities_${userData.id}`);
+            }
+          }
+
+          // Fetch new user data
+          const { data: dbUser, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("email", authUser.email)
+            .single();
+
+          const finalUserData = (!error && dbUser) ? dbUser : authUser;
+          setUserData(finalUserData);
+          
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('userProfileData', JSON.stringify(finalUserData));
+          }
+
+          // Fetch activities
+          const userId = dbUser?.id || authUser?.id;
+          if (userId) {
+            fetch(`/api/activities?user_id=${userId}&limit=100`)
+              .then(async (activitiesResponse) => {
+                if (activitiesResponse.ok) {
+                  const activitiesData = await activitiesResponse.json();
+                  const fetchedActivities = activitiesData.activities || [];
+                  setActivities(fetchedActivities);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem(`userActivities_${userId}`, JSON.stringify(fetchedActivities));
+                  }
+                }
+              })
+              .catch((err) => {
+                console.error("Error fetching activities:", err);
+              });
+          }
+        }
+      } else if (event === 'SIGNED_OUT') {
+        // Clear cache on sign out
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('userProfileData');
+          if (userData?.id) {
+            localStorage.removeItem(`userActivities_${userData.id}`);
+          }
+        }
+        setUserData(null);
+        setActivities([]);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase, userData?.id]);
+
   const handleSignOut = async () => {
+    // Clear localStorage cache before signing out
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('userProfileData');
+      if (userData?.id) {
+        localStorage.removeItem(`userActivities_${userData.id}`);
+      }
+    }
     await supabase.auth.signOut();
     router.push("/");
   };
@@ -185,9 +281,28 @@ export default function ProfilePage() {
   // Note: Cached data is now loaded synchronously in useState initializer above
   // This useEffect is kept for cases where we need to refresh from cache
 
-  // Don't render content until we have userData
-  if (!userData) {
-    return null;
+  // Show loading screen while loading userData
+  if (loading || !userData) {
+    return (
+      <div className={styles.loadingContainer}>
+        <div style={{
+          position: 'relative',
+          width: '20.375rem',
+          height: '17.375rem',
+          flexShrink: 0,
+          aspectRatio: '163/139'
+        }}>
+          <Image
+            src="/icons/loading.png"
+            alt="טוען..."
+            fill
+            style={{ objectFit: 'contain' }}
+            priority
+          />
+        </div>
+        <div className={styles.loadingText}>רק רגע...</div>
+      </div>
+    );
   }
 
   return (
@@ -328,10 +443,27 @@ export default function ProfilePage() {
                           updateDetails = activity.description.substring(colonIndex + 1).trim();
                         }
                       }
+                      
+                      // Add participant_name to the main description for status updates
+                      if (activity.participant_name) {
+                        mainDescription = `${mainDescription} ${activity.participant_name}`;
+                      }
                     }
 
+                    // Make activities clickable if they have a participant_id
+                    const handleActivityClick = () => {
+                      if (activity.participant_id) {
+                        router.push(`/participant-card?id=${activity.participant_id}`);
+                      }
+                    };
+
                     return (
-                      <div key={activity.id || index} className={styles.activityItem}>
+                      <div 
+                        key={activity.id || index} 
+                        className={styles.activityItem}
+                        onClick={handleActivityClick}
+                        style={activity.participant_id ? { cursor: 'pointer' } : {}}
+                      >
                         <div className={styles.activityDate}>{formattedDate}</div>
                         <div className={styles.activityIcon}>
                           {getActivityIcon()}

@@ -36,13 +36,29 @@
 
 .loadingContainer {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  min-height: 60vh;
+  justify-content: center;
+  width: 100%;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #FFFCE5;
+  gap: 1rem;
+  z-index: 9999;
 }
 
 .loadingText {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--Blue-Adamami, #4D58D8);
+  text-align: center;
+  font-family: EditorSans_PRO;
+  font-size: 1.875rem;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 98%;
+  /* 1.8375rem */
 }
 
 .backButtonWrapper {
@@ -272,7 +288,7 @@
 .activityItem {
   padding: 0.75rem 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.5rem;
   border-bottom: 0.0625rem solid var(--color-background);
   position: relative;
