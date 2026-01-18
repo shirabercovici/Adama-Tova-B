@@ -429,8 +429,20 @@ export default function ProfilePage() {
                       }
                     }
 
+                    // Make activities clickable if they have a participant_id
+                    const handleActivityClick = () => {
+                      if (activity.participant_id) {
+                        router.push(`/participant-card?id=${activity.participant_id}`);
+                      }
+                    };
+
                     return (
-                      <div key={activity.id || index} className={styles.activityItem}>
+                      <div 
+                        key={activity.id || index} 
+                        className={styles.activityItem}
+                        onClick={handleActivityClick}
+                        style={activity.participant_id ? { cursor: 'pointer' } : {}}
+                      >
                         <div className={styles.activityDate}>{formattedDate}</div>
                         <div className={styles.activityIcon}>
                           {getActivityIcon()}
