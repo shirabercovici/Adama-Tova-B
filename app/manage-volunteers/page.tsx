@@ -37,8 +37,10 @@ export default function ManageVolunteersPage() {
         return [];
     };
 
-    const [users, setUsers] = useState<User[]>(getCachedUsers);
+    const cachedUsers = getCachedUsers();
+    const [users, setUsers] = useState<User[]>(cachedUsers);
     const [search, setSearch] = useState("");
+    const [isLoading, setIsLoading] = useState(() => cachedUsers.length === 0);
 
     useEffect(() => {
         // If we have cached users, show them immediately and fetch in background
@@ -81,6 +83,8 @@ export default function ManageVolunteersPage() {
             }
         } catch (error) {
             console.error("Error fetching users:", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -120,38 +124,42 @@ export default function ManageVolunteersPage() {
                 </div>
 
                 <div className={styles.content}>
-                    {/* Team Summary */}
-                    <div className={styles.teamSummary}>
-                        {volunteerCount} מתנדבים.ות{managerCount > 0 ? `, ${managerCount} מנהלים.ות` : ""}
-                    </div>
+                    {/* Team Summary - only show when data is loaded */}
+                    {!isLoading && (
+                        <div className={styles.teamSummary}>
+                            {volunteerCount} מתנדבים.ות{managerCount > 0 ? `, ${managerCount} מנהלים.ות` : ""}
+                        </div>
+                    )}
 
-                    <hr className={styles.divider} />
+                    {!isLoading && <hr className={styles.divider} />}
 
-                    {/* Team Members List */}
-                    {filteredUsers.length === 0 ? (
-                        <div className={styles.emptyState}>
-                            <div className={styles.emptyStateText}>
-                                {search ? "לא נמצאו תוצאות" : "אין אנשי צוות"}
+                    {/* Team Members List - only show when data is loaded */}
+                    {!isLoading && (
+                        filteredUsers.length === 0 ? (
+                            <div className={styles.emptyState}>
+                                <div className={styles.emptyStateText}>
+                                    {search ? "לא נמצאו תוצאות" : "אין אנשי צוות"}
+                                </div>
                             </div>
-                        </div>
-                    ) : (
-                        <div className={styles.teamList}>
-                            {filteredUsers.map((user, index) => (
-                                <Link
-                                    key={user.id}
-                                    href={`/manage-volunteers/${user.id}`}
-                                    className={styles.teamMemberItem}
-                                    prefetch={true}
-                                >
-                                    <div className={styles.memberName}>
-                                        {user.first_name} {user.last_name}
-                                    </div>
-                                    <div className={styles.memberRole}>
-                                        {user.role || "מתנדב.ת"}
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
+                        ) : (
+                            <div className={styles.teamList}>
+                                {filteredUsers.map((user, index) => (
+                                    <Link
+                                        key={user.id}
+                                        href={`/manage-volunteers/${user.id}`}
+                                        className={styles.teamMemberItem}
+                                        prefetch={true}
+                                    >
+                                        <div className={styles.memberName}>
+                                            {user.first_name} {user.last_name}
+                                        </div>
+                                        <div className={styles.memberRole}>
+                                            {user.role || "מתנדב.ת"}
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        )
                     )}
                 </div>
             </div>
