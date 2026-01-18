@@ -47,7 +47,7 @@
 
 .backButtonWrapper {
   position: absolute;
-  top: 1.25rem;
+  top: calc(env(safe-area-inset-top) + 1.25rem);
   right: 1.25rem;
   z-index: 10;
 }
@@ -82,7 +82,7 @@
 .header {
   width: 100%;
   padding-right: 3.13rem;
-  padding-top: 1.56rem;
+  padding-top: calc(env(safe-area-inset-top) + 1.56rem);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -151,7 +151,7 @@
 
 .tabActive {
   background: var(--color-primary);
-  color:var(--color-background);
+  color: var(--color-background);
   z-index: 2;
 }
 
@@ -301,7 +301,8 @@
 }
 
 .activityIconImage {
-  filter: brightness(0) invert(1); /* Makes SVG white to match the color scheme */
+  filter: brightness(0) invert(1);
+  /* Makes SVG white to match the color scheme */
 }
 
 .activityIconImageNoFilter {

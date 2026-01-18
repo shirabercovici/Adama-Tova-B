@@ -5,6 +5,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import styles from "./page.module.css";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function ProfilePage() {
   // Initialize with cached data immediately (synchronous)
@@ -12,15 +13,15 @@ export default function ProfilePage() {
     if (typeof window === 'undefined') {
       return { userData: null, activities: [] };
     }
-    
+
     try {
       const saved = localStorage.getItem('userProfileData');
       if (saved) {
         const cachedData = JSON.parse(saved);
-        const cachedActivities = cachedData?.id 
+        const cachedActivities = cachedData?.id
           ? localStorage.getItem(`userActivities_${cachedData.id}`)
           : null;
-        
+
         return {
           userData: cachedData,
           activities: cachedActivities ? JSON.parse(cachedActivities) : []
@@ -29,7 +30,7 @@ export default function ProfilePage() {
     } catch {
       // Invalid cache, use defaults
     }
-    
+
     return { userData: null, activities: [] };
   };
 
@@ -113,17 +114,8 @@ export default function ProfilePage() {
   useEffect(() => {
     setMounted(true);
     document.body.classList.add('profile-page');
-    // Update theme-color to match purple header background (#4D58D8)
-    const metaThemeColor = document.querySelector("meta[name='theme-color']");
-    if (metaThemeColor) {
-      metaThemeColor.setAttribute("content", "#4D58D8");
-    }
     return () => {
       document.body.classList.remove('profile-page');
-      // Reset theme-color when leaving page
-      if (metaThemeColor) {
-        metaThemeColor.setAttribute("content", "#4D58D8");
-      }
     };
   }, []);
 
@@ -136,36 +128,36 @@ export default function ProfilePage() {
   const filterAttendancePairs = (activities: any[]) => {
     // Group attendance activities by participant and date
     const attendanceGroups = new Map<string, any[]>();
-    
+
     // First pass: collect all attendance activities by participant and date
     activities.forEach((activity) => {
       if (activity.activity_type === 'attendance_marked' || activity.activity_type === 'attendance_removed') {
         if (!activity.participant_id) return;
-        
+
         const date = new Date(activity.created_at).toISOString().split('T')[0]; // YYYY-MM-DD
         const key = `${activity.participant_id}_${date}`;
-        
+
         if (!attendanceGroups.has(key)) {
           attendanceGroups.set(key, []);
         }
-        
+
         attendanceGroups.get(key)!.push(activity);
       }
     });
-    
+
     // For each group, match pairs (marked + removed) and exclude them
     const excludeIds = new Set<string>();
-    
+
     attendanceGroups.forEach((groupActivities) => {
       // Sort by created_at to process chronologically
-      groupActivities.sort((a, b) => 
+      groupActivities.sort((a, b) =>
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       );
-      
+
       // Match pairs: mark each marked/removed pair for exclusion
       const markedStack: any[] = [];
       const removedStack: any[] = [];
-      
+
       groupActivities.forEach((activity) => {
         if (activity.activity_type === 'attendance_marked') {
           markedStack.push(activity);
@@ -173,7 +165,7 @@ export default function ProfilePage() {
           removedStack.push(activity);
         }
       });
-      
+
       // Pair up marked and removed activities (match them)
       while (markedStack.length > 0 && removedStack.length > 0) {
         const marked = markedStack.shift()!;
@@ -182,27 +174,13 @@ export default function ProfilePage() {
         excludeIds.add(removed.id);
       }
     });
-    
+
     // Filter out activities that are part of a pair
     return activities.filter((activity) => !excludeIds.has(activity.id));
   };
 
-  useEffect(() => {
-    setMounted(true);
-    document.body.classList.add('profile-page');
-    // Update theme-color to match purple header background (#4D58D8)
-    const metaThemeColor = document.querySelector("meta[name='theme-color']");
-    if (metaThemeColor) {
-      metaThemeColor.setAttribute("content", "#4D58D8");
-    }
-    return () => {
-      document.body.classList.remove('profile-page');
-      // Reset theme-color when leaving page
-      if (metaThemeColor) {
-        metaThemeColor.setAttribute("content", "#4D58D8");
-      }
-    };
-  }, []);
+  // Update theme-color to match purple header background (#4D58D8)
+  useThemeColor('#4D58D8');
 
   // Note: Cached data is now loaded synchronously in useState initializer above
   // This useEffect is kept for cases where we need to refresh from cache
@@ -216,7 +194,7 @@ export default function ProfilePage() {
     <main className={styles.main} dir="rtl">
       <div className={styles.container}>
         <div className={styles.backButtonWrapper}>
-          <button 
+          <button
             onClick={() => router.back()}
             className={styles.closeXButton}
             aria-label="סגור"
@@ -337,7 +315,7 @@ export default function ProfilePage() {
                     const isStatusUpdate = activity.activity_type === 'status_update';
                     let mainDescription = activity.description;
                     let updateDetails = '';
-                    
+
                     if (isStatusUpdate) {
                       // Use update_content column if available, otherwise parse from description for backward compatibility
                       if (activity.update_content) {

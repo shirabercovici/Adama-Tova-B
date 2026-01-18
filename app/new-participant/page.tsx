@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import styles from './page.module.css';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function NewParticipantPage() {
     const router = useRouter();
@@ -11,7 +13,8 @@ export default function NewParticipantPage() {
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [description, setDescription] = useState('');
-    const [showPopup, setShowPopup] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showUnsavedModal, setShowUnsavedModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [createdId, setCreatedId] = useState<string | null>(null);
@@ -20,19 +23,32 @@ export default function NewParticipantPage() {
 
     const supabase = createClient();
 
-    // Update theme-color to match cream header background (#FFFCE5)
     useEffect(() => {
-        const metaThemeColor = document.querySelector("meta[name='theme-color']");
-        if (metaThemeColor) {
-            metaThemeColor.setAttribute("content", "#FFFCE5");
+        if (showSuccessModal && createdId) {
+            const timer = setTimeout(() => {
+                setShowSuccessModal(false);
+                router.replace(`/participant-card?id=${createdId}`);
+            }, 2500);
+            return () => clearTimeout(timer);
         }
-        // Cleanup function to reset the color when leaving the page
-        return () => {
-            if (metaThemeColor) {
-                metaThemeColor.setAttribute("content", "#4D58D8");
-            }
-        };
-    }, []);
+    }, [showSuccessModal, createdId, router]);
+
+    // Use custom hook for theme color
+    useThemeColor('#FFFCE5');
+
+    const hasUnsavedChanges = () => {
+        return name.trim() !== '' ||
+            fullName.trim() !== '' ||
+            circle !== '' ||
+            email.trim() !== '' ||
+            phone.trim() !== '' ||
+            description.trim() !== '';
+    };
+
+    const handleConfirmExit = () => {
+        setShowUnsavedModal(false);
+        router.back();
+    };
 
     const handleSave = async () => {
         // Validation
@@ -71,7 +87,7 @@ export default function NewParticipantPage() {
             if (insertError) throw insertError;
             if (data) {
                 setCreatedId(data.id);
-                setShowPopup(true);
+                setShowSuccessModal(true);
             }
         } catch (err: any) {
             console.error('Error saving participant:', err);
@@ -81,13 +97,14 @@ export default function NewParticipantPage() {
         }
     };
 
-    const goToProfile = () => {
-        if (createdId) router.push(`/participant-card?id=${createdId}`);
-        else router.push('/');
-    };
+
 
     const onClose = () => {
-        router.back();
+        if (hasUnsavedChanges()) {
+            setShowUnsavedModal(true);
+        } else {
+            router.back();
+        }
     }
 
     return (
@@ -162,7 +179,7 @@ export default function NewParticipantPage() {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        paddingTop: '2.5rem',
+                        paddingTop: 'calc(env(safe-area-inset-top) + 2.5rem)',
                         paddingBottom: '1.25rem',
                         paddingLeft: '1.88rem',
                         paddingRight: '1.88rem',
@@ -424,12 +441,51 @@ export default function NewParticipantPage() {
                     </button>
                 </div>
 
-                {/* POPUP */}
-                {showPopup && (
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000 }}>
-                        <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '15px', textAlign: 'center', width: '80%', maxWidth: '350px' }}>
-                            <p style={{ fontWeight: 'bold', marginBottom: '20px', fontSize: '1.2rem', color: 'var(--color-primary)' }}>כרטיסיית פונה חדשה נוצרה בהצלחה!</p>
-                            <button onClick={goToProfile} style={{ padding: '10px 30px', backgroundColor: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer', fontSize: '1rem' }}>צפייה בתיק הפונה</button>
+                {/* Success Modal */}
+                {showSuccessModal && (
+                    <div className={styles.modalOverlay}>
+                        <div className={styles.successModalContent}>
+                            <h3 className={styles.modalTitle}>נשמר בהצלחה!</h3>
+
+                            <div className={styles.modalIllustration}>
+                                <img
+                                    src="/icons/approve_saving.svg"
+                                    alt="Success illustration"
+                                    className={styles.plantIcon}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Unsaved Changes Modal */}
+                {showUnsavedModal && (
+                    <div className={styles.modalOverlay}>
+                        <div className={styles.modalContent}>
+                            <h3 className={styles.modalTitle}>הנתונים לא נשמרו. לצאת בכל זאת?</h3>
+
+                            <div className={styles.modalIllustration}>
+                                <img
+                                    src="/icons/not_saved.svg"
+                                    alt="Unsaved changes illustration"
+                                    className={styles.plantIcon}
+                                />
+                            </div>
+
+                            <div className={styles.modalButtons}>
+                                <button
+                                    onClick={handleConfirmExit}
+                                    className={styles.confirmButton}
+                                >
+                                    כן
+                                </button>
+                                <button
+                                    onClick={() => setShowUnsavedModal(false)}
+                                    className={styles.cancelButton}
+                                >
+                                    ביטול
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

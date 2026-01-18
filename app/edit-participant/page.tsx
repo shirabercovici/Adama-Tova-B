@@ -1,14 +1,15 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 
 
 export default function EditParticipantPage() {
     const router = useRouter();
-        const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-const id = searchParams?.get('id');
+    const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const id = searchParams?.get('id');
     const [name, setName] = useState('');
     const [fullName, setFullName] = useState('');
     const [circle, setCircle] = useState<string>('');
@@ -24,80 +25,84 @@ const id = searchParams?.get('id');
 
 
 
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
+
+    // Use custom hook for theme color
+    useThemeColor('#FFFCE5');
+
     // זה החלק ש"מושך" את המידע הקיים לתוך השדות
-useEffect(() => {
-    const fetchParticipantData = async () => {
-        if (!id) return; // אם אין ID בכתובת, אל תעשה כלום
+    useEffect(() => {
+        const fetchParticipantData = async () => {
+            if (!id) return; // אם אין ID בכתובת, אל תעשה כלום
 
-        const { data, error } = await supabase
-            .from('participants')
-            .select('*')
-            .eq('id', id)
-            .single();
+            const { data, error } = await supabase
+                .from('participants')
+                .select('*')
+                .eq('id', id)
+                .single();
 
-        if (error) {
-            console.error('Error fetching participant:', error);
-            setError('לא הצלחנו למצוא את פרטי הפונה');
+            if (error) {
+                console.error('Error fetching participant:', error);
+                setError('לא הצלחנו למצוא את פרטי הפונה');
+                return;
+            }
+
+            if (data) {
+                // כאן אנחנו ממלאים את השדות במידע שהגיע מה-Database
+                setName(data.full_name || '');
+                setFullName(data.bereavement_detail || '');
+                setCircle(data.bereavement_circle || '');
+                setEmail(data.email || '');
+                setPhone(data.phone || '');
+                setDescription(data.general_notes || '');
+            }
+        };
+
+        fetchParticipantData();
+    }, [id, supabase]); // הפעולה תתבצע כשהדף נטען
+
+    const handleSave = async () => {
+        // וולידציה (בדיקה שהשדות לא ריקים)
+        const newErrors: Record<string, boolean> = {};
+        if (!name.trim()) newErrors.name = true;
+        if (!phone.trim()) newErrors.phone = true;
+        if (!email.trim()) newErrors.email = true;
+        if (!circle) newErrors.circle = true;
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
             return;
         }
 
-        if (data) {
-            // כאן אנחנו ממלאים את השדות במידע שהגיע מה-Database
-            setName(data.full_name || '');
-            setFullName(data.bereavement_detail || '');
-            setCircle(data.bereavement_circle || '');
-            setEmail(data.email || '');
-            setPhone(data.phone || '');
-            setDescription(data.general_notes || '');
+        setIsSubmitting(true);
+        setError(null);
+
+        try {
+            // כאן השינוי המרכזי: משתמשים ב-update במקום insert
+            const { error: updateError } = await supabase
+                .from('participants')
+                .update({
+                    full_name: name,
+                    bereavement_detail: fullName,
+                    bereavement_circle: circle,
+                    email: email,
+                    phone: phone,
+                    general_notes: description,
+                })
+                .eq('id', id); // מעדכן רק את הפונה עם ה-ID הספציפי
+
+            if (updateError) throw updateError;
+
+            // במקום להציג פופ-אפ, נחזור ישר לכרטיס הפונה המעודכן
+            router.push(`/participant-card?id=${id}`);
+
+        } catch (err: any) {
+            console.error('Error updating participant:', err);
+            setError(err.message || 'אירעה שגיאה בעדכון הנתונים');
+        } finally {
+            setIsSubmitting(false);
         }
     };
-
-    fetchParticipantData();
-}, [id, supabase]); // הפעולה תתבצע כשהדף נטען
-
-const handleSave = async () => {
-    // וולידציה (בדיקה שהשדות לא ריקים)
-    const newErrors: Record<string, boolean> = {};
-    if (!name.trim()) newErrors.name = true;
-    if (!phone.trim()) newErrors.phone = true;
-    if (!email.trim()) newErrors.email = true;
-    if (!circle) newErrors.circle = true;
-
-    if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-        // כאן השינוי המרכזי: משתמשים ב-update במקום insert
-        const { error: updateError } = await supabase
-            .from('participants')
-            .update({
-                full_name: name,
-                bereavement_detail: fullName,
-                bereavement_circle: circle,
-                email: email,
-                phone: phone,
-                general_notes: description,
-            })
-            .eq('id', id); // מעדכן רק את הפונה עם ה-ID הספציפי
-
-        if (updateError) throw updateError;
-        
-        // במקום להציג פופ-אפ, נחזור ישר לכרטיס הפונה המעודכן
-        router.push(`/participant-card?id=${id}`);
-        
-    } catch (err: any) {
-        console.error('Error updating participant:', err);
-        setError(err.message || 'אירעה שגיאה בעדכון הנתונים');
-    } finally {
-        setIsSubmitting(false);
-    }
-};
 
     const goToProfile = () => {
         if (createdId) router.push(`/participant-card?id=${createdId}`);
@@ -180,7 +185,7 @@ const handleSave = async () => {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        paddingTop: '2.5rem',
+                        paddingTop: 'calc(env(safe-area-inset-top) + 2.5rem)',
                         paddingBottom: '1.25rem',
                         paddingLeft: '1.88rem',
                         paddingRight: '1.88rem',
@@ -444,7 +449,7 @@ const handleSave = async () => {
 
                 {/* POPUP */}
                 {showPopup && (
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000 }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(77, 88, 216, 0.50)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000 }}>
                         <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '15px', textAlign: 'center', width: '80%', maxWidth: '350px' }}>
                             <p style={{ fontWeight: 'bold', marginBottom: '20px', fontSize: '1.2rem', color: 'var(--color-primary)' }}>כרטיסיית פונה חדשה נוצרה בהצלחה!</p>
                             <button onClick={goToProfile} style={{ padding: '10px 30px', backgroundColor: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer', fontSize: '1rem' }}>צפייה בתיק הפונה</button>

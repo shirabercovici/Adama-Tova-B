@@ -41,7 +41,7 @@ export default function RootLayout({
         {/* Theme color for mobile status bar */}
         <meta name="theme-color" content="#4D58D8" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
         {/* Favicon for all browsers - no white background */}
         <link rel="icon" href="/chrome_logo_adamami.svg" type="image/svg+xml" />
       </head>

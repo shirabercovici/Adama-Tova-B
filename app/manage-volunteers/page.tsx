@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import SearchBarWithAdd from "@/lib/components/SearchBarWithAdd";
 import styles from "./page.module.css";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface User {
     id: string;
@@ -22,7 +23,7 @@ export default function ManageVolunteersPage() {
     const router = useRouter();
     const supabase = useMemo(() => createClient(), []);
     const hasFetchedUserRef = useRef(false);
-    
+
     // Try to get cached users first for instant display
     const getCachedUsers = (): User[] => {
         if (typeof window === 'undefined') return [];
@@ -55,19 +56,13 @@ export default function ManageVolunteersPage() {
 
     useEffect(() => {
         document.body.classList.add('profile-page');
-        // Update theme-color to match purple header background (#4D58D8)
-        const metaThemeColor = document.querySelector("meta[name='theme-color']");
-        if (metaThemeColor) {
-            metaThemeColor.setAttribute("content", "#4D58D8");
-        }
         return () => {
             document.body.classList.remove('profile-page');
-            // Reset theme-color when leaving page
-            if (metaThemeColor) {
-                metaThemeColor.setAttribute("content", "#4D58D8");
-            }
         };
     }, []);
+
+    // Update theme-color to match purple header background (#4D58D8)
+    useThemeColor('#4D58D8');
 
     const fetchUsers = async () => {
         try {
@@ -76,7 +71,7 @@ export default function ManageVolunteersPage() {
                 const data = await response.json();
                 const fetchedUsers = data.users || [];
                 setUsers(fetchedUsers);
-                
+
                 // Cache the users for instant loading on return
                 if (typeof window !== 'undefined') {
                     try {

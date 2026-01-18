@@ -4,6 +4,7 @@ import { useEffect, useState, ChangeEvent, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import styles from "./page.module.css";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 const CACHE_KEY = 'manage-volunteers-cache';
 
@@ -31,11 +32,11 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                     role: user.role === "מנהל.ת" ? "manager" : "volunteer"
                 };
             }
-            
+
             // If not found, try to get from users list cache (for header name/role)
             const usersCache = sessionStorage.getItem(`${CACHE_KEY}-users`);
             if (usersCache) {
-                const users: Array<{id: string; first_name: string; last_name: string; role: string}> = JSON.parse(usersCache);
+                const users: Array<{ id: string; first_name: string; last_name: string; role: string }> = JSON.parse(usersCache);
                 const userFromList = users.find(u => u.id === params.id);
                 if (userFromList) {
                     return {
@@ -79,18 +80,7 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
     }, []);
 
     // Update theme-color to match cream header background (#FFFCE5)
-    useEffect(() => {
-        const metaThemeColor = document.querySelector("meta[name='theme-color']");
-        if (metaThemeColor) {
-            metaThemeColor.setAttribute("content", "#FFFCE5");
-        }
-        // Cleanup function to reset the color when leaving the page
-        return () => {
-            if (metaThemeColor) {
-                metaThemeColor.setAttribute("content", "#4D58D8");
-            }
-        };
-    }, []);
+    useThemeColor('#FFFCE5');
 
     // Auto-dismiss success modal after 2.5 seconds
     useEffect(() => {
@@ -118,22 +108,22 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                             email: user.email || "",
                             role: user.role === "מנהל.ת" ? "manager" : "volunteer"
                         };
-                        
+
                         // Update form data (only if different from cached to avoid flicker)
                         setFormData(prev => {
-                            const hasChanged = 
+                            const hasChanged =
                                 prev.firstName !== newFormData.firstName ||
                                 prev.lastName !== newFormData.lastName ||
                                 prev.phone !== newFormData.phone ||
                                 prev.email !== newFormData.email ||
                                 prev.role !== newFormData.role;
-                            
+
                             return hasChanged ? newFormData : prev;
                         });
-                        
+
                         // Update original form data for change detection
                         setOriginalFormData(newFormData);
-                        
+
                         // Cache the user data for future navigation
                         if (typeof window !== 'undefined') {
                             try {
@@ -210,8 +200,8 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
 
             if (response.ok) {
                 startTransition(() => {
-                router.push("/manage-volunteers");
-            });
+                    router.push("/manage-volunteers");
+                });
             } else {
                 alert("שגיאה במחיקת המשתמש");
             }
@@ -233,10 +223,10 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
     // Check if form data has changed from original
     const hasUnsavedChanges = () => {
         return formData.firstName !== originalFormData.firstName ||
-               formData.lastName !== originalFormData.lastName ||
-               formData.phone !== originalFormData.phone ||
-               formData.email !== originalFormData.email ||
-               formData.role !== originalFormData.role;
+            formData.lastName !== originalFormData.lastName ||
+            formData.phone !== originalFormData.phone ||
+            formData.email !== originalFormData.email ||
+            formData.role !== originalFormData.role;
     };
 
     const handleBack = () => {
@@ -263,7 +253,7 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                 {/* Header with User Info */}
                 <div className={styles.header}>
                     <div className={styles.headerTop}>
-                        <button 
+                        <button
                             onClick={handleBack}
                             className={styles.backButton}
                             aria-label="חזור"
@@ -387,7 +377,7 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                         onClick={() => setShowDeleteModal(true)}
                         className={styles.deleteButton}
                     >
-                       מחיקת איש צוות
+                        מחיקת איש צוות
                     </button>
                     <button
                         onClick={handleSave}
@@ -404,7 +394,7 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                 <div className={styles.modalOverlay}>
                     <div className={styles.successModalContent}>
                         <h3 className={styles.modalTitle}>נשמר בהצלחה!</h3>
-                        
+
                         <div className={styles.modalIllustration}>
                             <img
                                 src="/icons/approve_saving.svg"
@@ -421,7 +411,7 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent}>
                         <h3 className={styles.modalTitle}>למחוק פרופיל?</h3>
-                        
+
                         <div className={styles.modalIllustration}>
                             <img
                                 src="/icons/delete_profile.svg"
@@ -453,7 +443,7 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent}>
                         <h3 className={styles.modalTitle}>הנתונים לא נשמרו. לצאת בכל זאת?</h3>
-                        
+
                         <div className={styles.modalIllustration}>
                             <img
                                 src="/icons/not_saved.svg"
