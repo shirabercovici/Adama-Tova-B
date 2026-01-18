@@ -46,8 +46,8 @@ export default function ProfilePage() {
   const hasFetchedProfileRef = useRef(false);
 
   useEffect(() => {
-    // Fetch immediately if we don't have cached data
-    if (!initialState.userData && !hasFetchedProfileRef.current) {
+    // Always verify the cached user matches the authenticated user
+    if (!hasFetchedProfileRef.current) {
       hasFetchedProfileRef.current = true;
       
       const getProfile = async () => {
@@ -58,6 +58,24 @@ export default function ProfilePage() {
           if (!authUser) {
             router.push("/");
             return;
+          }
+
+          // Check if cached data belongs to the current user
+          const cachedData = initialState.userData;
+          const cachedEmail = cachedData?.email;
+          const currentEmail = authUser.email;
+
+          // If cached data exists but belongs to a different user, clear it
+          if (cachedData && cachedEmail !== currentEmail) {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('userProfileData');
+              // Also clear activities cache for the old user
+              if (cachedData.id) {
+                localStorage.removeItem(`userActivities_${cachedData.id}`);
+              }
+            }
+            setUserData(null);
+            setActivities([]);
           }
 
           // Fetch full user details first (single query is faster than two)
@@ -119,7 +137,83 @@ export default function ProfilePage() {
     };
   }, []);
 
+  // Listen for auth state changes (e.g., when user switches accounts)
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        // User has signed in or switched accounts, refresh profile data
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        
+        if (authUser) {
+          // Clear old cache
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('userProfileData');
+            if (userData?.id) {
+              localStorage.removeItem(`userActivities_${userData.id}`);
+            }
+          }
+
+          // Fetch new user data
+          const { data: dbUser, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("email", authUser.email)
+            .single();
+
+          const finalUserData = (!error && dbUser) ? dbUser : authUser;
+          setUserData(finalUserData);
+          
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('userProfileData', JSON.stringify(finalUserData));
+          }
+
+          // Fetch activities
+          const userId = dbUser?.id || authUser?.id;
+          if (userId) {
+            fetch(`/api/activities?user_id=${userId}&limit=100`)
+              .then(async (activitiesResponse) => {
+                if (activitiesResponse.ok) {
+                  const activitiesData = await activitiesResponse.json();
+                  const fetchedActivities = activitiesData.activities || [];
+                  setActivities(fetchedActivities);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem(`userActivities_${userId}`, JSON.stringify(fetchedActivities));
+                  }
+                }
+              })
+              .catch((err) => {
+                console.error("Error fetching activities:", err);
+              });
+          }
+        }
+      } else if (event === 'SIGNED_OUT') {
+        // Clear cache on sign out
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('userProfileData');
+          if (userData?.id) {
+            localStorage.removeItem(`userActivities_${userData.id}`);
+          }
+        }
+        setUserData(null);
+        setActivities([]);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase, userData?.id]);
+
   const handleSignOut = async () => {
+    // Clear localStorage cache before signing out
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('userProfileData');
+      if (userData?.id) {
+        localStorage.removeItem(`userActivities_${userData.id}`);
+      }
+    }
     await supabase.auth.signOut();
     router.push("/");
   };
