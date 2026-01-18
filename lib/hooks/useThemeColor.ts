@@ -27,16 +27,18 @@ export function useThemeColor(color: string) {
       document.head.appendChild(appleMeta);
     }
 
-    // Store original color to revert later (optional, but good practice)
-    const originalColor = metaThemeColor.getAttribute("content");
+    // Store the previous color BEFORE updating (captures current state at mount/re-render)
+    // This ensures we can revert to the color that was active before this component mounted
+    const previousColor = metaThemeColor.getAttribute("content");
 
-    // Update the color
+    // Always update to the new color (ensures correct color even when navigating back)
     metaThemeColor.setAttribute("content", color);
 
-    // Cleanup: revert to original color or default purple
+    // Cleanup: revert to the previous color (the color that was active before this effect ran)
+    // This allows proper transitions when navigating between pages with different colors
     return () => {
-      if (originalColor) {
-        metaThemeColor.setAttribute("content", originalColor);
+      if (previousColor && metaThemeColor) {
+        metaThemeColor.setAttribute("content", previousColor);
       }
     };
   }, [color]);
