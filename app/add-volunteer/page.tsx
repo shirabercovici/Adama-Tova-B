@@ -9,6 +9,7 @@ export default function AddVolunteerPage() {
     const [loading, setLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showUnsavedModal, setShowUnsavedModal] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -112,7 +113,24 @@ export default function AddVolunteerPage() {
         }
     };
 
+    // Check if any data has been entered
+    const hasData = () => {
+        return formData.firstName.trim() || 
+               formData.lastName.trim() || 
+               formData.phone.trim() || 
+               formData.email.trim();
+    };
+
     const handleBack = () => {
+        if (hasData()) {
+            setShowUnsavedModal(true);
+        } else {
+            router.back();
+        }
+    };
+
+    const handleConfirmExit = () => {
+        setShowUnsavedModal(false);
         router.back();
     };
 
@@ -249,7 +267,7 @@ export default function AddVolunteerPage() {
             {/* Success Modal */}
             {showSuccessModal && (
                 <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent}>
+                    <div className={styles.successModalContent}>
                         <h3 className={styles.modalTitle}>איש הצוות נוסף בהצלחה!</h3>
                         
                         <div className={styles.modalIllustration}>
@@ -258,6 +276,38 @@ export default function AddVolunteerPage() {
                                 alt="Success illustration"
                                 className={styles.plantIcon}
                             />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Unsaved Changes Modal */}
+            {showUnsavedModal && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent}>
+                        <h3 className={styles.modalTitle}>הנתונים לא נשמרו. לצאת בכל זאת?</h3>
+                        
+                        <div className={styles.modalIllustration}>
+                            <img
+                                src="/icons/not_saved.svg"
+                                alt="Unsaved changes illustration"
+                                className={styles.plantIcon}
+                            />
+                        </div>
+
+                        <div className={styles.modalButtons}>
+                            <button
+                                onClick={handleConfirmExit}
+                                className={styles.confirmButton}
+                            >
+                                כן
+                            </button>
+                            <button
+                                onClick={() => setShowUnsavedModal(false)}
+                                className={styles.cancelButton}
+                            >
+                                ביטול
+                            </button>
                         </div>
                     </div>
                 </div>
