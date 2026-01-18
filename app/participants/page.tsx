@@ -35,8 +35,17 @@ export default function ParticipantsPage() {
   // Add class to body to hide navbar and make full width
   useEffect(() => {
     document.body.classList.add('participants-page');
+    // Update theme-color to match purple header background (#4D58D8)
+    const metaThemeColor = document.querySelector("meta[name='theme-color']");
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute("content", "#4D58D8");
+    }
     return () => {
       document.body.classList.remove('participants-page');
+      // Reset theme-color when leaving page
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute("content", "#4D58D8");
+      }
     };
   }, []);
 
