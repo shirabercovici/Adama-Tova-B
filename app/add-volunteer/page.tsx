@@ -14,8 +14,17 @@ export default function AddVolunteerPage() {
     useEffect(() => {
         setMounted(true);
         document.body.classList.add('profile-page');
+        // Update theme-color to match cream header background (#FFFCE5)
+        const metaThemeColor = document.querySelector("meta[name='theme-color']");
+        if (metaThemeColor) {
+            metaThemeColor.setAttribute("content", "#FFFCE5");
+        }
         return () => {
             document.body.classList.remove('profile-page');
+            // Reset theme-color when leaving page
+            if (metaThemeColor) {
+                metaThemeColor.setAttribute("content", "#4D58D8");
+            }
         };
     }, []);
 
