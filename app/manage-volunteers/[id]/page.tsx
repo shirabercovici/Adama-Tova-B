@@ -11,6 +11,7 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
     const router = useRouter();
     const [saving, setSaving] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     // Try to get cached data first for instant display
@@ -66,6 +67,17 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
             document.body.classList.remove('profile-page');
         };
     }, []);
+
+    // Auto-dismiss success modal after 2.5 seconds
+    useEffect(() => {
+        if (showSuccessModal) {
+            const timer = setTimeout(() => {
+                setShowSuccessModal(false);
+                router.push("/manage-volunteers");
+            }, 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [showSuccessModal, router]);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -145,9 +157,8 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                 throw new Error(data.error || "Failed to update user");
             }
 
-            startTransition(() => {
-                router.push("/manage-volunteers");
-            });
+            // Show success modal instead of navigating immediately
+            setShowSuccessModal(true);
         } catch (error: any) {
             alert(error.message);
         } finally {
@@ -324,6 +335,23 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                     </button>
                 </div>
             </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.successModalContent}>
+                        <h3 className={styles.modalTitle}>נשמר בהצלחה!</h3>
+                        
+                        <div className={styles.modalIllustration}>
+                            <img
+                                src="/icons/approve_saving.svg"
+                                alt="Success illustration"
+                                className={styles.plantIcon}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
