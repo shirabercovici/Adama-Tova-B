@@ -12,6 +12,7 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
     const [saving, setSaving] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showUnsavedModal, setShowUnsavedModal] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -54,13 +55,15 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
     };
 
     const cachedUser = getCachedUser();
-    const [formData, setFormData] = useState(() => cachedUser || {
+    const initialFormData = cachedUser || {
         firstName: "",
         lastName: "",
         phone: "",
         email: "",
         role: "volunteer" // 'volunteer' or 'manager'
-    });
+    };
+    const [formData, setFormData] = useState(() => initialFormData);
+    const [originalFormData, setOriginalFormData] = useState(() => initialFormData);
     // If we have cached data, we don't need to wait for loading
     const [hasInitialData] = useState(() => !!cachedUser);
 
@@ -110,6 +113,9 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                             
                             return hasChanged ? newFormData : prev;
                         });
+                        
+                        // Update original form data for change detection
+                        setOriginalFormData(newFormData);
                         
                         // Cache the user data for future navigation
                         if (typeof window !== 'undefined') {
@@ -207,6 +213,28 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
         return name || "";
     };
 
+    // Check if form data has changed from original
+    const hasUnsavedChanges = () => {
+        return formData.firstName !== originalFormData.firstName ||
+               formData.lastName !== originalFormData.lastName ||
+               formData.phone !== originalFormData.phone ||
+               formData.email !== originalFormData.email ||
+               formData.role !== originalFormData.role;
+    };
+
+    const handleBack = () => {
+        if (hasUnsavedChanges()) {
+            setShowUnsavedModal(true);
+        } else {
+            router.back();
+        }
+    };
+
+    const handleConfirmExit = () => {
+        setShowUnsavedModal(false);
+        router.back();
+    };
+
     // Don't show the form until we have data (either from cache or fetch)
     if (isLoading && !hasInitialData) {
         return null;
@@ -219,7 +247,7 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                 <div className={styles.header}>
                     <div className={styles.headerTop}>
                         <button 
-                            onClick={() => router.back()}
+                            onClick={handleBack}
                             className={styles.backButton}
                             aria-label="חזור"
                         >
@@ -394,6 +422,38 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
                             </button>
                             <button
                                 onClick={() => setShowDeleteModal(false)}
+                                className={styles.cancelButton}
+                            >
+                                ביטול
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Unsaved Changes Modal */}
+            {showUnsavedModal && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent}>
+                        <h3 className={styles.modalTitle}>הנתונים לא נשמרו. לצאת בכל זאת?</h3>
+                        
+                        <div className={styles.modalIllustration}>
+                            <img
+                                src="/icons/not_saved.svg"
+                                alt="Unsaved changes illustration"
+                                className={styles.plantIcon}
+                            />
+                        </div>
+
+                        <div className={styles.modalButtons}>
+                            <button
+                                onClick={handleConfirmExit}
+                                className={styles.confirmButton}
+                            >
+                                כן
+                            </button>
+                            <button
+                                onClick={() => setShowUnsavedModal(false)}
                                 className={styles.cancelButton}
                             >
                                 ביטול

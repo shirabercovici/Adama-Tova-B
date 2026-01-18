@@ -328,13 +328,13 @@
   background: var(--color-background);
   border: 2px solid var(--color-primary);
   border-radius: 0;
-  width: 100%;
-  max-width: 320px;
   display: flex;
+  width: 21.6875rem;
+  height: 28.75rem;
+  padding-top: 0.625rem;
   flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  padding: 2rem 0 0 0;
-  gap: 1.5rem;
   animation: modalSlideIn 0.25s ease-out;
 }
 
@@ -371,6 +371,17 @@
   margin: 0;
   text-align: center;
   padding: 0 2rem;
+  line-height: 1.5;
+}
+
+.modalSubtitle {
+  font-size: 1.875rem;
+  font-weight: 400;
+  color: var(--color-primary);
+  margin: 0;
+  text-align: center;
+  padding: 0 2rem;
+  margin-top: 0.5rem;
 }
 
 .successModalContent .modalTitle {
