@@ -32,6 +32,20 @@ export default function NewParticipantPage() {
         }
     }, [showSuccessModal, createdId, router]);
 
+    // Update theme-color to match cream header background (#FFFCE5)
+    useEffect(() => {
+        const metaThemeColor = document.querySelector("meta[name='theme-color']");
+        if (metaThemeColor) {
+            metaThemeColor.setAttribute("content", "#FFFCE5");
+        }
+        // Cleanup function to reset the color when leaving the page
+        return () => {
+            if (metaThemeColor) {
+                metaThemeColor.setAttribute("content", "#4D58D8");
+            }
+        };
+    }, []);
+
     const hasUnsavedChanges = () => {
         return name.trim() !== '' ||
             fullName.trim() !== '' ||

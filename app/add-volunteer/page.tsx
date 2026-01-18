@@ -19,6 +19,20 @@ export default function AddVolunteerPage() {
         };
     }, []);
 
+    // Update theme-color to match cream header background (#FFFCE5)
+    useEffect(() => {
+        const metaThemeColor = document.querySelector("meta[name='theme-color']");
+        if (metaThemeColor) {
+            metaThemeColor.setAttribute("content", "#FFFCE5");
+        }
+        // Cleanup function to reset the color when leaving the page
+        return () => {
+            if (metaThemeColor) {
+                metaThemeColor.setAttribute("content", "#4D58D8");
+            }
+        };
+    }, []);
+
     // Auto-dismiss success modal after 2.5 seconds
     useEffect(() => {
         if (showSuccessModal) {
