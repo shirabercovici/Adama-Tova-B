@@ -31,14 +31,19 @@ export function useThemeColor(color: string) {
     // This ensures we can revert to the color that was active before this component mounted
     const previousColor = metaThemeColor.getAttribute("content");
 
-    // Always update to the new color (ensures correct color even when navigating back)
+    // Always update to the new color
     metaThemeColor.setAttribute("content", color);
 
-    // Cleanup: revert to the previous color (the color that was active before this effect ran)
-    // This allows proper transitions when navigating between pages with different colors
+    // Also update body background color to match (for iOS safe areas/home indicator)
+    document.body.style.backgroundColor = color;
+    document.documentElement.style.backgroundColor = color;
+
+    // Cleanup: revert to the previous color
     return () => {
       if (previousColor && metaThemeColor) {
         metaThemeColor.setAttribute("content", previousColor);
+        // We generally don't revert body color here to prevent flashing,
+        // as the next page's hook will run immediately and set its own color.
       }
     };
   }, [color]);

@@ -24,6 +24,9 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  transition: background-color 0.3s ease;
 }
 
 body.profile-page {
@@ -45,11 +48,11 @@ main.main-layout {
 }
 
 /* Hide navbar from layout.tsx on participants page (we show it inside the page) */
-body.participants-page > header {
+body.participants-page>header {
   display: none;
 }
 
-body.participants-page > main.main-layout {
+body.participants-page>main.main-layout {
   max-width: 100vw !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -61,7 +64,7 @@ body.profile-page {
   overflow: hidden !important;
 }
 
-body.profile-page > main.main-layout {
+body.profile-page>main.main-layout {
   max-width: 100vw !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -71,7 +74,7 @@ body.profile-page > main.main-layout {
 }
 
 /* Override for participants page container - full width */
-body.participants-page main.main-layout > .container {
+body.participants-page main.main-layout>.container {
   max-width: 100vw !important;
   padding: 0 !important;
   margin: 0 !important;
