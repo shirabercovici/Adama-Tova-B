@@ -40,7 +40,7 @@
   width: 100vw;
   max-width: 100vw;
   background: #4D58D8;
-  padding: 1rem;
+  padding: 1rem 1.88rem;
   padding-top: calc(env(safe-area-inset-top) + 1rem);
   color: white;
   position: relative;
