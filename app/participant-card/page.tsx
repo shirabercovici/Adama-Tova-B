@@ -9,67 +9,63 @@ import { logActivity } from '@/lib/activity-logger';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 
-const InfoRow = ({ label, value, children }: { label: string, value: any, children?: React.ReactNode }) => (
-  <div style={{ 
+const InfoRow = ({ label, value, children, isArchived }: { label: string, value: any, children?: React.ReactNode, isArchived?: boolean }) => (
+  <div style={{
     display: 'flex',
-    marginTop: '-0.3rem',
-    padding: '0.8rem 0', // הגדלתי מעט את הריווח האנכי לטובת התוכן המוגדל
     flexDirection: 'column',
-    alignItems: 'flex-start', 
-    gap: '0.300rem',
-    flex: '1 0 0',
     width: '100%',
+    paddingTop: '1rem',
     position: 'relative'
   }}>
-    
+
     <div style={{
       display: 'flex',
       width: '100%',
-      maxWidth: '17.11794rem', 
-      padding: '0 0.3125rem', 
       flexDirection: 'column',
       justifyContent: 'center',
-      alignItems: 'flex-start', 
-      gap: '0.1rem' // הגדלתי מעט את הרווח בין הכותרת לתוכן המוגדל
+      alignItems: 'flex-start',
+      gap: '0.5rem',
+      paddingBottom: '1rem'
     }}>
-      
-      {/* כותרת השדה - כעת בבולד */}
-      <div style={{ 
-        color: '#4D58D8', 
-        fontFamily: "'EditorSans_PRO', sans-serif", 
-        fontSize: '1.3rem', 
+
+      {/* כותרת השדה */}
+      <div style={{
+        color: isArchived ? '#949ADD' : 'var(--Blue-Adamami, #4D58D8)',
+        textAlign: 'right',
+        fontFamily: "'EditorSans_PRO', sans-serif",
+        fontSize: '1.5rem',
         fontStyle: 'normal',
-        fontWeight: '450', // הדגשת הכותרת
-        lineHeight: '1.2',
-        textAlign: 'right'
+        fontWeight: 400,
+        lineHeight: '98%',
+        width: '100%'
       }}>
         {label}
       </div>
 
-      {/* ערך השדה - הגדלתי את הפונט מ-1.25rem ל-1.4rem */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
+      {/* ערך השדה */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         width: '100%',
         direction: 'rtl'
       }}>
-        <div style={{ 
-          color: '#4D58D8', 
-          fontFamily: "'EditorSans_PRO', sans-serif", 
-          fontSize: '1.2rem', // הגדלת התוכן
+        <div style={{
+          color: isArchived ? '#949ADD' : 'var(--Blue-Adamami, #4D58D8)', // שינוי צבע בארכיון
+          textAlign: 'right',
+          fontFamily: "'EditorSans_PRO', sans-serif",
+          fontSize: '1.25rem',
           fontStyle: 'normal',
-          fontWeight: '400', // הוספת עובי בינוני לתוכן כדי שיהיה קריא יותר
-          lineHeight: '1.2',
-          textAlign: 'right'
+          fontWeight: 300,
+          lineHeight: '98%'
         }}>
           {value || '---'}
         </div>
-        
+
         {children && (
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', // מירכוז פנימי של האייקון
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center'
           }}>
             {children}
@@ -78,10 +74,10 @@ const InfoRow = ({ label, value, children }: { label: string, value: any, childr
       </div>
     </div>
 
-    <div style={{ 
+    <div style={{
       width: '100%',
-      borderBottom: '1px solid'
-          }}></div>
+      borderBottom: '1px solid rgba(77, 88, 216, 0.3)'
+    }}></div>
   </div>
 );
 const ArchiveConfirmPopup = ({ isArchived, onConfirm, onCancel }: { isArchived: boolean, onConfirm: () => void, onCancel: () => void }) => (
@@ -164,9 +160,12 @@ const getTabStyle = (isActive: boolean, isLast: boolean): React.CSSProperties =>
   border: 'none',
   borderLeft: !isLast ? '1px solid rgba(255,255,255,0.2)' : 'none',
   backgroundColor: isActive ? '#FFFCE5' : 'transparent',
-  color: isActive ? '#4D58D8' : 'white',
+  color: isActive ? 'var(--Blue-Adamami, #4D58D8)' : 'var(--Off-White-Adamami, #FFFCE5)',
   fontFamily: "'EditorSans_PRO', sans-serif",
-  fontSize: '1.15rem',
+  fontSize: '1.25rem',
+  fontWeight: 400,
+  lineHeight: '98%',
+  textAlign: 'center',
   cursor: 'pointer',
   borderRadius: '0',
   outline: 'none',
@@ -182,7 +181,7 @@ export default function ParticipantCardPage() {
   const urlName = searchParams.get('name') || ''; // הוספת השורה הזו
   const [updateTarget, setUpdateTarget] = useState('כולם');
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
-  
+
   // Try to load from cache first for instant display
   const getCachedParticipant = (): Participant | null => {
     if (!id || typeof window === 'undefined') return null;
@@ -228,8 +227,23 @@ export default function ParticipantCardPage() {
     general_notes: ''
   });
   const [activeTab, setActiveTab] = useState('תיק פונה');
+  const [isFocused, setIsFocused] = useState(false);
 
-  const triggerLog = useCallback(async (type: any, description: string) => {
+
+  const fetchActivities = useCallback(async () => {
+    if (!id) return;
+    try {
+      const response = await fetch(`/api/activities?participant_id=${id}&limit=50`);
+      if (response.ok) {
+        const data = await response.json();
+        setActivities(data.activities || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch activities:", err);
+    }
+  }, [id]);
+
+  const triggerLog = useCallback(async (type: any, description: string, updateContent?: string) => {
     if (!id || !participant || !participant.full_name) return;
 
     try {
@@ -237,9 +251,10 @@ export default function ParticipantCardPage() {
       if (!authUser) return;
 
       // שליפת המשתמש בדיוק לפי השדות שראינו בקוד ששלחת: first_name ו-last_name
+      // שליפת המשתמש בדיוק לפי השדות שראינו בקוד ששלחת: first_name ו-last_name
       const { data: dbUser, error: userError } = await supabase
         .from('users')
-        .select('first_name, last_name')
+        .select('id, first_name, last_name')
         .eq('email', authUser.email)
         .single();
 
@@ -252,20 +267,29 @@ export default function ParticipantCardPage() {
       const lastName = dbUser?.last_name || '';
       const fullName = `${firstName} ${lastName}`.trim() || 'חבר/ת צוות';
 
-      // שליחת הלוג עם החתימה המדויקת
-      await logActivity({
-        user_id: authUser.id, // משתמשים ב-ID של ה-Auth ליתר ביטחון
-        activity_type: type,
-        participant_id: id,
-        participant_name: participant.full_name,
-        description: `${description} [DONE_BY:${fullName}]`,
-      });
+      if (dbUser) {
+        // שליחת הלוג עם החתימה המדויקת
+        await logActivity({
+          user_id: dbUser.id, // שימוש ב-ID של המשתמש מהדאטה בייס
+          activity_type: type,
+          participant_id: id,
+          participant_name: participant.full_name,
+          description: description,
+          update_content: updateContent,
+          is_public: true,
+        });
 
-      console.log("Activity logged successfully by:", fullName);
+        console.log("Activity logged successfully by:", fullName);
+
+        // Refresh activities after logging
+        fetchActivities();
+      }
     } catch (err) {
       console.error("Failed to trigger log:", err);
     }
-  }, [id, participant, supabase]);
+  }, [id, participant, supabase, fetchActivities]);
+
+
 
   const fetchParticipant = useCallback(async () => {
     if (!id) return;
@@ -293,12 +317,8 @@ export default function ParticipantCardPage() {
           general_notes: data.general_notes || ''
         });
 
-        try {
-          const parsedUpdates = data.updates ? JSON.parse(data.updates) : [];
-          setActivities(Array.isArray(parsedUpdates) ? parsedUpdates : []);
-        } catch (e) {
-          setActivities([]);
-        }
+        // Fetch activities from the new table
+        fetchActivities();
 
         // Cache participant data for next time
         if (typeof window !== 'undefined') {
@@ -317,7 +337,7 @@ export default function ParticipantCardPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, supabase, cachedParticipant]);
+  }, [id, supabase, cachedParticipant, fetchActivities]);
 
   useEffect(() => {
     if (id) fetchParticipant();
@@ -334,33 +354,22 @@ export default function ParticipantCardPage() {
     const newEntry = { id: Date.now(), text: newUpdateText, date: formattedDate };
     const updatedActivities = [newEntry, ...activities];
 
-    setActivities(updatedActivities);
     setNewUpdateText('');
     // הסרנו את ה-setIsPopupOpen(false) מכאן
 
     if (id && participant) {
       try {
-        // עדכון בסיס הנתונים
-        await supabase
-          .from('participants')
-          .update({ updates: JSON.stringify(updatedActivities) })
-          .eq('id', id);
+        // עדכון בסיס הנתונים - ביטלנו את השמירה לטבלה הישנה
+        // await supabase
+        //   .from('participants')
+        //   .update({ updates: JSON.stringify(updatedActivities) })
+        //   .eq('id', id);
 
-        // קריאה לפונקציית הלוג
-        await triggerLog('status_update' as any, `עדכון סטטוס ${participant.full_name}: ${newUpdateText}`);
+        // קריאה לפונקציית הלוג שהיא המקום המרכזי עכשיו
+        await triggerLog('status_update' as any, `עדכון סטטוס`, newUpdateText);
 
-        // Update cache with new data
-        if (id && typeof window !== 'undefined') {
-          try {
-            const updatedParticipant = { ...participant, updates: JSON.stringify(updatedActivities) };
-            localStorage.setItem(`participant_${id}`, JSON.stringify({
-              participant: updatedParticipant,
-              timestamp: Date.now()
-            }));
-          } catch (e) {
-            // Ignore cache errors
-          }
-        }
+        // Cache update is less relevant for activities now that we fetch live,
+        // but we keep participant cache for basic info
 
         // --- כאן הוספנו את הפקודה החדשה ---
         setIsSuccessMessageOpen(true);
@@ -471,7 +480,7 @@ export default function ParticipantCardPage() {
     return `לפני ${Math.floor(diffDays / 7)} שבועות`;
   };
   const getLastAttendanceText = () => {
-    if (!participant?.last_attendance) return "לא נמצאה נוכחות אחרונה";
+    if (!participant?.last_attendance) return "לא נמצאה";
 
     const lastDate = new Date(participant.last_attendance);
     const today = new Date();
@@ -491,14 +500,34 @@ export default function ParticipantCardPage() {
     const events: any[] = [];
 
     // 1. הוספת עדכוני סטטוס מטבלת המשתתף
+    // 1. הוספת עדכוני סטטוס מטבלת user_activities החדשה
     activities.forEach(act => {
-      const parts = (act.date || "").split('/');
-      events.push({
-        type: 'status',
-        text: act.text,
-        date: act.date,
-        originalDate: parts.length === 2 ? new Date(2024, Number(parts[1]) - 1, Number(parts[0])) : new Date()
-      });
+      // נתמוך גם בפורמט הישן וגם בחדש
+      let dateObj = new Date();
+      let text = '';
+
+      // פורמט חדש מהשרת
+      if (act.created_at) {
+        dateObj = new Date(act.created_at);
+        text = act.update_content || act.description || '';
+      }
+      // תמיכה לאחור בפורמט הישן (אם יש עדיין באובייקט)
+      else if (act.date) {
+        const parts = (act.date || "").split('/');
+        dateObj = parts.length === 2 ? new Date(new Date().getFullYear(), Number(parts[1]) - 1, Number(parts[0])) : new Date();
+        text = act.text || '';
+      }
+
+      // נציג רק אם יש תוכן רלוונטי
+      if (text && (act.activity_type === 'status_update' || act.type === 'status' || !act.activity_type)) {
+        events.push({
+          type: 'status',
+          text: text,
+          date: `${dateObj.getDate()}/${dateObj.getMonth() + 1}`,
+          originalDate: dateObj,
+          author: act.user_name || act.user_display_name || '' // אופציה להציג מי כתב
+        });
+      }
     });
 
     // 2. הוספת אירוע נוכחות
@@ -537,6 +566,15 @@ export default function ParticipantCardPage() {
         .hide-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+        .custom-textarea::placeholder {
+          color: var(--Light-blue-Adamami, #949ADD);
+          text-align: right;
+          font-family: 'EditorSans_PRO', sans-serif;
+          font-size: 1.5rem;
+          font-style: italic;
+          font-weight: 400;
+          line-height: 98%;
         }
       `}</style>
       {/* --- Header ثابت --- */}
@@ -577,17 +615,34 @@ export default function ParticipantCardPage() {
               />
             ) : (
               <div style={{ flex: 1, textAlign: 'right' }}>
-                <h2 style={{ fontSize: '1.875rem', fontFamily: "'EditorSans_PRO', sans-serif", fontStyle: 'normal', fontWeight: 'normal', margin: 0, color: 'white' }}>
+                <h2 style={{
+                  fontSize: '1.875rem',
+                  fontFamily: "'EditorSans_PRO', sans-serif",
+                  fontStyle: 'normal',
+                  fontWeight: 400,
+                  lineHeight: '98%',
+                  textAlign: 'right',
+                  margin: 0,
+                  color: 'var(--Off-White-Adamami, #FFFCE5)'
+                }}>
                   {displayName}
                 </h2>
-                <div style={{ fontSize: '1.15rem', opacity: 0.9, marginTop: '-10px',fontStyle: 'italic', lineHeight: '1' }}>
-                  נוכחות אחרונה: {getLastAttendanceText()}
+                <div style={{
+                  fontSize: '1.25rem',
+                  fontFamily: "'EditorSans_PRO', sans-serif",
+                  fontStyle: 'italic',
+                  fontWeight: 300,
+                  lineHeight: '98%',
+                  textAlign: 'right',
+                  marginTop: '4px',
+                  color: 'var(--Off-White-Adamami, #FFFCE5)',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {participant?.is_archived
+                    ? 'נמצא.ת בארכיון'
+                    : `נוכחות אחרונה: ${getLastAttendanceText()}`
+                  }
                 </div>
-                {participant?.is_archived && (
-                  <div style={{ fontSize: '1rem', fontFamily: "'EditorSans_PRO', sans-serif", color: 'rgba(255, 255, 255, 0.8)', marginTop: '4px' }}>
-                    נמצא.ת בארכיון
-                  </div>
-                )}
               </div>
             )}
 
@@ -688,10 +743,10 @@ export default function ParticipantCardPage() {
             }}>
 
               {/* נתוני פונה */}
-              <InfoRow label="שם מלא" value={participant?.full_name} />
+              <InfoRow label="שם מלא" value={participant?.full_name} isArchived={participant?.is_archived} />
 
               <div style={{ position: 'relative' }}>
-                <InfoRow label="מס' טלפון" value={participant?.phone} />
+                <InfoRow label="מס' טלפון" value={participant?.phone} isArchived={participant?.is_archived} />
                 {!participant?.is_archived && participant?.phone && (
                   <a href={`tel:${participant.phone}`} style={{ position: 'absolute', left: '20px', top: '25px', width: '1.6875rem', height: '1.6875rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <img src="/TELL.svg" alt="Call" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -699,10 +754,10 @@ export default function ParticipantCardPage() {
                 )}
               </div>
 
-              <InfoRow label="מעגל" value={participant?.bereavement_circle} />
-              <InfoRow label="מייל" value={participant?.email} />
-              <InfoRow label="קשר" value={participant?.bereavement_detail} />
-              <InfoRow label="תיאור" value={participant?.general_notes} />
+              <InfoRow label="מעגל" value={participant?.bereavement_circle} isArchived={participant?.is_archived} />
+              <InfoRow label="מייל" value={participant?.email} isArchived={participant?.is_archived} />
+              <InfoRow label="קשר" value={participant?.bereavement_detail} isArchived={participant?.is_archived} />
+              <InfoRow label="תיאור" value={participant?.general_notes} isArchived={participant?.is_archived} />
             </div>
 
             {/* הכפתורים הסטטיים - נשארים בתוך התנאי של הטאב */}
@@ -733,21 +788,22 @@ export default function ParticipantCardPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                   
+
                     backgroundColor: 'transparent',
                     color: '#4D58D8',
-              border: '1px solid #4D58D8', // הוספת קו גבול מסביב
-               borderBottom: 'none',
+                    border: '1px solid #4D58D8', // הוספת קו גבול מסביב
+                    borderBottom: 'none',
                     borderLeft: 'none',
                     borderRight: 'none',
-borderRadius: '0',
-                    fontSize: '1.7rem',
+                    borderRadius: '0',
+                    textAlign: 'center',
                     fontFamily: "'EditorSans_PRO', sans-serif",
+                    fontSize: '1.875rem',
                     fontStyle: 'normal',
-                                        fontWeight: "500",
-
+                    fontWeight: 400,
+                    lineHeight: '98%',
                     cursor: 'pointer'
-                    
+
                   }}
                 >
                   {participant?.is_archived ? 'הוצאה מהארכיון' : 'העברה לארכיון'}
@@ -762,17 +818,19 @@ borderRadius: '0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-              border: '1px solid #4D58D8', // הוספת קו גבול מסביב
-               borderBottom: 'none',
+                    border: '1px solid #4D58D8', // הוספת קו גבול מסביב
+                    borderBottom: 'none',
                     borderLeft: 'none',
                     borderRight: 'none',
                     backgroundColor: 'transparent',
-borderRadius: '0',
+                    borderRadius: '0',
                     color: '#4D58D8',
-                    fontSize: '1.7rem',
+                    textAlign: 'center',
                     fontFamily: "'EditorSans_PRO', sans-serif",
+                    fontSize: '1.875rem',
                     fontStyle: 'normal',
-                    fontWeight: "500",
+                    fontWeight: 400,
+                    lineHeight: '98%',
                     cursor: 'pointer'
                   }}
                 >
@@ -809,9 +867,12 @@ borderRadius: '0',
 
               {/* תיבת הטקסט */}
               <textarea
+                className="custom-textarea"
                 value={newUpdateText}
                 onChange={(e) => setNewUpdateText(e.target.value)}
-                placeholder='למשל: "התחילה ללכת לקבוצת אריגה", "יש לו היום יום הולדת", או "אובחנה כפוסט טראומטית".'
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                placeholder={isFocused ? '' : 'למשל: "התחילה ללכת לקבוצת אריגה", "יש לו היום יום הולדת", או "אובחנה כפוסט טראומטית".'}
                 style={{
                   width: '100%',
                   minHeight: '150px',
@@ -914,8 +975,12 @@ borderRadius: '0',
                   border: 'none',
                   backgroundColor: 'transparent',
                   color: '#4D58D8',
-                  fontSize: '1.875rem', // גודל פונט תואם לעיצוב שלך
+                  textAlign: 'center',
                   fontFamily: "'EditorSans_PRO', sans-serif",
+                  fontSize: '1.875rem',
+                  fontStyle: 'normal',
+                  fontWeight: 400,
+                  lineHeight: '98%',
                   cursor: 'pointer'
                 }}
               >
@@ -1041,9 +1106,12 @@ borderRadius: '0',
                     border: 'none',
                     backgroundColor: 'transparent',
                     color: '#4D58D8',
-                    fontSize: '1.875rem',
+                    textAlign: 'center',
                     fontFamily: "'EditorSans_PRO', sans-serif",
+                    fontSize: '1.875rem',
                     fontStyle: 'normal',
+                    fontWeight: 400,
+                    lineHeight: '98%',
                     cursor: 'pointer'
                   }}
                 >
