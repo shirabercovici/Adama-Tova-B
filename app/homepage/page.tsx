@@ -25,11 +25,32 @@ export default function Dashboard() {
       if (!authUser) {
         router.push("/");
       } else {
-        const { data: dbUser } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', authUser.email)
-          .single();
+        // Try to use cached user data first
+        let dbUser = null;
+        if (typeof window !== 'undefined') {
+          try {
+            const cachedUserData = localStorage.getItem('userProfileData');
+            if (cachedUserData) {
+              const cached = JSON.parse(cachedUserData);
+              // Verify cached email matches current user
+              if (cached.email === authUser.email) {
+                dbUser = cached;
+              }
+            }
+          } catch (e) {
+            // Invalid cache, continue to fetch
+          }
+        }
+
+        // If no cache or cache invalid, fetch from server
+        if (!dbUser) {
+          const { data: fetchedDbUser } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', authUser.email)
+            .single();
+          dbUser = fetchedDbUser;
+        }
 
         setUser(dbUser || authUser);
 

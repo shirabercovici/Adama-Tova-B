@@ -182,11 +182,41 @@ export default function ParticipantCardPage() {
   const urlName = searchParams.get('name') || ''; // הוספת השורה הזו
   const [updateTarget, setUpdateTarget] = useState('כולם');
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
-  const [participant, setParticipant] = useState<Participant | null>(null);
-  const [activities, setActivities] = useState<any[]>([]);
+  
+  // Try to load from cache first for instant display
+  const getCachedParticipant = (): Participant | null => {
+    if (!id || typeof window === 'undefined') return null;
+    try {
+      const cached = localStorage.getItem(`participant_${id}`);
+      if (cached) {
+        const { participant: cachedData, timestamp } = JSON.parse(cached);
+        // Use cache if less than 5 minutes old
+        if (cachedData && Date.now() - timestamp < 5 * 60 * 1000) {
+          return cachedData;
+        }
+      }
+    } catch (e) {
+      // Ignore cache errors
+    }
+    return null;
+  };
+
+  const cachedParticipant = getCachedParticipant();
+  const [participant, setParticipant] = useState<Participant | null>(cachedParticipant);
+  const [activities, setActivities] = useState<any[]>(() => {
+    if (cachedParticipant) {
+      try {
+        const parsedUpdates = cachedParticipant.updates ? JSON.parse(cachedParticipant.updates) : [];
+        return Array.isArray(parsedUpdates) ? parsedUpdates : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [newUpdateText, setNewUpdateText] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!cachedParticipant);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -239,7 +269,10 @@ export default function ParticipantCardPage() {
 
   const fetchParticipant = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
+    // Only show loading if we don't have cached data
+    if (!cachedParticipant) {
+      setLoading(true);
+    }
     try {
       const { data, error } = await supabase
         .from('participants')
@@ -266,13 +299,25 @@ export default function ParticipantCardPage() {
         } catch (e) {
           setActivities([]);
         }
+
+        // Cache participant data for next time
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(`participant_${id}`, JSON.stringify({
+              participant: data,
+              timestamp: Date.now()
+            }));
+          } catch (e) {
+            // Ignore cache errors
+          }
+        }
       }
     } catch (err) {
       console.error('Error fetching participant:', err);
     } finally {
       setLoading(false);
     }
-  }, [id, supabase]);
+  }, [id, supabase, cachedParticipant]);
 
   useEffect(() => {
     if (id) fetchParticipant();
@@ -304,6 +349,19 @@ export default function ParticipantCardPage() {
         // קריאה לפונקציית הלוג
         await triggerLog('status_update' as any, `עדכון סטטוס ${participant.full_name}: ${newUpdateText}`);
 
+        // Update cache with new data
+        if (id && typeof window !== 'undefined') {
+          try {
+            const updatedParticipant = { ...participant, updates: JSON.stringify(updatedActivities) };
+            localStorage.setItem(`participant_${id}`, JSON.stringify({
+              participant: updatedParticipant,
+              timestamp: Date.now()
+            }));
+          } catch (e) {
+            // Ignore cache errors
+          }
+        }
+
         // --- כאן הוספנו את הפקודה החדשה ---
         setIsSuccessMessageOpen(true);
         // ----------------------------------
@@ -317,13 +375,18 @@ export default function ParticipantCardPage() {
   const handleArchive = async () => {
     if (!id || !participant) return;
     const newValue = !participant.is_archived;
-    setParticipant({ ...participant, is_archived: newValue });
+    const updatedParticipant = { ...participant, is_archived: newValue };
+    setParticipant(updatedParticipant);
     const { error } = await supabase.from('participants').update({ is_archived: newValue }).eq('id', id);
 
-    // Invalidate cache so other users see the update
+    // Update cache with new data
     if (typeof window !== 'undefined' && !error) {
       try {
-        // Remove cache or mark it as stale so it refreshes on next visit
+        localStorage.setItem(`participant_${id}`, JSON.stringify({
+          participant: updatedParticipant,
+          timestamp: Date.now()
+        }));
+        // Also invalidate participants list cache so other users see the update
         const cachedParticipants = localStorage.getItem('participants_cache');
         if (cachedParticipants) {
           const cacheData = JSON.parse(cachedParticipants);
@@ -348,12 +411,17 @@ export default function ParticipantCardPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, last_attendance: newAttendance }),
     });
-    setParticipant({ ...participant, last_attendance: newAttendance });
+    const updatedParticipant = { ...participant, last_attendance: newAttendance };
+    setParticipant(updatedParticipant);
 
-    // Invalidate cache so other users see the update
-    if (typeof window !== 'undefined') {
+    // Update cache with new data
+    if (typeof window !== 'undefined' && id) {
       try {
-        // Remove cache or mark it as stale so it refreshes on next visit
+        localStorage.setItem(`participant_${id}`, JSON.stringify({
+          participant: updatedParticipant,
+          timestamp: Date.now()
+        }));
+        // Also invalidate participants list cache so other users see the update
         const cachedParticipants = localStorage.getItem('participants_cache');
         if (cachedParticipants) {
           const cacheData = JSON.parse(cachedParticipants);

@@ -36,7 +36,8 @@ export default function ProfilePage() {
 
   const initialState = getInitialState();
   const [userData, setUserData] = useState<any>(initialState.userData);
-  const [loading, setLoading] = useState(true); // Start with true to show loading screen
+  // If we have cached data, start with loading=false to show it immediately
+  const [loading, setLoading] = useState(!initialState.userData);
   const [activities, setActivities] = useState<any[]>(initialState.activities);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [mounted, setMounted] = useState(false);

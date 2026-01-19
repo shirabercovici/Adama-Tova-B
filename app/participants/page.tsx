@@ -36,6 +36,7 @@ export default function ParticipantsPage() {
     return [];
   });
   const [statusUpdatesReady, setStatusUpdatesReady] = useState(false); // Track if status updates have been loaded/cleared
+  const [isTasksReady, setIsTasksReady] = useState(false); // Track if tasks have been loaded
   const isFetchingStatusUpdatesRef = useRef(false);
   const hasPreloadedStatusUpdatesRef = useRef(false); // Track if we already preloaded from initial useEffect
   const isFetchingTasksRef = useRef(false);
@@ -60,27 +61,52 @@ export default function ParticipantsPage() {
     // This runs only on client after hydration
     setIsHydrated(true);
     
-    // CRITICAL: Fetch user role from server FIRST, before anything else
+    // CRITICAL: Fetch user role from server ONLY if not cached or user changed
     // This ensures we know if user is manager or volunteer before loading any data
-    const determineUserRole = async (): Promise<string | null> => {
+    const determineUserRole = async (useCache: boolean = true): Promise<string | null> => {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-          const { data: dbUser } = await supabase
-            .from('users')
-            .select('role')
-            .eq('email', authUser.email)
-            .single();
-          
-          if (dbUser?.role) {
-            setUserRole(dbUser.role);
-            // Cache user role for next time
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('userRole', dbUser.role);
+        if (!authUser) {
+          setIsLoadingRole(false);
+          return null;
+        }
+
+        // Check cache first if enabled
+        if (useCache && typeof window !== 'undefined') {
+          const cachedRoleData = localStorage.getItem('userRoleData');
+          if (cachedRoleData) {
+            try {
+              const { role: cachedRole, email: cachedEmail } = JSON.parse(cachedRoleData);
+              // If cached email matches current user email, use cached role
+              if (cachedEmail === authUser.email && cachedRole) {
+                setUserRole(cachedRole);
+                setIsLoadingRole(false);
+                return cachedRole;
+              }
+            } catch (e) {
+              // Invalid cache, continue to fetch from server
             }
-            setIsLoadingRole(false); // Role is now known
-            return dbUser.role;
           }
+        }
+
+        // Cache miss or user changed - fetch from server
+        const { data: dbUser } = await supabase
+          .from('users')
+          .select('role')
+          .eq('email', authUser.email)
+          .single();
+        
+        if (dbUser?.role) {
+          setUserRole(dbUser.role);
+          // Cache user role with email for next time
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('userRoleData', JSON.stringify({
+              role: dbUser.role,
+              email: authUser.email
+            }));
+          }
+          setIsLoadingRole(false); // Role is now known
+          return dbUser.role;
         }
       } catch (err) {
         console.error('Error fetching user role:', err);
@@ -95,11 +121,6 @@ export default function ParticipantsPage() {
         setUserInitials(savedInitials);
       }
 
-      // DON'T load user role from cache - always fetch from server first
-      // This prevents using wrong role when switching accounts
-      // const savedUserRole = localStorage.getItem('userRole'); // NOT using cache
-      const savedUserRole = null; // Always start with null, fetch from server
-
       // Helper function to check if a role string is a manager (used before isManager callback is defined)
       const isManagerRole = (role: string | null) => {
         return role === "מנהל.ת" || role === "מנהל" || role === "מנהלת" || (role && role.includes("מנהל"));
@@ -110,30 +131,50 @@ export default function ParticipantsPage() {
       setStatusUpdates([]);
       setStatusUpdatesReady(false); // Reset ready state when component mounts (user might have changed)
       
-      // CRITICAL: Fetch role from server FIRST and WAIT for it before handling statusUpdates
-      // This ensures we know the correct role before loading status updates
-      determineUserRole().then((role) => {
+      // Try to use cache first, then fetch from server if needed
+      // This ensures fast loading while still verifying user hasn't changed
+      determineUserRole(true).then((role) => {
         // After role is determined, handle status updates
         const isManagerRole = (r: string | null) => {
           return r === "מנהל.ת" || r === "מנהל" || r === "מנהלת" || (r && r.includes("מנהל"));
         };
         
         if (!role || !isManagerRole(role)) {
-          // Volunteer - clear cache and mark as ready
+          // Volunteer - clear cache
           if (typeof window !== 'undefined') {
             localStorage.removeItem('statusUpdates_cache');
           }
-          setStatusUpdatesReady(true);
+          // Mark as ready only after tasks are also ready
+          // setStatusUpdatesReady(true);
         } else {
           // Manager - load from cache or fetch
+          // Check if we have cached tasks too - if both are cached, mark as ready together
+          let hasCachedTasks = false;
+          try {
+            const cachedTasks = localStorage.getItem('tasks_cache');
+            if (cachedTasks) {
+              const { tasks: cachedTasksData, timestamp } = JSON.parse(cachedTasks);
+              if (cachedTasksData && Date.now() - timestamp < 5 * 60 * 1000) {
+                hasCachedTasks = true;
+              }
+            }
+          } catch (e) {
+            // Ignore cache errors
+          }
+
           try {
             const cachedStatusUpdates = localStorage.getItem('statusUpdates_cache');
             if (cachedStatusUpdates) {
               const { statusUpdates: cachedData, timestamp } = JSON.parse(cachedStatusUpdates);
               if (cachedData && Array.isArray(cachedData) && Date.now() - timestamp < 5 * 60 * 1000) {
                 setStatusUpdates(cachedData);
-                setStatusUpdatesReady(true);
-                return;
+                // If both tasks and status updates are cached, mark as ready together
+                if (hasCachedTasks) {
+                  setIsTasksReady(true);
+                  setStatusUpdatesReady(true);
+                  return;
+                }
+                // Otherwise wait for tasks to load
               }
             }
           } catch (e) {
@@ -141,28 +182,49 @@ export default function ParticipantsPage() {
           }
           
           // No cache or expired - fetch from server
-          fetch("/api/activities?activity_type=status_update&limit=50", { cache: 'no-store' })
-            .then(async (response) => {
-              if (response.ok) {
-                const data = await response.json();
-                if (data.activities && Array.isArray(data.activities)) {
-                  setStatusUpdates(data.activities);
-                  try {
-                    localStorage.setItem('statusUpdates_cache', JSON.stringify({
-                      statusUpdates: data.activities,
-                      timestamp: Date.now()
-                    }));
-                  } catch (e) {
-                    // Ignore cache errors
-                  }
+          // Fetch both tasks and status updates together
+          Promise.all([
+            fetch("/api/activities?activity_type=status_update&limit=50", { cache: 'no-store' }),
+            fetch("/tasks/api", { cache: 'no-store' })
+          ]).then(async ([statusResponse, tasksResponse]) => {
+            // Handle status updates
+            if (statusResponse.ok) {
+              const data = await statusResponse.json();
+              if (data.activities && Array.isArray(data.activities)) {
+                setStatusUpdates(data.activities);
+                try {
+                  localStorage.setItem('statusUpdates_cache', JSON.stringify({
+                    statusUpdates: data.activities,
+                    timestamp: Date.now()
+                  }));
+                } catch (e) {
+                  // Ignore cache errors
                 }
               }
-              setStatusUpdatesReady(true);
-            })
-            .catch((err) => {
-              console.error("Background status updates preload failed:", err);
-              setStatusUpdatesReady(true);
-            });
+            }
+            // Handle tasks
+            if (tasksResponse.ok) {
+              const tasksData = await tasksResponse.json();
+              if (tasksData.tasks) {
+                setTasks(tasksData.tasks);
+                try {
+                  localStorage.setItem('tasks_cache', JSON.stringify({
+                    tasks: tasksData.tasks,
+                    timestamp: Date.now()
+                  }));
+                } catch (e) {
+                  // Ignore cache errors
+                }
+              }
+            }
+            // Mark both as ready together
+            setIsTasksReady(true);
+            setStatusUpdatesReady(true);
+          }).catch((err) => {
+            console.error("Background tasks/status updates preload failed:", err);
+            setIsTasksReady(true);
+            setStatusUpdatesReady(true);
+          });
         }
       });
 
@@ -201,6 +263,7 @@ export default function ParticipantsPage() {
           // Use cache if it's less than 5 minutes old
           if (cachedTasksData && Date.now() - timestamp < 5 * 60 * 1000) {
             setTasks(cachedTasksData);
+            setIsTasksReady(true); // Mark tasks as ready if loaded from cache
           }
         }
       } catch (e) {
@@ -682,23 +745,30 @@ export default function ParticipantsPage() {
   useEffect(() => {
     if (userRole && isManager() && !isFetchingStatusUpdatesRef.current && !hasPreloadedStatusUpdatesRef.current) {
       // Only fetch if we haven't already preloaded in the initial useEffect
-      fetchStatusUpdates().then(() => {
+      // Fetch tasks and status updates together
+      Promise.all([fetchTasks(), fetchStatusUpdates()]).then(() => {
+        setIsTasksReady(true);
         setStatusUpdatesReady(true);
       }).catch(err => {
-        console.error('Error fetching status updates:', err);
+        console.error('Error fetching tasks/status updates:', err);
+        setIsTasksReady(true);
         setStatusUpdatesReady(true); // Mark as ready even on error
       });
     } else if (userRole && !isManager()) {
       // Explicitly clear status updates for non-managers to prevent any flash
       // Do this immediately, even if statusUpdates is already empty
       setStatusUpdates([]);
+      // Make sure tasks are ready too
+      if (!isTasksReady) {
+        fetchTasks().then(() => setIsTasksReady(true)).catch(() => setIsTasksReady(true));
+      }
       setStatusUpdatesReady(true); // Mark as ready since we've cleared them
     } else if (userRole === null) {
       // If userRole is still null after some time, ensure statusUpdates is cleared
       // This prevents showing cached messages when role hasn't loaded yet
       setStatusUpdates([]);
     }
-  }, [userRole, isManager, fetchStatusUpdates]);
+  }, [userRole, isManager, fetchStatusUpdates, isTasksReady, fetchTasks]);
 
   // Fetch initial data only once on mount
   useEffect(() => {
@@ -725,6 +795,17 @@ export default function ParticipantsPage() {
       }
 
       fetchPromise = (async () => {
+        // Fetch tasks and status updates in parallel - they must load together
+        // This ensures they appear at the same time
+        if (isMounted) {
+          const tasksPromise = fetchTasks();
+          const statusUpdatesPromise = fetchStatusUpdates();
+          // Wait for both to complete together
+          await Promise.all([tasksPromise, statusUpdatesPromise]);
+          setIsTasksReady(true);
+          setStatusUpdatesReady(true); // Mark both as ready together
+        }
+
         // If we have cached participants, refresh them silently in background
         // Don't block or show loading if we already have data
         if (hasLoadedFromCacheRef.current && participants.length > 0) {
@@ -732,22 +813,9 @@ export default function ParticipantsPage() {
           fetchParticipantsDebounced().catch(() => {
             // Silently fail - we have cached data
           });
-          // Still fetch tasks and other data
-          await fetchTasks();
         } else {
-          // No cache - fetch participants FIRST (most important feature)
-          const participantsPromise = fetchParticipantsDebounced();
-
-          // Fetch tasks in parallel (not blocking participants)
-          const tasksPromise = fetchTasks();
-
-          // Wait for both but participants is priority
-          await Promise.all([participantsPromise, tasksPromise]);
-        }
-
-        // Fetch status updates if user is a manager
-        if (isMounted) {
-          await fetchStatusUpdates();
+          // No cache - fetch participants
+          await fetchParticipantsDebounced();
         }
 
         // Fetch user data from users table
@@ -768,9 +836,12 @@ export default function ParticipantsPage() {
             // Set user role - CRITICAL: This updates the role from server
             if (dbUser?.role) {
               setUserRole(dbUser.role);
-              // Cache user role for instant display on next visit
+              // Cache user role with email for instant display on next visit
               if (typeof window !== 'undefined') {
-                localStorage.setItem('userRole', dbUser.role);
+                localStorage.setItem('userRoleData', JSON.stringify({
+                  role: dbUser.role,
+                  email: authUser.email
+                }));
               }
             }
 
@@ -1118,9 +1189,9 @@ export default function ParticipantsPage() {
         </div>
       </div>
 
-      {/* Loading - show loading screen until role is determined AND status updates are ready */}
-      {/* CRITICAL: Never show UI until we know the role and status updates are ready */}
-      {(isLoadingRole || (loading && participants.length === 0) || !statusUpdatesReady) && (
+      {/* Loading - show loading screen until participants are loaded AND tasks/status updates are ready */}
+      {/* Tasks and status updates must load together and display at the same time */}
+      {(isLoadingRole && participants.length === 0) || (loading && participants.length === 0) || (!isTasksReady || !statusUpdatesReady) ? (
         <div className={styles.loadingContainer}>
           <div style={{
             position: 'relative',
@@ -1139,7 +1210,7 @@ export default function ParticipantsPage() {
           </div>
           <div className={styles.loadingText}>רק רגע...</div>
         </div>
-      )}
+      ) : null}
 
       {/* Error */}
       {error && (
@@ -1186,7 +1257,14 @@ export default function ParticipantsPage() {
             );
 
             return sortedLetters.map((letter) => {
-              const letterParticipants = groupedParticipants[letter];
+              // Sort participants in this letter group: non-archived first, archived last
+              const letterParticipants = [...groupedParticipants[letter]].sort((a, b) => {
+                // If one is archived and the other isn't, archived goes to the end
+                if (a.is_archived && !b.is_archived) return 1;
+                if (!a.is_archived && b.is_archived) return -1;
+                // If both have same archive status, keep original order (already sorted by name)
+                return 0;
+              });
               const lastIndex = letterParticipants.length - 1;
 
               return (
@@ -1271,16 +1349,29 @@ export default function ParticipantsPage() {
       )}
 
       {/* Empty state - show only when not loading, no error, and no participants */}
-      {!loading && !error && participants.length === 0 && (
-        <div className={styles.emptyContainer}>
-          <Image
-            src="/icons/noponim.png"
-            alt="לא נמצאו פונים"
-            width={200}
-            height={200}
-            className={styles.emptyImage}
-          />
-          <div className={styles.empty}>לא נמצאו פונים</div>
+      {userRole !== null && statusUpdatesReady && !loading && !error && participants.length === 0 && (
+        <div className={`${styles.participantsList} ${isSearchActive ? styles.searchActive : ''}`}>
+          {/* List Header - show even when empty */}
+          <div className={styles.listHeader}>
+            <div className={styles.headerCell}>
+              <div className={styles.headerName}>שם</div>
+            </div>
+            <div className={styles.headerCellLast}>
+              <div className={styles.headerAttendance}>נוכחות</div>
+            </div>
+          </div>
+          
+          {/* Empty state message */}
+          <div className={styles.emptyContainer}>
+            <Image
+              src="/icons/noponim.png"
+              alt="לא נמצאו פונים"
+              width={200}
+              height={200}
+              className={styles.emptyImage}
+            />
+            <div className={styles.empty}>לא נמצאו פונים</div>
+          </div>
         </div>
       )}
 
