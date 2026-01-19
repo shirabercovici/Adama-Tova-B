@@ -2,9 +2,9 @@
  * Utility functions for logging user activities
  */
 
-export type ActivityType = 
-  | 'phone_call' 
-  | 'attendance_marked' 
+export type ActivityType =
+  | 'phone_call'
+  | 'attendance_marked'
   | 'attendance_removed'
   | 'status_update'
   | 'participant_updated';
@@ -15,6 +15,8 @@ export interface ActivityLog {
   participant_id?: string;
   participant_name?: string;
   description: string;
+  update_content?: string;
+  is_public?: boolean;
   metadata?: Record<string, any>;
 }
 

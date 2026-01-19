@@ -18,7 +18,7 @@ function getDatabaseClient() {
   if (!PUBLIC_SUPABASE_URL || !PRIVATE_SUPABASE_SERVICE_KEY) {
     throw new Error("Missing Supabase environment variables");
   }
-  
+
   cachedDatabaseClient = createClient<Database>(
     PUBLIC_SUPABASE_URL,
     PRIVATE_SUPABASE_SERVICE_KEY,
@@ -34,7 +34,7 @@ function getDatabaseClient() {
       },
     }
   );
-  
+
   return cachedDatabaseClient;
 }
 
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   try {
     const databaseClient = getDatabaseClient();
     const body = await request.json();
-    
+
     const {
       user_id,
       activity_type,
@@ -58,7 +58,9 @@ export async function POST(request: NextRequest) {
       description,
       metadata,
       activity_id,
-      is_read
+      is_read,
+      update_content,
+      is_public
     } = body;
 
     // If activity_id and is_read are provided, update the read status
@@ -99,6 +101,8 @@ export async function POST(request: NextRequest) {
         participant_id: participant_id || null,
         participant_name: participant_name || null,
         description,
+        update_content: update_content || null,
+        is_public: is_public !== undefined ? is_public : true, // Default to true if not specified
         metadata: metadata ? JSON.stringify(metadata) : null,
         created_at: new Date().toISOString(),
       })
@@ -130,7 +134,40 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const user_id = searchParams.get("user_id");
     const activity_type = searchParams.get("activity_type");
+    const participant_id = searchParams.get("participant_id");
     const limit = parseInt(searchParams.get("limit") || "50");
+
+    // If participant_id is specified, fetch activities for that participant
+    if (participant_id) {
+      let query = databaseClient
+        .from("user_activities")
+        .select("*")
+        .eq("participant_id", participant_id);
+
+      if (activity_type) {
+        query = query.eq("activity_type", activity_type);
+      }
+
+      const { data: activitiesData, error: activitiesError } = await query
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (activitiesError) {
+        console.error("Error fetching activities:", activitiesError);
+        return Response.json(
+          { error: "Failed to fetch activities", details: activitiesError.message },
+          { status: 500 }
+        );
+      }
+
+      // Parse metadata JSON strings
+      const activities = (activitiesData || []).map((activity: any) => ({
+        ...activity,
+        metadata: activity.metadata ? JSON.parse(activity.metadata as string) : null,
+      }));
+
+      return Response.json({ activities });
+    }
 
     // If activity_type is specified without user_id, fetch all activities of that type
     // This is useful for managers to see all status updates
@@ -157,7 +194,7 @@ export async function GET(request: NextRequest) {
       const filteredActivities = (activitiesData || []).filter((activity: any) => {
         if (activity_type === 'status_update') {
           // Check if update_content exists and is not empty (IS NOT NULL)
-          return activity.update_content && 
+          return activity.update_content &&
             (typeof activity.update_content === 'string' ? activity.update_content.trim() !== '' : activity.update_content !== null);
         }
         return true;
@@ -166,13 +203,13 @@ export async function GET(request: NextRequest) {
       // Fetch user names separately (more reliable than join)
       const userIds = Array.from(new Set(filteredActivities.map((a: any) => a.user_id).filter(Boolean)));
       const usersMap: Record<string, any> = {};
-      
+
       if (userIds.length > 0) {
         const { data: usersData, error: usersError } = await databaseClient
           .from("users")
           .select("id, first_name, last_name, role")
           .in("id", userIds);
-        
+
         if (!usersError && usersData) {
           usersData.forEach((user: any) => {
             usersMap[user.id] = user;
@@ -186,10 +223,10 @@ export async function GET(request: NextRequest) {
         const firstName = user?.first_name || '';
         const userRole = user?.role || '';
         const userDisplayName = firstName ? `${firstName} ${userRole}` : '';
-        
+
         // Use update_content directly from the field (it exists in the table)
         const updateContent = activity.update_content;
-        
+
         // Return the activity with all fields
         return {
           id: activity.id,
