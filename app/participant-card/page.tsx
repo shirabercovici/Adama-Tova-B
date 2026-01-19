@@ -227,6 +227,7 @@ export default function ParticipantCardPage() {
     general_notes: ''
   });
   const [activeTab, setActiveTab] = useState('תיק פונה');
+  const [isFocused, setIsFocused] = useState(false);
 
   const triggerLog = useCallback(async (type: any, description: string) => {
     if (!id || !participant || !participant.full_name) return;
@@ -537,6 +538,15 @@ export default function ParticipantCardPage() {
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
+        .custom-textarea::placeholder {
+          color: var(--Light-blue-Adamami, #949ADD);
+          text-align: right;
+          font-family: 'EditorSans_PRO', sans-serif;
+          font-size: 1.5rem;
+          font-style: italic;
+          font-weight: 400;
+          line-height: 98%;
+        }
       `}</style>
       {/* --- Header ثابت --- */}
       <div style={{ flexShrink: 0, zIndex: 10, width: '100%' }}>
@@ -596,7 +606,8 @@ export default function ParticipantCardPage() {
                   lineHeight: '98%',
                   textAlign: 'right',
                   marginTop: '4px',
-                  color: 'var(--Off-White-Adamami, #FFFCE5)'
+                  color: 'var(--Off-White-Adamami, #FFFCE5)',
+                  whiteSpace: 'nowrap'
                 }}>
                   {participant?.is_archived
                     ? 'נמצא.ת בארכיון'
@@ -827,9 +838,12 @@ export default function ParticipantCardPage() {
 
               {/* תיבת הטקסט */}
               <textarea
+                className="custom-textarea"
                 value={newUpdateText}
                 onChange={(e) => setNewUpdateText(e.target.value)}
-                placeholder='למשל: "התחילה ללכת לקבוצת אריגה", "יש לו היום יום הולדת", או "אובחנה כפוסט טראומטית".'
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                placeholder={isFocused ? '' : 'למשל: "התחילה ללכת לקבוצת אריגה", "יש לו היום יום הולדת", או "אובחנה כפוסט טראומטית".'}
                 style={{
                   width: '100%',
                   minHeight: '150px',
