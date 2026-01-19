@@ -180,7 +180,19 @@ export default function ParticipantCardPage() {
   const id = searchParams.get('id');
   const urlName = searchParams.get('name') || ''; // הוספת השורה הזו
   const [updateTarget, setUpdateTarget] = useState('כולם');
+
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
+
+  // Auto-close success popup after 2.5 seconds
+  useEffect(() => {
+    if (isSuccessMessageOpen) {
+      const timer = setTimeout(() => {
+        setIsSuccessMessageOpen(false);
+        setActiveTab('היסטוריה');
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccessMessageOpen]);
 
   // Try to load from cache first for instant display
   const getCachedParticipant = (): Participant | null => {
@@ -349,7 +361,12 @@ export default function ParticipantCardPage() {
   const handleAddUpdate = async () => {
     if (newUpdateText.trim() === '') return;
 
+    // סגירת פופ-אפ הכתיבה מיד
+    setIsPopupOpen(false); // Close input popup immediately so success popup shows cleanly
+
     const today = new Date();
+
+
     const formattedDate = `${today.getDate()}/${today.getMonth() + 1}`;
     const newEntry = { id: Date.now(), text: newUpdateText, date: formattedDate };
     const updatedActivities = [newEntry, ...activities];
@@ -365,15 +382,15 @@ export default function ParticipantCardPage() {
         //   .update({ updates: JSON.stringify(updatedActivities) })
         //   .eq('id', id);
 
+        // --- כאן הוספנו את הפקודה החדשה כדי שיופיע מיד ---
+        setIsSuccessMessageOpen(true);
+        // ----------------------------------
+
         // קריאה לפונקציית הלוג שהיא המקום המרכזי עכשיו
         await triggerLog('status_update' as any, `עדכון סטטוס`, newUpdateText);
 
         // Cache update is less relevant for activities now that we fetch live,
         // but we keep participant cache for basic info
-
-        // --- כאן הוספנו את הפקודה החדשה ---
-        setIsSuccessMessageOpen(true);
-        // ----------------------------------
 
       } catch (err) {
         console.error("שגיאה בשמירת העדכון:", err);
@@ -1057,67 +1074,74 @@ export default function ParticipantCardPage() {
         )}{/* פופ-אפ אישור שליחה - מעוצב בדיוק כמו הארכיון */}
         {/* פופ-אפ אישור שליחה - מעוצב בדיוק כמו הארכיון עם התמונה המבוקשת */}
         {isSuccessMessageOpen && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(77, 88, 216, 0.50)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(77, 88, 216, 0.50)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3000,
+            padding: '1rem'
+          }}>
             <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              width: '21.6875rem',
-              maxWidth: '90vw',
-              height: '28.75rem',
-              maxHeight: '80vh',
-              paddingTop: '0.625rem',
               backgroundColor: '#FFFCE5',
-              borderRadius: '15px',
-              overflow: 'hidden',
-              textAlign: 'center',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+              border: 'none',
+              borderRadius: '0', // Matching New Participant style
+              display: 'flex',
+              width: '21.6875rem',
+              height: '21.8125rem', // Matching successModalContent height
+              padding: '0.625rem 0 1.875rem 0', // Matching padding
+              flexDirection: 'column',
+              justifyContent: 'flex-start',
+              alignItems: 'center',
+              gap: '1rem', // Gap between elements
+              boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+              animation: 'modalSlideIn 0.15s ease-out'
             }}>
-              {/* כותרת הפופ-אפ */}
-              <div style={{ padding: '25px 20px 10px 20px', width: '100%', boxSizing: 'border-box' }}>
-                <h3 style={{ margin: 0, color: '#4D58D8', fontSize: '1.875rem', fontFamily: "'EditorSans_PRO', sans-serif", fontStyle: 'normal', fontWeight: 'normal' }}>
-                  העדכון נשלח בהצלחה!
-                </h3>
-              </div>
+              <style>{`
+                @keyframes modalSlideIn {
+                  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+                  to { opacity: 1; transform: scale(1) translateY(0); }
+                }
+              `}</style>
 
-              {/* התמונה מהתיקייה הציבורית */}
-              <div style={{ padding: '10px', display: 'flex', justifyContent: 'center' }}>
+              {/* Title */}
+              <h3 style={{
+                fontSize: '1.875rem',
+                fontWeight: '400',
+                color: '#4D58D8',
+                margin: 0,
+                textAlign: 'center',
+                padding: '0.5rem 2rem 0 2rem',
+                lineHeight: '1.5',
+                fontFamily: "'EditorSans_PRO', sans-serif"
+              }}>
+                העדכון נשלח בהצלחה!
+              </h3>
+
+              {/* Illustration */}
+              <div style={{
+                width: '10.1875rem',
+                height: '12.9375rem',
+                padding: 0,
+                marginTop: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
                 <img
-                  src="/archive-image.svg"
+                  src="/UPDATE.svg"
                   alt="אישור שליחה"
-                  style={{ width: '120px', height: 'auto', objectFit: 'contain' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain'
+                  }}
                 />
               </div>
 
-              {/* אזור הכפתור בתחתית */}
-              <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#FFF2A8', width: '100%' }}>
-                <button
-                  onClick={() => {
-                    setIsSuccessMessageOpen(false);
-                    setActiveTab('היסטוריה');
-                  }}
-                  style={{
-                    width: '100%',
-                    height: '4.375rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    color: '#4D58D8',
-                    textAlign: 'center',
-                    fontFamily: "'EditorSans_PRO', sans-serif",
-                    fontSize: '1.875rem',
-                    fontStyle: 'normal',
-                    fontWeight: 400,
-                    lineHeight: '98%',
-                    cursor: 'pointer'
-                  }}
-                >
-                  סגירה
-                </button>
-              </div>
+              {/* No footer/buttons needed as it auto-closes */}
             </div>
           </div>
         )}
