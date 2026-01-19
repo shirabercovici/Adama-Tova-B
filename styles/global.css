@@ -85,6 +85,14 @@ body.participants-page main.main-layout>.container {
   box-sizing: border-box;
 }
 
+/* Override for login/home page - remove padding to avoid blue border */
+body:not(.participants-page):not(.profile-page) main.main-layout {
+  padding: 0 !important;
+  max-width: 100vw !important;
+  margin: 0 !important;
+  width: 100vw !important;
+}
+
 header {
   padding: 1rem 2rem;
   background-color: var(--color-primary);
