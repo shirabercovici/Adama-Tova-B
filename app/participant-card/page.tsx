@@ -229,7 +229,21 @@ export default function ParticipantCardPage() {
   const [activeTab, setActiveTab] = useState('תיק פונה');
   const [isFocused, setIsFocused] = useState(false);
 
-  const triggerLog = useCallback(async (type: any, description: string) => {
+
+  const fetchActivities = useCallback(async () => {
+    if (!id) return;
+    try {
+      const response = await fetch(`/api/activities?participant_id=${id}&limit=50`);
+      if (response.ok) {
+        const data = await response.json();
+        setActivities(data.activities || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch activities:", err);
+    }
+  }, [id]);
+
+  const triggerLog = useCallback(async (type: any, description: string, updateContent?: string) => {
     if (!id || !participant || !participant.full_name) return;
 
     try {
@@ -237,9 +251,10 @@ export default function ParticipantCardPage() {
       if (!authUser) return;
 
       // שליפת המשתמש בדיוק לפי השדות שראינו בקוד ששלחת: first_name ו-last_name
+      // שליפת המשתמש בדיוק לפי השדות שראינו בקוד ששלחת: first_name ו-last_name
       const { data: dbUser, error: userError } = await supabase
         .from('users')
-        .select('first_name, last_name')
+        .select('id, first_name, last_name')
         .eq('email', authUser.email)
         .single();
 
@@ -252,20 +267,29 @@ export default function ParticipantCardPage() {
       const lastName = dbUser?.last_name || '';
       const fullName = `${firstName} ${lastName}`.trim() || 'חבר/ת צוות';
 
-      // שליחת הלוג עם החתימה המדויקת
-      await logActivity({
-        user_id: authUser.id, // משתמשים ב-ID של ה-Auth ליתר ביטחון
-        activity_type: type,
-        participant_id: id,
-        participant_name: participant.full_name,
-        description: `${description} [DONE_BY:${fullName}]`,
-      });
+      if (dbUser) {
+        // שליחת הלוג עם החתימה המדויקת
+        await logActivity({
+          user_id: dbUser.id, // שימוש ב-ID של המשתמש מהדאטה בייס
+          activity_type: type,
+          participant_id: id,
+          participant_name: participant.full_name,
+          description: description,
+          update_content: updateContent,
+          is_public: true,
+        });
 
-      console.log("Activity logged successfully by:", fullName);
+        console.log("Activity logged successfully by:", fullName);
+
+        // Refresh activities after logging
+        fetchActivities();
+      }
     } catch (err) {
       console.error("Failed to trigger log:", err);
     }
-  }, [id, participant, supabase]);
+  }, [id, participant, supabase, fetchActivities]);
+
+
 
   const fetchParticipant = useCallback(async () => {
     if (!id) return;
@@ -293,12 +317,8 @@ export default function ParticipantCardPage() {
           general_notes: data.general_notes || ''
         });
 
-        try {
-          const parsedUpdates = data.updates ? JSON.parse(data.updates) : [];
-          setActivities(Array.isArray(parsedUpdates) ? parsedUpdates : []);
-        } catch (e) {
-          setActivities([]);
-        }
+        // Fetch activities from the new table
+        fetchActivities();
 
         // Cache participant data for next time
         if (typeof window !== 'undefined') {
@@ -317,7 +337,7 @@ export default function ParticipantCardPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, supabase, cachedParticipant]);
+  }, [id, supabase, cachedParticipant, fetchActivities]);
 
   useEffect(() => {
     if (id) fetchParticipant();
@@ -334,33 +354,22 @@ export default function ParticipantCardPage() {
     const newEntry = { id: Date.now(), text: newUpdateText, date: formattedDate };
     const updatedActivities = [newEntry, ...activities];
 
-    setActivities(updatedActivities);
     setNewUpdateText('');
     // הסרנו את ה-setIsPopupOpen(false) מכאן
 
     if (id && participant) {
       try {
-        // עדכון בסיס הנתונים
-        await supabase
-          .from('participants')
-          .update({ updates: JSON.stringify(updatedActivities) })
-          .eq('id', id);
+        // עדכון בסיס הנתונים - ביטלנו את השמירה לטבלה הישנה
+        // await supabase
+        //   .from('participants')
+        //   .update({ updates: JSON.stringify(updatedActivities) })
+        //   .eq('id', id);
 
-        // קריאה לפונקציית הלוג
-        await triggerLog('status_update' as any, `עדכון סטטוס ${participant.full_name}: ${newUpdateText}`);
+        // קריאה לפונקציית הלוג שהיא המקום המרכזי עכשיו
+        await triggerLog('status_update' as any, `עדכון סטטוס`, newUpdateText);
 
-        // Update cache with new data
-        if (id && typeof window !== 'undefined') {
-          try {
-            const updatedParticipant = { ...participant, updates: JSON.stringify(updatedActivities) };
-            localStorage.setItem(`participant_${id}`, JSON.stringify({
-              participant: updatedParticipant,
-              timestamp: Date.now()
-            }));
-          } catch (e) {
-            // Ignore cache errors
-          }
-        }
+        // Cache update is less relevant for activities now that we fetch live,
+        // but we keep participant cache for basic info
 
         // --- כאן הוספנו את הפקודה החדשה ---
         setIsSuccessMessageOpen(true);
@@ -491,14 +500,34 @@ export default function ParticipantCardPage() {
     const events: any[] = [];
 
     // 1. הוספת עדכוני סטטוס מטבלת המשתתף
+    // 1. הוספת עדכוני סטטוס מטבלת user_activities החדשה
     activities.forEach(act => {
-      const parts = (act.date || "").split('/');
-      events.push({
-        type: 'status',
-        text: act.text,
-        date: act.date,
-        originalDate: parts.length === 2 ? new Date(2024, Number(parts[1]) - 1, Number(parts[0])) : new Date()
-      });
+      // נתמוך גם בפורמט הישן וגם בחדש
+      let dateObj = new Date();
+      let text = '';
+
+      // פורמט חדש מהשרת
+      if (act.created_at) {
+        dateObj = new Date(act.created_at);
+        text = act.update_content || act.description || '';
+      }
+      // תמיכה לאחור בפורמט הישן (אם יש עדיין באובייקט)
+      else if (act.date) {
+        const parts = (act.date || "").split('/');
+        dateObj = parts.length === 2 ? new Date(new Date().getFullYear(), Number(parts[1]) - 1, Number(parts[0])) : new Date();
+        text = act.text || '';
+      }
+
+      // נציג רק אם יש תוכן רלוונטי
+      if (text && (act.activity_type === 'status_update' || act.type === 'status' || !act.activity_type)) {
+        events.push({
+          type: 'status',
+          text: text,
+          date: `${dateObj.getDate()}/${dateObj.getMonth() + 1}`,
+          originalDate: dateObj,
+          author: act.user_name || act.user_display_name || '' // אופציה להציג מי כתב
+        });
+      }
     });
 
     // 2. הוספת אירוע נוכחות
