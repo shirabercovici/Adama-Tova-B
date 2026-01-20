@@ -4,7 +4,6 @@ import { useEffect, useState, ChangeEvent, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import styles from "./page.module.css";
-import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 const CACHE_KEY = 'manage-volunteers-cache';
 
@@ -78,9 +77,6 @@ export default function EditVolunteerPage({ params }: { params: { id: string } }
             document.body.classList.remove('profile-page');
         };
     }, []);
-
-    // Update theme-color to match cream header background (#FFFCE5)
-    useThemeColor('#FFFCE5');
 
     // Auto-dismiss success modal after 2.5 seconds
     useEffect(() => {

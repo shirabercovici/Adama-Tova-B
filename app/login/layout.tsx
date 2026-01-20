@@ -2,10 +2,7 @@ import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
   appleWebApp: {
-    statusBarStyle: "default", // Remove blue status bar on iOS
-  },
-  other: {
-    "apple-mobile-web-app-status-bar-style": "default",
+    statusBarStyle: "default",
   },
 };
 

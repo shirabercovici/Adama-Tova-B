@@ -7,29 +7,32 @@ const useIsomorphicLayoutEffect =
 
 /**
  * A hook to dynamically set the theme-color meta tag.
- * This is used to change the status bar color on mobile devices per page.
+ * 
+ * NOTE: For static theme colors, use the Next.js viewport export instead:
+ *   export const viewport: Viewport = { themeColor: "#4D58D8" };
+ * 
+ * This hook should only be used for dynamic theme colors that change based on
+ * runtime data (e.g., participant archived status).
  * 
  * @param color The color to set the theme-color to (e.g., "#FFFCE5")
  */
 export function useThemeColor(color: string) {
   useIsomorphicLayoutEffect(() => {
-    // Check if the meta tag exists
+    // Remove any duplicate theme-color meta tags first
+    const allThemeColorTags = document.querySelectorAll("meta[name='theme-color']");
+    // Keep only the first one (created by Next.js viewport export)
+    for (let i = 1; i < allThemeColorTags.length; i++) {
+      allThemeColorTags[i].remove();
+    }
+
+    // Get the single remaining meta tag (should be created by Next.js viewport export)
     let metaThemeColor = document.querySelector("meta[name='theme-color']");
 
-    // If not, create it (should exist from layout, but just in case)
+    // If not, create it (fallback for edge cases)
     if (!metaThemeColor) {
       metaThemeColor = document.createElement('meta');
       metaThemeColor.setAttribute('name', 'theme-color');
       document.head.appendChild(metaThemeColor);
-    }
-
-    // Check if apple-mobile-web-app-status-bar-style exists (should be black-translucent from layout)
-    let appleMeta = document.querySelector("meta[name='apple-mobile-web-app-status-bar-style']");
-    if (!appleMeta) {
-      appleMeta = document.createElement('meta');
-      appleMeta.setAttribute('name', 'apple-mobile-web-app-status-bar-style');
-      appleMeta.setAttribute('content', 'black-translucent');
-      document.head.appendChild(appleMeta);
     }
 
     // Store the previous color BEFORE updating (captures current state at mount/re-render)
