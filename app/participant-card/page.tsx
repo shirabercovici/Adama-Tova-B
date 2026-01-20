@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import BackButton from '../../components/BackButton';
 import { createClient } from '@/lib/supabase/client';
+import Image from "next/image";
 import { Participant } from '@/app/participants/types';
 import { logActivity } from '@/lib/activity-logger';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
@@ -171,6 +172,67 @@ const getTabStyle = (isActive: boolean, isLast: boolean): React.CSSProperties =>
   outline: 'none',
   padding: 0
 });
+
+// Filter out attendance pairs (marked + removed for same participant on same day)
+const filterAttendancePairs = (activities: any[]) => {
+  // Group attendance activities by participant and date
+  const attendanceGroups = new Map<string, any[]>();
+
+  // First pass: collect all attendance activities by participant and date
+  activities.forEach((activity) => {
+    if (activity.activity_type === 'attendance_marked' || activity.activity_type === 'attendance_removed') {
+      const pId = activity.participant_id || 'unknown';
+      const dateStr = activity.created_at ? new Date(activity.created_at).toISOString().split('T')[0] : (activity.date || 'unknown');
+      const key = `${pId}_${dateStr}`;
+
+      if (!attendanceGroups.has(key)) {
+        attendanceGroups.set(key, []);
+      }
+
+      attendanceGroups.get(key)!.push(activity);
+    }
+  });
+
+  // For each group, match pairs (marked + removed) and exclude them
+  const excludeIds = new Set<string>();
+
+  attendanceGroups.forEach((groupActivities) => {
+    // Sort by created_at/date
+    groupActivities.sort((a, b) => {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return timeA - timeB;
+    });
+
+    // Match pairs: mark each marked/removed pair for exclusion
+    const markedStack: any[] = [];
+    const removedStack: any[] = [];
+
+    groupActivities.forEach((activity) => {
+      if (activity.activity_type === 'attendance_marked') {
+        markedStack.push(activity);
+      } else {
+        removedStack.push(activity);
+      }
+    });
+
+    // Pair up marked and removed activities (match them)
+    while (markedStack.length > 0 && removedStack.length > 0) {
+      const marked = markedStack.shift()!;
+      const removed = removedStack.shift()!;
+      if (marked.id) excludeIds.add(marked.id);
+      if (removed.id) excludeIds.add(removed.id);
+    }
+  });
+
+  // Filter out activities that are part of a pair AND exclude 'attendance_removed' events entirely from display
+  // (We only want to show 'attendance_marked' that wasn't cancelled, or other events)
+  return activities.filter((activity) => {
+    if (excludeIds.has(activity.id)) return false;
+    if (activity.activity_type === 'attendance_removed') return false; // Don't show "removed" events alone
+    return true;
+  });
+};
 
 export default function ParticipantCardPage() {
   const [isSuccessMessageOpen, setIsSuccessMessageOpen] = useState(false);
@@ -1007,67 +1069,211 @@ export default function ParticipantCardPage() {
           </>
         )}
         {activeTab === 'היסטוריה' && (
-          <div style={{ width: '100%', padding: '1.25rem', display: 'flex', flexDirection: 'column', backgroundColor: '#FFFCE5', minHeight: '100vh' }}>
+          <div style={{ width: '100%', padding: '1.25rem', display: 'flex', flexDirection: 'column', backgroundColor: '#FFFCE5', minHeight: '100vh', paddingBottom: '8rem' }}>
             {loading ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: '#4D58D8' }}>טוען...</div>
-            ) : allEvents.length === 0 ? (
+            ) : activities.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: '#949ADD' }}>אין פעילויות עדיין</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {allEvents.map((activity, index) => (
-                  <div key={index} style={{ padding: '0.75rem 0', display: 'flex', alignItems: 'flex-start', gap: '0.75rem', borderBottom: '0.0625rem solid rgba(77, 88, 216, 0.1)', position: 'relative', direction: 'rtl' }}>
+                {filterAttendancePairs(activities).map((activity, index) => {
+                  // Parsing Date
+                  let dateObj = new Date();
+                  let formattedDate = "";
+                  if (activity.created_at) {
+                    dateObj = new Date(activity.created_at);
+                  } else if (activity.date) {
+                    // Fallback for old updates format DD/MM
+                    const parts = activity.date.split('/');
+                    if (parts.length === 2) {
+                      const now = new Date();
+                      dateObj = new Date(now.getFullYear(), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    }
+                  }
+                  const day = dateObj.getDate();
+                  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                  formattedDate = `${day}/${month}`;
 
-                    {/* קו אנכי עיצובי */}
-                    <div style={{ position: 'absolute', right: '3.75rem', top: 0, bottom: 0, width: '0.0625rem', background: 'rgba(77, 88, 216, 0.2)' }}></div>
+                  // Determining Type and Content
+                  const activityType = activity.activity_type || 'status_update'; // Default to status update if missing
+                  const authorName = activity.user_name || 'חבר/ת צוות';
+                  const authorRole = activity.user_role || '';
+                  const performerString = `ע"י ${authorName} ${authorRole}`.trim();
 
-                    {/* תאריך */}
-                    <div style={{ fontSize: '1.25rem', color: '#4D58D8', width: '3.75rem', textAlign: 'right', flexShrink: 0, fontWeight: '400', order: 1 }}>
-                      {activity.date}
-                    </div>
+                  let actionName = "";
+                  let details = "";
+                  let iconSrc = "";
+                  let useFilter = true;
 
-                    {/* אייקון */}
-                    <div style={{ color: '#4D58D8', width: '1.25rem', order: 2, display: 'flex', justifyContent: 'center', zIndex: 1, backgroundColor: '#FFFCE5', padding: '2px 0' }}>
-                      {/* כאן האייקון שלך מופיע */}
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                    </div>
-
-                    {/* --- זה החלק שאת מחליפה - תיקון התצוגה לבדיקה --- */}
-                    <div style={{ flex: 1, textAlign: 'right', order: 3, fontFamily: 'EditorSans_PRO' }}>
-                      {(() => {
-                        const fullText = activity.text || "";
-                        const signatureTag = "[DONE_BY:";
-                        const sigIndex = fullText.indexOf(signatureTag);
-
-                        let doneByName = "לא נמצאה חתימה";
-                        let cleanDisplayDescription = fullText;
-
-                        if (sigIndex !== -1) {
-                          const endTagIndex = fullText.lastIndexOf(']');
-                          doneByName = fullText.substring(sigIndex + signatureTag.length, endTagIndex).trim();
-                          cleanDisplayDescription = fullText.substring(0, sigIndex).trim();
+                  switch (activityType) {
+                    case 'attendance_marked':
+                      actionName = "נוכחות";
+                      iconSrc = "/icons/attendance_marked_blue.svg";
+                      useFilter = false;
+                      break;
+                    case 'phone_call':
+                      actionName = "שיחת טלפון";
+                      iconSrc = "/icons/phone_call.svg";
+                      break;
+                    case 'status_update':
+                    default:
+                      actionName = "עדכון סטטוס";
+                      iconSrc = "/icons/status_update.svg";
+                      // Logic for details
+                      if (activity.update_content) {
+                        details = activity.update_content;
+                      } else if (activity.description) {
+                        // Clean defaults like "Update Status..."
+                        const desc = activity.description;
+                        if (desc.includes(':')) {
+                          details = desc.split(':')[1].trim();
+                        } else {
+                          details = desc;
                         }
+                      } else if (activity.text) { // Old format
+                        details = activity.text;
+                      }
+                      break;
+                  }
 
-                        return (
-                          <div style={{ border: '1px dashed #4D58D8', padding: '5px', borderRadius: '5px', backgroundColor: 'rgba(77, 88, 216, 0.05)' }}>
-                            <div style={{ fontSize: '1.3rem', color: '#4D58D8', fontWeight: 'bold' }}>
-                              {cleanDisplayDescription}
-                            </div>
+                  return (
+                    <div key={activity.id || index} style={{
+                      padding: '0.75rem 0',
+                      display: 'flex',
+                      flexDirection: 'row', // RTL default direction
+                      alignItems: 'stretch', // Stretch to make vertical line full height
+                      gap: '0',
+                      borderBottom: '1px solid #4D58D8',
+                      position: 'relative',
+                      direction: 'rtl',
+                      width: '100%'
+                    }}>
 
-                            <div style={{ fontSize: '1rem', color: 'red', fontWeight: 'bold', marginTop: '5px' }}>
-                              מבצע שזוהה: {doneByName}
-                            </div>
+                      {/* Date Column (Right) */}
+                      <div style={{
+                        width: '3.75rem',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        paddingTop: '0.2rem', // Align with text baseline
+                        flexShrink: 0
+                      }}>
+                        <span style={{
+                          fontSize: '1.25rem',
+                          color: '#4D58D8',
+                          fontFamily: 'EditorSans_PRO',
+                          fontWeight: '400',
 
-                            <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '5px', direction: 'ltr', textAlign: 'left' }}>
-                              Raw: {fullText}
-                            </div>
+                        }}>
+                          {formattedDate}
+                        </span>
+                      </div>
+
+                      {/* Vertical Blue Line */}
+                      <div style={{
+                        position: 'absolute',
+                        right: '4.25rem',
+                        top: 0,
+                        bottom: 0,
+                        width: '1px',
+                        backgroundColor: '#4D58D8'
+                      }}></div>
+
+                      {/* Content Column (Left of line) */}
+                      <div style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        paddingRight: '1rem', // Push content away from the absolute line
+                        minWidth: 0 // Allow text truncation/wrapping
+                      }}>
+
+                        {/* Header Row: Text + Icon */}
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'row',
+                          alignItems: 'baseline', // Align text baselines
+                          width: '100%',
+                          gap: '0.5rem',
+                          flexWrap: 'wrap'
+                        }}>
+                          {/* Icon (Rightmost in RTL) */}
+                          <div style={{
+                            position: 'relative',
+                            width: '1rem',
+                            height: '1rem',
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            alignSelf: 'center' // Center icon vertically relative to line
+                          }}>
+                            <Image
+                              src={iconSrc}
+                              alt={activityType}
+                              fill
+                              style={{
+                                objectFit: 'contain',
+                                // Filter to convert black to #4D58D8 only if needed
+                                filter: useFilter ? 'brightness(0) saturate(100%) invert(32%) sepia(50%) saturate(3007%) hue-rotate(224deg) brightness(90%) contrast(92%)' : 'none'
+                              }}
+                            />
                           </div>
-                        );
-                      })()}
-                    </div>
-                    {/* --- סוף החלק להחלפה --- */}
 
-                  </div>
-                ))}
+                          {/* Title Text (Left of Icon) */}
+                          <div style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '0.3rem',
+                            alignItems: 'baseline'
+                          }}>
+                            <span style={{
+                              color: '#4D58D8',
+                              fontFamily: 'EditorSans_PRO',
+                              fontSize: '1.5rem',
+                              fontStyle: 'italic',
+                              fontWeight: 400,
+                              lineHeight: '98%',
+                            }}>{actionName}</span>
+
+                            <span style={{
+                              color: '#949ADD',
+                              fontFamily: 'EditorSans_PRO',
+                              fontSize: '1.25rem',
+                              fontStyle: 'italic',
+                              fontWeight: 300,
+                              lineHeight: '98%',
+                            }}>- {performerString}</span>
+                          </div>
+                        </div>
+
+                        {/* Details Row */}
+                        {details && (
+                          <div style={{
+                            color: '#4D58D8',
+                            textAlign: 'right',
+                            fontFamily: 'EditorSans_PRO',
+                            fontSize: '1.25rem',
+                            fontStyle: 'italic',
+                            fontWeight: 300,
+                            lineHeight: '98%',
+                            marginTop: '0.5rem',
+                            paddingRight: '0.5rem', // Check padding
+                            marginRight: '0.45rem', // Push slightly to align visually with text start
+                            borderRight: '1px solid #4D58D8', // "Add a line before"
+                            paddingLeft: '0.5rem',
+                            wordBreak: 'break-word',
+                            width: 'fit-content'
+                          }}>
+                            {details}
+                          </div>
+                        )}
+
+                      </div>
+
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
