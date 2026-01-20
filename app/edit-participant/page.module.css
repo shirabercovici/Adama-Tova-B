@@ -1,0 +1,142 @@
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(77, 88, 216, 0.50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.modalContent {
+  background: var(--color-background);
+  border: none;
+  border-radius: 0;
+  display: flex;
+  width: 21.6875rem;
+  height: 28.75rem;
+  padding-top: 0.625rem;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  animation: modalSlideIn 0.25s ease-out;
+}
+
+.successModalContent {
+  background: var(--color-background);
+  border: none;
+  border-radius: 0;
+  display: flex;
+  width: 21.6875rem;
+  height: 21.8125rem;
+  padding: 0.625rem 0 1.875rem 0;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 1rem;
+  animation: modalSlideIn 0.15s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modalTitle {
+  font-size: 1.875rem;
+  font-weight: 400;
+  color: var(--color-primary);
+  margin: 0;
+  text-align: center;
+  padding: 0 2rem;
+  line-height: 1.5;
+}
+
+.modalSubtitle {
+  font-size: 1.875rem;
+  font-weight: 400;
+  color: var(--color-primary);
+  margin: 0;
+  text-align: center;
+  padding: 0 2rem;
+  margin-top: 0.5rem;
+}
+
+.successModalContent .modalTitle {
+  padding: 0.5rem 2rem 0 2rem;
+}
+
+.modalIllustration {
+  width: 180px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2rem;
+}
+
+.successModalContent .modalIllustration {
+  width: 10.1875rem;
+  height: 12.9375rem;
+  padding: 0;
+  margin-top: 0.5rem;
+}
+
+.plantIcon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.modalButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+.confirmButton {
+  width: 100%;
+  padding: 1rem;
+  border: none;
+  border-top: 1px solid var(--color-primary);
+  border-radius: 0;
+  font-size: 1.875rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--color-secondary);
+  color: var(--color-primary);
+  font-family: var(--font-body);
+}
+
+.confirmButton:hover {
+  background: #ffe066;
+}
+
+.cancelButton {
+  width: 100%;
+  padding: 1rem;
+  border: none;
+  border-top: 1px solid var(--color-primary);
+  border-radius: 0;
+  font-size: 1.875rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--color-secondary);
+  color: var(--color-primary);
+  font-family: var(--font-body);
+}
+
+.cancelButton:hover {
+  background: var(--color-secondary);
+}
