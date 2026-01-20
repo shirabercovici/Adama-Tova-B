@@ -678,8 +678,7 @@ export default function ParticipantCardPage() {
             alignItems: 'center',
             margin: '0 auto'
           }}>
-
-            <div style={{ color: 'white', marginLeft: "0" }}>
+            <div style={{ color: 'white'}}>
               <BackButton />
             </div>
 
