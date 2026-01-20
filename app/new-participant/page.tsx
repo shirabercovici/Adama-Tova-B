@@ -179,16 +179,11 @@ export default function NewParticipantPage() {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        paddingTop: 'calc(env(safe-area-inset-top) + 2.5rem)',
-                        paddingBottom: '1.25rem',
-                        paddingLeft: '1.88rem',
-                        paddingRight: '1.88rem',
+                        padding: '3rem 1.88rem 1.25rem',
                         width: '100%',
                         maxWidth: '23.75rem',
                         margin: '0 auto',
-                        boxSizing: 'border-box',
-                        gap: '0.8rem',
-                        flexWrap: 'nowrap',
+                        boxSizing: 'border-box'
                     }}>
                         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }}>
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4D58D8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -196,18 +191,7 @@ export default function NewParticipantPage() {
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
                             </svg>
                         </button>
-                        <h1 style={{
-                            fontFamily: 'EditorSans_PRO',
-                            fontSize: '1.875rem',
-                            fontWeight: 'normal',
-                            color: 'var(--color-primary)',
-                            textAlign: 'center',
-                            margin: 0,
-                            flex: 1,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                        }}>הוספת פונה חדש</h1>
+                        <h1 style={{ fontSize: '1.875rem', fontWeight: 'normal', color: '#4D58D8', margin: 0, marginRight:'0.625rem', flex: 1 }}>הוספת פונה חדש</h1>
                         <div onClick={() => setIsChecked(!isChecked)} style={{
                             width: '24px',
                             height: '24px',

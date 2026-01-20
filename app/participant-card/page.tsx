@@ -668,7 +668,6 @@ export default function ParticipantCardPage() {
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
-          gap: '1.25rem'
         }}>
           <div style={{
             display: 'flex',
@@ -677,11 +676,10 @@ export default function ParticipantCardPage() {
             paddingTop: '1.25rem',
             justifyContent: 'flex-end',
             alignItems: 'center',
-            gap: '15px',
             margin: '0 auto'
           }}>
 
-            <div style={{ color: 'white' }}>
+            <div style={{ color: 'white', marginLeft:"0"}}>
               <BackButton />
             </div>
 
