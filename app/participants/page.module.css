@@ -49,6 +49,8 @@
   margin: 0;
   left: 0;
   right: 0;
+  touch-action: pan-y; /* Allow vertical scrolling but prevent horizontal */
+  overscroll-behavior-y: contain; /* Prevent scroll chaining */
 }
 
 .headerTop {
