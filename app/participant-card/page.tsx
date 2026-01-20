@@ -1108,7 +1108,7 @@ export default function ParticipantCardPage() {
                   switch (activityType) {
                     case 'attendance_marked':
                       actionName = "נוכחות";
-                      iconSrc = "/icons/checkbox-checked.svg";
+                      iconSrc = "/icons/attendance_marked_blue.svg";
                       useFilter = false;
                       break;
                     case 'phone_call':
@@ -1192,7 +1192,7 @@ export default function ParticipantCardPage() {
                         <div style={{
                           display: 'flex',
                           flexDirection: 'row',
-                          alignItems: 'center', // Align center for safety
+                          alignItems: 'baseline', // Align text baselines
                           width: '100%',
                           gap: '0.5rem',
                           flexWrap: 'wrap'
