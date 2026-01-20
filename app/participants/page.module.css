@@ -8,6 +8,7 @@
   position: relative;
   overflow-x: hidden;
   box-sizing: border-box;
+  overscroll-behavior-y: contain;
 }
 
 /* Navbar Wrapper */
@@ -936,6 +937,8 @@
   padding: 0;
   background-color: #FFFCE5;
   position: relative;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 

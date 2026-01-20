@@ -34,6 +34,10 @@ body.profile-page {
   overflow: hidden;
 }
 
+body.participants-page {
+  overscroll-behavior-y: contain;
+}
+
 html {
   margin: 0;
   padding: 0;

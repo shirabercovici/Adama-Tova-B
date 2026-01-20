@@ -1883,6 +1883,23 @@ export default function ParticipantsPage() {
     statusUpdatesDrawerTouchStartY.current = null;
   };
 
+  // Prevent background scrolling when scrolling inside drawer content
+  const handleTasksContentTouchMove = (e: React.TouchEvent) => {
+    // Only prevent if not dragging the drawer itself
+    if (!isTasksDrawerDragging) {
+      // Always stop propagation to prevent background scroll when scrolling inside drawer
+      e.stopPropagation();
+    }
+  };
+
+  const handleStatusUpdatesContentTouchMove = (e: React.TouchEvent) => {
+    // Only prevent if not dragging the drawer itself
+    if (!isStatusUpdatesDrawerDragging) {
+      // Always stop propagation to prevent background scroll when scrolling inside drawer
+      e.stopPropagation();
+    }
+  };
+
   const handleTaskToggle = async (task: Task) => {
     // Prevent multiple simultaneous toggles
     if (isFetchingTasksRef.current) {
@@ -2390,7 +2407,10 @@ export default function ParticipantsPage() {
             </div>
           </div>
 
-          <div className={styles.tasksContent}>
+          <div 
+            className={styles.tasksContent}
+            onTouchMove={handleStatusUpdatesContentTouchMove}
+          >
             <ul className={styles.taskList}>
               {statusUpdates && statusUpdates.length > 0 ? (
                 <>
@@ -2599,7 +2619,10 @@ export default function ParticipantsPage() {
           {isTasksOpen && (
             <div className={styles.tasksDivider}></div>
           )}
-          <div className={styles.tasksContent}>
+          <div 
+            className={styles.tasksContent}
+            onTouchMove={handleTasksContentTouchMove}
+          >
             <ul className={styles.taskList}>
               {tasks.filter(t => {
                 // Filter uses actual state only - item stays in list until real state changes
