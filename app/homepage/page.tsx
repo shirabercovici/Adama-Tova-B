@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
@@ -11,6 +12,9 @@ export default function Dashboard() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const hasFetchedUserRef = useRef(false);
+
+  // Update theme-color for iOS compatibility (iOS doesn't always respect viewport exports)
+  useThemeColor('#4D58D8');
 
   // --- אפקט 1: בדיקת משתמש וקביעת טיימר של 2 שניות להצגת ההודעה ---
   useEffect(() => {

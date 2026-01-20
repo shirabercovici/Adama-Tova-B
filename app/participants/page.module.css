@@ -8,6 +8,8 @@
   position: relative;
   overflow-x: hidden;
   box-sizing: border-box;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y; /* Allow vertical scrolling but prevent horizontal */
 }
 
 /* Navbar Wrapper */
@@ -48,6 +50,9 @@
   margin: 0;
   left: 0;
   right: 0;
+  touch-action: none; /* Prevent all touch gestures on header */
+  overscroll-behavior-y: contain; /* Prevent scroll chaining */
+  -webkit-overflow-scrolling: touch;
 }
 
 .headerTop {
@@ -936,6 +941,9 @@
   padding: 0;
   background-color: #FFFCE5;
   position: relative;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y; /* Allow vertical scrolling inside drawer content */
 }
 
 

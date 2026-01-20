@@ -8,6 +8,7 @@ import SearchBarWithAdd from "@/lib/components/SearchBarWithAdd";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
 import { logActivity } from "@/lib/activity-logger";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function ParticipantsPage() {
   const router = useRouter();
@@ -80,15 +81,232 @@ export default function ParticipantsPage() {
   const [isInitialDataReady, setIsInitialDataReady] = useState(false);
   // Track if we've already set isInitialDataReady to true - prevent double updates
   const hasSetInitialDataReadyRef = useRef(false);
+  // Track pending checkbox states for immediate visual feedback before sorting
+  const [pendingTaskStates, setPendingTaskStates] = useState<Record<string, "open" | "done">>({});
+  const [pendingStatusUpdateStates, setPendingStatusUpdateStates] = useState<Record<string, boolean>>({});
+  // Track swipe gestures for drawers
+  const tasksDrawerTouchStartY = useRef<number | null>(null);
+  const statusUpdatesDrawerTouchStartY = useRef<number | null>(null);
+  const SWIPE_THRESHOLD = 50; // Minimum distance in pixels to trigger swipe
+  
+  // Track dragging state and position for smooth dragging
+  const [tasksDrawerTranslateY, setTasksDrawerTranslateY] = useState(0);
+  const [isTasksDrawerDragging, setIsTasksDrawerDragging] = useState(false);
+  const [statusUpdatesDrawerTranslateY, setStatusUpdatesDrawerTranslateY] = useState(0);
+  const [isStatusUpdatesDrawerDragging, setIsStatusUpdatesDrawerDragging] = useState(false);
+  
+  // Store initial drawer position when drag starts
+  const tasksDrawerInitialBottom = useRef<number>(0);
+  const statusUpdatesDrawerInitialBottom = useRef<number>(0);
 
   // Add class to body to hide navbar and make full width
   // Add class to body to hide navbar and make full width
   useEffect(() => {
     document.body.classList.add('participants-page');
+    
+    // Prevent background scrolling when touching header area or dragging drawers on mobile
+    const handleTouchMove = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // Check if dragging a drawer by checking refs (more reliable than state)
+      const isDraggingDrawer = tasksDrawerTouchStartY.current !== null || statusUpdatesDrawerTouchStartY.current !== null;
+      
+      // Check if target is inside tasksContent or statusUpdatesContent (scrolling inside drawer)
+      let element: HTMLElement | null = target;
+      let isInDrawerContent = false;
+      while (element && element !== document.body) {
+        if (element.classList && Array.from(element.classList).some(cls => cls.includes('tasksContent'))) {
+          isInDrawerContent = true;
+          break;
+        }
+        element = element.parentElement;
+      }
+      
+      // Check if target is inside purpleHeader by traversing up the DOM
+      element = target;
+      let isInHeader = false;
+      while (element && element !== document.body) {
+        if (element.classList && Array.from(element.classList).some(cls => cls.includes('purpleHeader'))) {
+          isInHeader = true;
+          break;
+        }
+        element = element.parentElement;
+      }
+      
+      // Check if target is inside a drawer handle (not content)
+      let isInDrawerHandle = false;
+      element = target;
+      while (element && element !== document.body) {
+        if (element.classList && Array.from(element.classList).some(cls => cls.includes('tasksHandle'))) {
+          isInDrawerHandle = true;
+          break;
+        }
+        element = element.parentElement;
+      }
+      
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+      const isButton = target.tagName === 'BUTTON' || target.closest('button') !== null;
+      
+      // Prevent background scroll when:
+      // 1. Dragging a drawer handle
+      // 2. Touching header (except inputs/buttons)
+      // 3. NOT when scrolling inside drawer content (allow that to work)
+      // Only prevent if NOT scrolling inside drawer content
+      if (!isInDrawerContent && (isDraggingDrawer || (isInHeader && !isInput && !isButton) || (isInDrawerHandle && !isInput && !isButton))) {
+        e.preventDefault();
+      }
+      // Don't prevent when scrolling inside drawer content - let that scroll naturally
+    };
+    
+    // Use passive: false to allow preventDefault
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    
     return () => {
       document.body.classList.remove('participants-page');
+      document.removeEventListener('touchmove', handleTouchMove);
     };
   }, []);
+
+  // Reset translateY when drawer state changes (when not dragging)
+  useEffect(() => {
+    if (!isTasksDrawerDragging) {
+      setTasksDrawerTranslateY(0);
+    }
+  }, [isTasksOpen, isTasksDrawerDragging]);
+
+  useEffect(() => {
+    if (!isStatusUpdatesDrawerDragging) {
+      setStatusUpdatesDrawerTranslateY(0);
+    }
+  }, [isStatusUpdatesOpen, isStatusUpdatesDrawerDragging]);
+
+  // Global mouse event listeners for dragging
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isTasksDrawerDragging && tasksDrawerTouchStartY.current !== null) {
+        const currentY = e.clientY;
+        const deltaY = tasksDrawerTouchStartY.current - currentY;
+        // Invert deltaY: positive deltaY (drag up) = negative translateY (move drawer up)
+        const newTranslateY = -deltaY;
+        
+        const maxHeight = window.innerHeight - 200;
+        const minHeight = 95;
+        
+        if (isTasksOpen) {
+          const maxTranslate = maxHeight - minHeight;
+          const minTranslate = 0;
+          setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+        } else {
+          const maxTranslate = 0;
+          const minTranslate = -(maxHeight - minHeight);
+          setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+        }
+      }
+      
+      if (isStatusUpdatesDrawerDragging && statusUpdatesDrawerTouchStartY.current !== null) {
+        const currentY = e.clientY;
+        const deltaY = statusUpdatesDrawerTouchStartY.current - currentY;
+        // Invert deltaY: positive deltaY (drag up) = negative translateY (move drawer up)
+        const newTranslateY = -deltaY;
+        
+        const maxHeight = window.innerHeight - 200;
+        const minHeight = 68;
+        
+        if (isStatusUpdatesOpen) {
+          const maxTranslate = maxHeight - minHeight;
+          const minTranslate = 0;
+          setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+        } else {
+          const maxTranslate = 0;
+          const minTranslate = -(maxHeight - minHeight);
+          setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+        }
+      }
+    };
+
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      if (isTasksDrawerDragging && tasksDrawerTouchStartY.current !== null) {
+        const endY = e.clientY;
+        const deltaY = tasksDrawerTouchStartY.current - endY;
+        
+        const maxHeight = window.innerHeight - 200;
+        const minHeight = 95;
+        const threshold = (maxHeight - minHeight) / 2;
+        
+        // Invert logic: positive deltaY (drag up) should open, negative (drag down) should close
+        if (Math.abs(deltaY) > SWIPE_THRESHOLD || Math.abs(tasksDrawerTranslateY) > threshold) {
+          if (isTasksOpen) {
+            // If open and dragged down significantly, close
+            if (deltaY < 0 || tasksDrawerTranslateY > threshold) {
+              setIsTasksOpen(false);
+            } else {
+              setIsTasksOpen(true);
+            }
+          } else {
+            // If closed and dragged up significantly, open
+            if (deltaY > 0 || tasksDrawerTranslateY < -threshold) {
+              setIsTasksOpen(true);
+            } else {
+              setIsTasksOpen(false);
+            }
+          }
+        } else {
+          setIsTasksOpen(isTasksOpen);
+        }
+        
+        setIsTasksDrawerDragging(false);
+        setTasksDrawerTranslateY(0);
+        tasksDrawerTouchStartY.current = null;
+      }
+      
+      if (isStatusUpdatesDrawerDragging && statusUpdatesDrawerTouchStartY.current !== null) {
+        const endY = e.clientY;
+        const deltaY = statusUpdatesDrawerTouchStartY.current - endY;
+        
+        const maxHeight = window.innerHeight - 200;
+        const minHeight = 68;
+        const threshold = (maxHeight - minHeight) / 2;
+        
+        // Invert logic: positive deltaY (drag up) should open, negative (drag down) should close
+        if (Math.abs(deltaY) > SWIPE_THRESHOLD || Math.abs(statusUpdatesDrawerTranslateY) > threshold) {
+          if (isStatusUpdatesOpen) {
+            // If open and dragged down significantly, close
+            if (deltaY < 0 || statusUpdatesDrawerTranslateY > threshold) {
+              setIsStatusUpdatesOpen(false);
+            } else {
+              setIsStatusUpdatesOpen(true);
+            }
+          } else {
+            // If closed and dragged up significantly, open
+            if (deltaY > 0 || statusUpdatesDrawerTranslateY < -threshold) {
+              setIsStatusUpdatesOpen(true);
+            } else {
+              setIsStatusUpdatesOpen(false);
+            }
+          }
+        } else {
+          setIsStatusUpdatesOpen(isStatusUpdatesOpen);
+        }
+        
+        setIsStatusUpdatesDrawerDragging(false);
+        setStatusUpdatesDrawerTranslateY(0);
+        statusUpdatesDrawerTouchStartY.current = null;
+      }
+    };
+
+    if (isTasksDrawerDragging || isStatusUpdatesDrawerDragging) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isTasksDrawerDragging, isStatusUpdatesDrawerDragging, isTasksOpen, isStatusUpdatesOpen, tasksDrawerTranslateY, statusUpdatesDrawerTranslateY]);
+
+  // Update theme-color for iOS compatibility (iOS doesn't always respect viewport exports)
+  useThemeColor('#4D58D8');
 
   // Mark as hydrated and load initials from localStorage
   useEffect(() => {
@@ -721,6 +939,16 @@ export default function ParticipantsPage() {
     return userRole === "מנהל.ת" || userRole === "מנהל" || userRole === "מנהלת" || (userRole && userRole.includes("מנהל"));
   }, [userRole]);
 
+  // Helper function to check if a message is from the last 2 days
+  const isFromLastTwoDays = useCallback((createdAt: string) => {
+    const messageDate = new Date(createdAt);
+    const now = new Date();
+    const twoDaysAgo = new Date(now);
+    twoDaysAgo.setDate(now.getDate() - 2);
+    twoDaysAgo.setHours(0, 0, 0, 0); // Start of day 2 days ago
+    return messageDate >= twoDaysAgo;
+  }, []);
+
   // Fetch status updates for managers
   const fetchStatusUpdates = useCallback(async () => {
     // Only fetch if user is a manager
@@ -776,14 +1004,31 @@ export default function ParticipantsPage() {
       return;
     }
 
-    // Optimistic update
-    setStatusUpdates((prev) =>
-      prev.map((update) =>
-        update.id === updateId
-          ? { ...update, is_read: isRead }
-          : update
-      )
-    );
+    // Update pending state immediately for visual feedback
+    setPendingStatusUpdateStates((prev) => ({
+      ...prev,
+      [updateId]: isRead
+    }));
+
+    // Delay the actual state update that causes sorting/movement
+    // This allows the checkbox to fill first, then the item moves down
+    setTimeout(() => {
+      // Optimistic update
+      setStatusUpdates((prev) =>
+        prev.map((update) =>
+          update.id === updateId
+            ? { ...update, is_read: isRead }
+            : update
+        )
+      );
+      
+      // Clear pending state after update
+      setPendingStatusUpdateStates((prev) => {
+        const newPending = { ...prev };
+        delete newPending[updateId];
+        return newPending;
+      });
+    }, 300); // 300ms delay to allow checkbox to fill first
 
     try {
       const response = await fetch("/api/activities", {
@@ -800,6 +1045,12 @@ export default function ParticipantsPage() {
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Error updating read status:", errorData);
+        // Revert pending state on error
+        setPendingStatusUpdateStates((prev) => {
+          const newPending = { ...prev };
+          delete newPending[updateId];
+          return newPending;
+        });
         // Revert optimistic update on error
         setStatusUpdates((prev) =>
           prev.map((update) =>
@@ -811,6 +1062,12 @@ export default function ParticipantsPage() {
       }
     } catch (err) {
       console.error("Error updating read status:", err);
+      // Revert pending state on error
+      setPendingStatusUpdateStates((prev) => {
+        const newPending = { ...prev };
+        delete newPending[updateId];
+        return newPending;
+      });
       // Revert optimistic update on error
       setStatusUpdates((prev) =>
         prev.map((update) =>
@@ -1289,6 +1546,431 @@ export default function ParticipantsPage() {
     }
   }, [search]);
 
+  // Handle swipe gestures for tasks drawer
+  const handleTasksDrawerTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    const drawerElement = target.closest(`.${styles.tasksDrawer}`);
+    if (drawerElement) {
+      const isHandle = target.closest(`.${styles.tasksHandle}`) !== null;
+      const isContent = target.closest(`.${styles.tasksContent}`) !== null;
+      
+      // Track swipe if:
+      // 1. Starting from handle (always)
+      // 2. Starting from top area when drawer is closed (to open it)
+      // 3. Starting from top area when drawer is open (to close it)
+      if (isHandle) {
+        tasksDrawerTouchStartY.current = e.touches[0].clientY;
+        setIsTasksDrawerDragging(true);
+        setTasksDrawerTranslateY(0);
+        const rect = drawerElement.getBoundingClientRect();
+        tasksDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+        // Prevent background scroll when dragging drawer
+        e.stopPropagation();
+      } else if (isContent && !isTasksOpen) {
+        // Drawer is closed - allow swipe from anywhere to open
+        tasksDrawerTouchStartY.current = e.touches[0].clientY;
+        setIsTasksDrawerDragging(true);
+        setTasksDrawerTranslateY(0);
+        const rect = drawerElement.getBoundingClientRect();
+        tasksDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+        // Prevent background scroll when dragging drawer
+        e.stopPropagation();
+      } else if (isContent && isTasksOpen) {
+        // Drawer is open - only allow swipe from top area to close
+        const rect = drawerElement.getBoundingClientRect();
+        const touchY = e.touches[0].clientY;
+        const relativeY = touchY - rect.top;
+        if (relativeY < 150) {
+          tasksDrawerTouchStartY.current = e.touches[0].clientY;
+          setIsTasksDrawerDragging(true);
+          setTasksDrawerTranslateY(0);
+          tasksDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+          // Prevent background scroll when dragging drawer
+          e.stopPropagation();
+        }
+      }
+    }
+  };
+
+  const handleTasksDrawerTouchMove = (e: React.TouchEvent) => {
+    if (tasksDrawerTouchStartY.current === null || !isTasksDrawerDragging) return;
+    
+    const currentY = e.touches[0].clientY;
+    const deltaY = tasksDrawerTouchStartY.current - currentY;
+    
+    // Calculate new translateY position
+    // Positive deltaY (swipe up) = move drawer up (negative translateY)
+    // Negative deltaY (swipe down) = move drawer down (positive translateY)
+    const newTranslateY = -deltaY;
+    
+    // Limit the movement based on drawer state
+    const maxHeight = window.innerHeight - 200; // Max drawer height
+    const minHeight = 95; // Handle height when closed
+    
+    if (isTasksOpen) {
+      // When open, can only drag down (positive translateY)
+      const maxTranslate = maxHeight - minHeight;
+      const minTranslate = 0;
+      setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    } else {
+      // When closed, can only drag up (negative translateY)
+      const maxTranslate = 0;
+      const minTranslate = -(maxHeight - minHeight);
+      setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    }
+    
+    // Always prevent default scrolling and background scroll when dragging drawer
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleTasksDrawerTouchEnd = (e: React.TouchEvent) => {
+    if (tasksDrawerTouchStartY.current === null) {
+      setIsTasksDrawerDragging(false);
+      return;
+    }
+    
+    const endY = e.changedTouches[0].clientY;
+    const deltaY = tasksDrawerTouchStartY.current - endY;
+    
+    // Determine if should open or close based on position and movement
+    const maxHeight = window.innerHeight - 200;
+    const minHeight = 95;
+    const threshold = (maxHeight - minHeight) / 2; // Halfway point
+    
+    // Positive deltaY (swipe up) should open, negative (swipe down) should close
+    if (Math.abs(deltaY) > SWIPE_THRESHOLD || Math.abs(tasksDrawerTranslateY) > threshold) {
+      if (isTasksOpen) {
+        // If open and dragged down significantly, close
+        if (deltaY < 0 || tasksDrawerTranslateY > threshold) {
+          setIsTasksOpen(false);
+        } else {
+          // Otherwise keep open
+          setIsTasksOpen(true);
+        }
+      } else {
+        // If closed and dragged up significantly, open
+        if (deltaY > 0 || tasksDrawerTranslateY < -threshold) {
+          setIsTasksOpen(true);
+        } else {
+          // Otherwise keep closed
+          setIsTasksOpen(false);
+        }
+      }
+    } else {
+      // Small movement - revert to original state
+      setIsTasksOpen(isTasksOpen);
+    }
+    
+    // Reset dragging state
+    setIsTasksDrawerDragging(false);
+    setTasksDrawerTranslateY(0);
+    tasksDrawerTouchStartY.current = null;
+  };
+
+  // Mouse handlers for desktop dragging
+  const handleTasksDrawerMouseDown = (e: React.MouseEvent) => {
+    // Only allow dragging from handle on desktop
+    const target = e.target as HTMLElement;
+    const isHandle = target.closest(`.${styles.tasksHandle}`) !== null;
+    if (!isHandle) return;
+    
+    e.preventDefault();
+    const drawerElement = target.closest(`.${styles.tasksDrawer}`);
+    if (drawerElement) {
+      tasksDrawerTouchStartY.current = e.clientY;
+      setIsTasksDrawerDragging(true);
+      setTasksDrawerTranslateY(0);
+      const rect = drawerElement.getBoundingClientRect();
+      tasksDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+    }
+  };
+
+  const handleTasksDrawerMouseMove = (e: React.MouseEvent) => {
+    if (tasksDrawerTouchStartY.current === null || !isTasksDrawerDragging) return;
+    
+    const currentY = e.clientY;
+    const deltaY = tasksDrawerTouchStartY.current - currentY;
+    // Invert deltaY: positive deltaY (drag up) = negative translateY (move drawer up)
+    const newTranslateY = -deltaY;
+    
+    const maxHeight = window.innerHeight - 200;
+    const minHeight = 95;
+    
+    if (isTasksOpen) {
+      // When open, can only drag down (positive translateY)
+      const maxTranslate = maxHeight - minHeight;
+      const minTranslate = 0;
+      setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    } else {
+      // When closed, can only drag up (negative translateY)
+      const maxTranslate = 0;
+      const minTranslate = -(maxHeight - minHeight);
+      setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    }
+  };
+
+  const handleTasksDrawerMouseUp = (e: React.MouseEvent) => {
+    if (tasksDrawerTouchStartY.current === null) {
+      setIsTasksDrawerDragging(false);
+      return;
+    }
+    
+    const endY = e.clientY;
+    const deltaY = tasksDrawerTouchStartY.current - endY;
+    
+    const maxHeight = window.innerHeight - 200;
+    const minHeight = 95;
+    const threshold = (maxHeight - minHeight) / 2;
+    
+    // Invert logic: positive deltaY (drag up) should open, negative (drag down) should close
+    if (Math.abs(deltaY) > SWIPE_THRESHOLD || Math.abs(tasksDrawerTranslateY) > threshold) {
+      if (isTasksOpen) {
+        // If open and dragged down significantly, close
+        if (deltaY < 0 || tasksDrawerTranslateY > threshold) {
+          setIsTasksOpen(false);
+        } else {
+          setIsTasksOpen(true);
+        }
+      } else {
+        // If closed and dragged up significantly, open
+        if (deltaY > 0 || tasksDrawerTranslateY < -threshold) {
+          setIsTasksOpen(true);
+        } else {
+          setIsTasksOpen(false);
+        }
+      }
+    } else {
+      setIsTasksOpen(isTasksOpen);
+    }
+    
+    setIsTasksDrawerDragging(false);
+    setTasksDrawerTranslateY(0);
+    tasksDrawerTouchStartY.current = null;
+  };
+
+  // Handle swipe gestures for status updates drawer
+  const handleStatusUpdatesDrawerTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    const drawerElement = target.closest(`.${styles.statusUpdatesDrawer}`);
+    if (drawerElement) {
+      const isHandle = target.closest(`.${styles.tasksHandle}`) !== null;
+      const isContent = target.closest(`.${styles.tasksContent}`) !== null;
+      
+      // Track swipe if:
+      // 1. Starting from handle (always)
+      // 2. Starting from top area when drawer is closed (to open it)
+      // 3. Starting from top area when drawer is open (to close it)
+      if (isHandle) {
+        statusUpdatesDrawerTouchStartY.current = e.touches[0].clientY;
+        setIsStatusUpdatesDrawerDragging(true);
+        setStatusUpdatesDrawerTranslateY(0);
+        const rect = drawerElement.getBoundingClientRect();
+        statusUpdatesDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+        // Prevent background scroll when dragging drawer
+        e.stopPropagation();
+      } else if (isContent && !isStatusUpdatesOpen) {
+        // Drawer is closed - allow swipe from anywhere to open
+        statusUpdatesDrawerTouchStartY.current = e.touches[0].clientY;
+        setIsStatusUpdatesDrawerDragging(true);
+        setStatusUpdatesDrawerTranslateY(0);
+        const rect = drawerElement.getBoundingClientRect();
+        statusUpdatesDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+        // Prevent background scroll when dragging drawer
+        e.stopPropagation();
+      } else if (isContent && isStatusUpdatesOpen) {
+        // Drawer is open - only allow swipe from top area to close
+        const rect = drawerElement.getBoundingClientRect();
+        const touchY = e.touches[0].clientY;
+        const relativeY = touchY - rect.top;
+        if (relativeY < 150) {
+          statusUpdatesDrawerTouchStartY.current = e.touches[0].clientY;
+          setIsStatusUpdatesDrawerDragging(true);
+          setStatusUpdatesDrawerTranslateY(0);
+          statusUpdatesDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+          // Prevent background scroll when dragging drawer
+          e.stopPropagation();
+        }
+      }
+    }
+  };
+
+  const handleStatusUpdatesDrawerTouchMove = (e: React.TouchEvent) => {
+    if (statusUpdatesDrawerTouchStartY.current === null || !isStatusUpdatesDrawerDragging) return;
+    
+    const currentY = e.touches[0].clientY;
+    const deltaY = statusUpdatesDrawerTouchStartY.current - currentY;
+    
+    // Calculate new translateY position
+    // Positive deltaY (swipe up) = move drawer up (negative translateY)
+    // Negative deltaY (swipe down) = move drawer down (positive translateY)
+    const newTranslateY = -deltaY;
+    
+    // Limit the movement based on drawer state
+    const maxHeight = window.innerHeight - 200; // Max drawer height
+    const minHeight = 68; // Handle height when closed (4.25rem)
+    
+    if (isStatusUpdatesOpen) {
+      // When open, can only drag down (positive translateY)
+      const maxTranslate = maxHeight - minHeight;
+      const minTranslate = 0;
+      setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    } else {
+      // When closed, can only drag up (negative translateY)
+      const maxTranslate = 0;
+      const minTranslate = -(maxHeight - minHeight);
+      setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    }
+    
+    // Always prevent default scrolling and background scroll when dragging drawer
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleStatusUpdatesDrawerTouchEnd = (e: React.TouchEvent) => {
+    if (statusUpdatesDrawerTouchStartY.current === null) {
+      setIsStatusUpdatesDrawerDragging(false);
+      return;
+    }
+    
+    const endY = e.changedTouches[0].clientY;
+    const deltaY = statusUpdatesDrawerTouchStartY.current - endY;
+    
+    // Determine if should open or close based on position and movement
+    const maxHeight = window.innerHeight - 200;
+    const minHeight = 68; // 4.25rem
+    const threshold = (maxHeight - minHeight) / 2; // Halfway point
+    
+    // Positive deltaY (swipe up) should open, negative (swipe down) should close
+    if (Math.abs(deltaY) > SWIPE_THRESHOLD || Math.abs(statusUpdatesDrawerTranslateY) > threshold) {
+      if (isStatusUpdatesOpen) {
+        // If open and dragged down significantly, close
+        if (deltaY < 0 || statusUpdatesDrawerTranslateY > threshold) {
+          setIsStatusUpdatesOpen(false);
+        } else {
+          // Otherwise keep open
+          setIsStatusUpdatesOpen(true);
+        }
+      } else {
+        // If closed and dragged up significantly, open
+        if (deltaY > 0 || statusUpdatesDrawerTranslateY < -threshold) {
+          setIsStatusUpdatesOpen(true);
+        } else {
+          // Otherwise keep closed
+          setIsStatusUpdatesOpen(false);
+        }
+      }
+    } else {
+      // Small movement - revert to original state
+      setIsStatusUpdatesOpen(isStatusUpdatesOpen);
+    }
+    
+    // Reset dragging state
+    setIsStatusUpdatesDrawerDragging(false);
+    setStatusUpdatesDrawerTranslateY(0);
+    statusUpdatesDrawerTouchStartY.current = null;
+  };
+
+  // Mouse handlers for desktop dragging - status updates
+  const handleStatusUpdatesDrawerMouseDown = (e: React.MouseEvent) => {
+    // Only allow dragging from handle on desktop
+    const target = e.target as HTMLElement;
+    const isHandle = target.closest(`.${styles.tasksHandle}`) !== null;
+    if (!isHandle) return;
+    
+    e.preventDefault();
+    const drawerElement = target.closest(`.${styles.statusUpdatesDrawer}`);
+    if (drawerElement) {
+      statusUpdatesDrawerTouchStartY.current = e.clientY;
+      setIsStatusUpdatesDrawerDragging(true);
+      setStatusUpdatesDrawerTranslateY(0);
+      const rect = drawerElement.getBoundingClientRect();
+      statusUpdatesDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+    }
+  };
+
+  const handleStatusUpdatesDrawerMouseMove = (e: React.MouseEvent) => {
+    if (statusUpdatesDrawerTouchStartY.current === null || !isStatusUpdatesDrawerDragging) return;
+    
+    const currentY = e.clientY;
+    const deltaY = statusUpdatesDrawerTouchStartY.current - currentY;
+    // Invert deltaY: positive deltaY (drag up) = negative translateY (move drawer up)
+    const newTranslateY = -deltaY;
+    
+    const maxHeight = window.innerHeight - 200;
+    const minHeight = 68;
+    
+    if (isStatusUpdatesOpen) {
+      // When open, can only drag down (positive translateY)
+      const maxTranslate = maxHeight - minHeight;
+      const minTranslate = 0;
+      setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    } else {
+      // When closed, can only drag up (negative translateY)
+      const maxTranslate = 0;
+      const minTranslate = -(maxHeight - minHeight);
+      setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    }
+  };
+
+  const handleStatusUpdatesDrawerMouseUp = (e: React.MouseEvent) => {
+    if (statusUpdatesDrawerTouchStartY.current === null) {
+      setIsStatusUpdatesDrawerDragging(false);
+      return;
+    }
+    
+    const endY = e.clientY;
+    const deltaY = statusUpdatesDrawerTouchStartY.current - endY;
+    
+    const maxHeight = window.innerHeight - 200;
+    const minHeight = 68;
+    const threshold = (maxHeight - minHeight) / 2;
+    
+    // Invert logic: positive deltaY (drag up) should open, negative (drag down) should close
+    if (Math.abs(deltaY) > SWIPE_THRESHOLD || Math.abs(statusUpdatesDrawerTranslateY) > threshold) {
+      if (isStatusUpdatesOpen) {
+        // If open and dragged down significantly, close
+        if (deltaY < 0 || statusUpdatesDrawerTranslateY > threshold) {
+          setIsStatusUpdatesOpen(false);
+        } else {
+          setIsStatusUpdatesOpen(true);
+        }
+      } else {
+        // If closed and dragged up significantly, open
+        if (deltaY > 0 || statusUpdatesDrawerTranslateY < -threshold) {
+          setIsStatusUpdatesOpen(true);
+        } else {
+          setIsStatusUpdatesOpen(false);
+        }
+      }
+    } else {
+      setIsStatusUpdatesOpen(isStatusUpdatesOpen);
+    }
+    
+    setIsStatusUpdatesDrawerDragging(false);
+    setStatusUpdatesDrawerTranslateY(0);
+    statusUpdatesDrawerTouchStartY.current = null;
+  };
+
+  // Prevent background scrolling when scrolling inside drawer content
+  const handleTasksContentTouchMove = (e: React.TouchEvent) => {
+    // Only prevent background scroll if not dragging the drawer itself
+    if (!isTasksDrawerDragging) {
+      // Stop propagation to prevent background scroll, but allow content scrolling
+      e.stopPropagation();
+      // Don't prevent default - allow scrolling inside drawer content
+    }
+  };
+
+  const handleStatusUpdatesContentTouchMove = (e: React.TouchEvent) => {
+    // Only prevent background scroll if not dragging the drawer itself
+    if (!isStatusUpdatesDrawerDragging) {
+      // Stop propagation to prevent background scroll, but allow content scrolling
+      e.stopPropagation();
+      // Don't prevent default - allow scrolling inside drawer content
+    }
+  };
+
   const handleTaskToggle = async (task: Task) => {
     // Prevent multiple simultaneous toggles
     if (isFetchingTasksRef.current) {
@@ -1298,6 +1980,12 @@ export default function ParticipantsPage() {
     try {
       // Optimistic update
       const newStatus: "open" | "done" = task.status === 'done' ? 'open' : 'done';
+
+      // Update pending state immediately for visual feedback
+      setPendingTaskStates((prev) => ({
+        ...prev,
+        [task.id]: newStatus
+      }));
 
       // Get current user info for optimistic update
       let userId: string | null = null;
@@ -1329,30 +2017,42 @@ export default function ParticipantsPage() {
         }
       }
 
-      // Optimistic update with done_by_user info
-      const updatedTasks = tasks.map((t) => {
-        if (t.id === task.id) {
-          if (newStatus === 'done') {
-            return {
-              ...t,
-              status: newStatus,
-              done_by: userId,
-              done_by_user: doneByUser,
-              done_at: new Date().toISOString() // Set done_at for sorting
-            };
-          } else {
-            return {
-              ...t,
-              status: newStatus,
-              done_by: null,
-              done_by_user: null,
-              done_at: null
-            };
-          }
-        }
-        return t;
-      });
-      setTasks(updatedTasks);
+      // Delay the actual state update that causes sorting/movement
+      // This allows the checkbox to fill first, then the item moves down
+      setTimeout(() => {
+        // Optimistic update with done_by_user info - use functional update to get latest state
+        setTasks((currentTasks) => {
+          return currentTasks.map((t) => {
+            if (t.id === task.id) {
+              if (newStatus === 'done') {
+                return {
+                  ...t,
+                  status: newStatus,
+                  done_by: userId,
+                  done_by_user: doneByUser,
+                  done_at: new Date().toISOString() // Set done_at for sorting
+                };
+              } else {
+                return {
+                  ...t,
+                  status: newStatus,
+                  done_by: null,
+                  done_by_user: null,
+                  done_at: null
+                };
+              }
+            }
+            return t;
+          });
+        });
+        
+        // Clear pending state after update
+        setPendingTaskStates((prev) => {
+          const newPending = { ...prev };
+          delete newPending[task.id];
+          return newPending;
+        });
+      }, 300); // 300ms delay to allow checkbox to fill first
 
       const response = await fetch("/tasks/api", {
         method: "PATCH",
@@ -1374,6 +2074,12 @@ export default function ParticipantsPage() {
       // Data will be refreshed on next manual refresh or when opening tasks next time
     } catch (err) {
       console.error("Error toggling task:", err);
+      // Revert pending state on error
+      setPendingTaskStates((prev) => {
+        const newPending = { ...prev };
+        delete newPending[task.id];
+        return newPending;
+      });
       // Revert optimistic update by re-fetching (only if not already fetching)
       if (!isFetchingTasksRef.current) {
         fetchTasks(true); // Force refresh on error to revert changes
@@ -1517,7 +2223,19 @@ export default function ParticipantsPage() {
         {/* <Navbar /> */}
       </div>
       {/* Purple Header */}
-      <div className={styles.purpleHeader}>
+      <div 
+        className={styles.purpleHeader}
+        onTouchMove={(e) => {
+          // Prevent scrolling of header area on mobile
+          const target = e.target as HTMLElement;
+          const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+          const isButton = target.tagName === 'BUTTON' || target.closest('button') !== null;
+          // Only prevent if not interacting with input/button elements
+          if (!isInput && !isButton) {
+            e.stopPropagation();
+          }
+        }}
+      >
         <div className={styles.headerTop}>
           <div
             className={styles.headerButton}
@@ -1748,7 +2466,18 @@ export default function ParticipantsPage() {
       {/* Status Updates Drawer - Only render if user is manager and not first login or ALL data is ready */}
       {/* CRITICAL: Never render this component until we know the role - no hiding, no CSS tricks */}
       {!isSearchActive && isManager() && statusUpdatesReady && (!isFirstLoginRef.current || isInitialDataReady) && (
-        <div className={`${styles.statusUpdatesDrawer} ${isStatusUpdatesOpen ? styles.open : styles.closed} ${isTasksOpen ? styles.hidden : ''}`}>
+        <div 
+          className={`${styles.statusUpdatesDrawer} ${isStatusUpdatesOpen ? styles.open : styles.closed} ${isTasksOpen ? styles.hidden : ''}`}
+          style={{
+            transform: `translateY(${statusUpdatesDrawerTranslateY}px)`,
+            transition: isStatusUpdatesDrawerDragging ? 'none' : 'transform 0.3s ease-in-out',
+            cursor: isStatusUpdatesDrawerDragging ? 'grabbing' : 'grab'
+          }}
+          onTouchStart={handleStatusUpdatesDrawerTouchStart}
+          onTouchMove={handleStatusUpdatesDrawerTouchMove}
+          onTouchEnd={handleStatusUpdatesDrawerTouchEnd}
+          onMouseDown={handleStatusUpdatesDrawerMouseDown}
+        >
           <div className={styles.tasksLine}>
             <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
               <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round" />
@@ -1761,13 +2490,20 @@ export default function ParticipantsPage() {
             </div>
           </div>
 
-          <div className={styles.tasksContent}>
+          <div 
+            className={styles.tasksContent}
+            onTouchMove={handleStatusUpdatesContentTouchMove}
+          >
             <ul className={styles.taskList}>
               {statusUpdates && statusUpdates.length > 0 ? (
                 <>
                   {/* Active (unread) status updates */}
                   {(() => {
-                    const unreadUpdates = statusUpdates.filter(update => !update.is_read);
+                    const unreadUpdates = statusUpdates.filter(update => {
+                      // Filter uses actual state only - item stays in list until real state changes
+                      // Also filter to show only messages from the last 2 days
+                      return !(update.is_read || false) && isFromLastTwoDays(update.created_at);
+                    });
                     return unreadUpdates.map((update, index) => {
                       const participantName = update.participant_name || '';
                       const updateText = update.update_content || '';
@@ -1776,7 +2512,11 @@ export default function ParticipantsPage() {
                       const userDisplayName = update.user_display_name || update.user_name || '';
                       const isPublic = update.is_public === true;
                       const updateId = update.id;
-                      const isRead = update.is_read || false;
+                      // Checkbox uses pending state for immediate visual feedback
+                      const pendingIsRead = pendingStatusUpdateStates[updateId];
+                      const checkboxChecked = pendingIsRead !== undefined 
+                        ? pendingIsRead 
+                        : (update.is_read || false);
                       const isLastUnread = index === unreadUpdates.length - 1;
 
                       if (!updateId) return null; // Skip if no ID
@@ -1798,7 +2538,7 @@ export default function ParticipantsPage() {
                                 <input
                                   type="checkbox"
                                   className={styles.taskCheckbox}
-                                  checked={isRead}
+                                  checked={checkboxChecked}
                                   onChange={(e) => {
                                     if (updateId) {
                                       updateStatusUpdateReadStatus(updateId, e.target.checked);
@@ -1819,7 +2559,11 @@ export default function ParticipantsPage() {
                   })()}
 
                   {/* Full width line before done section */}
-                  {statusUpdates.filter(update => update.is_read).length > 0 && (
+                  {statusUpdates.filter(update => {
+                    // Filter uses actual state only
+                    // Also filter to show only messages from the last 2 days
+                    return (update.is_read || false) && isFromLastTwoDays(update.created_at);
+                  }).length > 0 && (
                     <li className={styles.statusUpdateItem} style={{ borderBottom: 'none', padding: 0 }}>
                       <div className={styles.tasksFullWidthLine}>
                         <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
@@ -1833,7 +2577,11 @@ export default function ParticipantsPage() {
                   <div className={styles.doneSection}>
                     <ul className={`${styles.taskList} ${styles.doneTasksList}`}>
                       {statusUpdates
-                        .filter(update => update.is_read)
+                        .filter(update => {
+                          // Filter uses actual state only - item appears in read list only when real state changes
+                          // Also filter to show only messages from the last 2 days
+                          return (update.is_read || false) && isFromLastTwoDays(update.created_at);
+                        })
                         .sort((a, b) => {
                           const aTime = new Date(a.created_at).getTime();
                           const bTime = new Date(b.created_at).getTime();
@@ -1847,7 +2595,11 @@ export default function ParticipantsPage() {
                           const userDisplayName = update.user_display_name || update.user_name || '';
                           const isPublic = update.is_public === true;
                           const updateId = update.id;
-                          const isRead = update.is_read || false;
+                          // Checkbox uses pending state for immediate visual feedback
+                          const pendingIsRead = pendingStatusUpdateStates[updateId];
+                          const checkboxChecked = pendingIsRead !== undefined 
+                            ? pendingIsRead 
+                            : (update.is_read || false);
 
                           if (!updateId) return null; // Skip if no ID
 
@@ -1868,7 +2620,7 @@ export default function ParticipantsPage() {
                                     <input
                                       type="checkbox"
                                       className={styles.taskCheckbox}
-                                      checked={isRead}
+                                      checked={checkboxChecked}
                                       onChange={(e) => {
                                         if (updateId) {
                                           updateStatusUpdateReadStatus(updateId, e.target.checked);
@@ -1894,8 +2646,16 @@ export default function ParticipantsPage() {
                     </ul>
                   </div>
 
-                  {statusUpdates.filter(update => !update.is_read).length === 0 &&
-                    statusUpdates.filter(update => update.is_read).length === 0 && (
+                  {statusUpdates.filter(update => {
+                    // Filter uses actual state only
+                    // Also filter to show only messages from the last 2 days
+                    return !(update.is_read || false) && isFromLastTwoDays(update.created_at);
+                  }).length === 0 &&
+                    statusUpdates.filter(update => {
+                      // Filter uses actual state only
+                      // Also filter to show only messages from the last 2 days
+                      return (update.is_read || false) && isFromLastTwoDays(update.created_at);
+                    }).length === 0 && (
                       <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
                         <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין עדכוני סטטוס</span>
                       </li>
@@ -1916,7 +2676,18 @@ export default function ParticipantsPage() {
       {/* For volunteers, show tasks immediately after statusUpdatesReady (which happens after role is determined) */}
       {/* For managers, show tasks after statusUpdatesReady (which happens after status updates are loaded) */}
       {!isSearchActive && (!isFirstLoginRef.current || isInitialDataReady) && isTasksReady && (
-        <div className={`${styles.tasksDrawer} ${isTasksOpen ? styles.open : styles.closed} ${isStatusUpdatesOpen ? styles.hidden : ''}`}>
+        <div 
+          className={`${styles.tasksDrawer} ${isTasksOpen ? styles.open : styles.closed} ${isStatusUpdatesOpen ? styles.hidden : ''}`}
+          style={{
+            transform: `translateY(${tasksDrawerTranslateY}px)`,
+            transition: isTasksDrawerDragging ? 'none' : 'transform 0.3s ease-in-out',
+            cursor: isTasksDrawerDragging ? 'grabbing' : 'grab'
+          }}
+          onTouchStart={handleTasksDrawerTouchStart}
+          onTouchMove={handleTasksDrawerTouchMove}
+          onTouchEnd={handleTasksDrawerTouchEnd}
+          onMouseDown={handleTasksDrawerMouseDown}
+        >
           <div className={styles.tasksLine}>
             <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
               <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round" />
@@ -1931,15 +2702,27 @@ export default function ParticipantsPage() {
           {isTasksOpen && (
             <div className={styles.tasksDivider}></div>
           )}
-          <div className={styles.tasksContent}>
+          <div 
+            className={styles.tasksContent}
+            onTouchMove={handleTasksContentTouchMove}
+          >
             <ul className={styles.taskList}>
-              {tasks.filter(t => t.status !== 'done').map(task => (
+              {tasks.filter(t => {
+                // Filter uses actual state only - item stays in list until real state changes
+                return t.status !== 'done';
+              }).map(task => {
+                // Checkbox uses pending state for immediate visual feedback
+                const pendingStatus = pendingTaskStates[task.id];
+                const checkboxChecked = pendingStatus !== undefined 
+                  ? pendingStatus === 'done' 
+                  : task.status === 'done';
+                return (
                 <li key={task.id} className={styles.taskItem}>
                   <div className={styles.taskItemContent}>
                     <input
                       type="checkbox"
                       className={styles.taskCheckbox}
-                      checked={task.status === 'done'}
+                      checked={checkboxChecked}
                       onChange={(e) => {
                         e.stopPropagation();
                         handleTaskToggle(task);
@@ -2030,7 +2813,8 @@ export default function ParticipantsPage() {
                     </svg>
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
 
             {/* Spacing */}
@@ -2040,7 +2824,10 @@ export default function ParticipantsPage() {
             <div className={styles.doneSection}>
               {/* Done tasks list */}
               <ul className={`${styles.taskList} ${styles.doneTasksList}`}>
-                {tasks.filter(t => t.status === 'done')
+                {tasks.filter(t => {
+                  // Filter uses actual state only - item appears in done list only when real state changes
+                  return t.status === 'done';
+                })
                   .sort((a, b) => {
                     // Sort by done_at descending (most recent first), fallback to due_date if done_at is null
                     const aTime = a.done_at ? new Date(a.done_at).getTime() : (a.due_date ? new Date(a.due_date).getTime() : 0);
@@ -2048,6 +2835,11 @@ export default function ParticipantsPage() {
                     return bTime - aTime; // Descending order (newest first)
                   })
                   .map(task => {
+                    // Checkbox uses pending state for immediate visual feedback
+                    const pendingStatus = pendingTaskStates[task.id];
+                    const checkboxChecked = pendingStatus !== undefined 
+                      ? pendingStatus === 'done' 
+                      : task.status === 'done';
                     let doneByName = null;
                     let doneByRole = null;
                     if (task.done_by_user) {
@@ -2064,7 +2856,7 @@ export default function ParticipantsPage() {
                           <input
                             type="checkbox"
                             className={styles.taskCheckbox}
-                            checked={task.status === 'done'}
+                            checked={checkboxChecked}
                             onChange={(e) => {
                               e.stopPropagation();
                               handleTaskToggle(task);
@@ -2122,7 +2914,10 @@ export default function ParticipantsPage() {
                       </li>
                     );
                   })}
-                {tasks.filter(t => t.status === 'done').length === 0 && (
+                {tasks.filter(t => {
+                  // Filter uses actual state only
+                  return t.status === 'done';
+                }).length === 0 && (
                   <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
                     <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין משימות שבוצעו</span>
                   </li>

@@ -5,6 +5,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import styles from "./page.module.css";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function ProfilePage() {
   // Initialize with cached data immediately (synchronous)
@@ -275,6 +276,8 @@ export default function ProfilePage() {
     return activities.filter((activity) => !excludeIds.has(activity.id));
   };
 
+  // Update theme-color for iOS compatibility (iOS doesn't always respect viewport exports)
+  useThemeColor('#4D58D8');
 
   // Note: Cached data is now loaded synchronously in useState initializer above
   // This useEffect is kept for cases where we need to refresh from cache

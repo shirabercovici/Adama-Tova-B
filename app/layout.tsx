@@ -7,10 +7,17 @@ import Script from "next/script";
 
 export const metadata = {
   title: "אדממי",
-  description: "אפליקציה למעקב אחר צוות אדמה טובה",
+  description: "אפליקציה לניהול רישום נוכחות ומעקב אחר סטטוס הפונים במרחב אדמה טובה",
   manifest: "/manifest.json",
   icons: {
-    icon: "/chrome_logo_adamami.svg",
+    icon: [
+      { url: "/app_logo_adamimi.svg", type: "image/svg+xml" },
+      { url: "/Icon logo.png", sizes: "192x192", type: "image/png" },
+      { url: "/Icon logo.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/Icon logo.png", type: "image/png" },
+    ],
   },
   appleWebApp: {
     capable: true,
@@ -38,8 +45,10 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-        {/* Favicon for all browsers - no white background */}
-        <link rel="icon" href="/chrome_logo_adamami.svg" type="image/svg+xml" />
+        {/* Favicon for all browsers */}
+        <link rel="icon" href="/app_logo_adamimi.svg" type="image/svg+xml" />
+        {/* Apple touch icon for iOS */}
+        <link rel="apple-touch-icon" href="/Icon logo.png" />
       </head>
       <body>
         {/* <Script
