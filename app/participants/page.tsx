@@ -732,6 +732,16 @@ export default function ParticipantsPage() {
     return userRole === "מנהל.ת" || userRole === "מנהל" || userRole === "מנהלת" || (userRole && userRole.includes("מנהל"));
   }, [userRole]);
 
+  // Helper function to check if a message is from the last 2 days
+  const isFromLastTwoDays = useCallback((createdAt: string) => {
+    const messageDate = new Date(createdAt);
+    const now = new Date();
+    const twoDaysAgo = new Date(now);
+    twoDaysAgo.setDate(now.getDate() - 2);
+    twoDaysAgo.setHours(0, 0, 0, 0); // Start of day 2 days ago
+    return messageDate >= twoDaysAgo;
+  }, []);
+
   // Fetch status updates for managers
   const fetchStatusUpdates = useCallback(async () => {
     // Only fetch if user is a manager
@@ -1998,7 +2008,8 @@ export default function ParticipantsPage() {
                   {(() => {
                     const unreadUpdates = statusUpdates.filter(update => {
                       // Filter uses actual state only - item stays in list until real state changes
-                      return !(update.is_read || false);
+                      // Also filter to show only messages from the last 2 days
+                      return !(update.is_read || false) && isFromLastTwoDays(update.created_at);
                     });
                     return unreadUpdates.map((update, index) => {
                       const participantName = update.participant_name || '';
@@ -2057,7 +2068,8 @@ export default function ParticipantsPage() {
                   {/* Full width line before done section */}
                   {statusUpdates.filter(update => {
                     // Filter uses actual state only
-                    return update.is_read || false;
+                    // Also filter to show only messages from the last 2 days
+                    return (update.is_read || false) && isFromLastTwoDays(update.created_at);
                   }).length > 0 && (
                     <li className={styles.statusUpdateItem} style={{ borderBottom: 'none', padding: 0 }}>
                       <div className={styles.tasksFullWidthLine}>
@@ -2074,7 +2086,8 @@ export default function ParticipantsPage() {
                       {statusUpdates
                         .filter(update => {
                           // Filter uses actual state only - item appears in read list only when real state changes
-                          return update.is_read || false;
+                          // Also filter to show only messages from the last 2 days
+                          return (update.is_read || false) && isFromLastTwoDays(update.created_at);
                         })
                         .sort((a, b) => {
                           const aTime = new Date(a.created_at).getTime();
@@ -2142,11 +2155,13 @@ export default function ParticipantsPage() {
 
                   {statusUpdates.filter(update => {
                     // Filter uses actual state only
-                    return !(update.is_read || false);
+                    // Also filter to show only messages from the last 2 days
+                    return !(update.is_read || false) && isFromLastTwoDays(update.created_at);
                   }).length === 0 &&
                     statusUpdates.filter(update => {
                       // Filter uses actual state only
-                      return update.is_read || false;
+                      // Also filter to show only messages from the last 2 days
+                      return (update.is_read || false) && isFromLastTwoDays(update.created_at);
                     }).length === 0 && (
                       <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
                         <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין עדכוני סטטוס</span>
