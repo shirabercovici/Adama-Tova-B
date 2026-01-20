@@ -16,7 +16,6 @@ export default function BackButton() {
         cursor: 'pointer',
         color: '#333',
         padding: '8px',
-        marginLeft: '10px',
         transition: 'transform 0.1s'
       }}
       onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
