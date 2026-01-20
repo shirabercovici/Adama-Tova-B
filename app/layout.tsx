@@ -7,7 +7,7 @@ import Script from "next/script";
 
 export const metadata = {
   title: "אדממי",
-  description: "אפליקציה למעקב אחר צוות אדמה טובה",
+  description: "אפליקציה לניהול רישום נוכחות ומעקב אחר סטטוס הפונים במרחב אדמה טובה",
   manifest: "/manifest.json",
   icons: {
     icon: [
