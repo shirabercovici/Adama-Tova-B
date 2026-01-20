@@ -88,6 +88,16 @@ export default function ParticipantsPage() {
   const tasksDrawerTouchStartY = useRef<number | null>(null);
   const statusUpdatesDrawerTouchStartY = useRef<number | null>(null);
   const SWIPE_THRESHOLD = 50; // Minimum distance in pixels to trigger swipe
+  
+  // Track dragging state and position for smooth dragging
+  const [tasksDrawerTranslateY, setTasksDrawerTranslateY] = useState(0);
+  const [isTasksDrawerDragging, setIsTasksDrawerDragging] = useState(false);
+  const [statusUpdatesDrawerTranslateY, setStatusUpdatesDrawerTranslateY] = useState(0);
+  const [isStatusUpdatesDrawerDragging, setIsStatusUpdatesDrawerDragging] = useState(false);
+  
+  // Store initial drawer position when drag starts
+  const tasksDrawerInitialBottom = useRef<number>(0);
+  const statusUpdatesDrawerInitialBottom = useRef<number>(0);
 
   // Add class to body to hide navbar and make full width
   // Add class to body to hide navbar and make full width
@@ -97,6 +107,144 @@ export default function ParticipantsPage() {
       document.body.classList.remove('participants-page');
     };
   }, []);
+
+  // Reset translateY when drawer state changes (when not dragging)
+  useEffect(() => {
+    if (!isTasksDrawerDragging) {
+      setTasksDrawerTranslateY(0);
+    }
+  }, [isTasksOpen, isTasksDrawerDragging]);
+
+  useEffect(() => {
+    if (!isStatusUpdatesDrawerDragging) {
+      setStatusUpdatesDrawerTranslateY(0);
+    }
+  }, [isStatusUpdatesOpen, isStatusUpdatesDrawerDragging]);
+
+  // Global mouse event listeners for dragging
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isTasksDrawerDragging && tasksDrawerTouchStartY.current !== null) {
+        const currentY = e.clientY;
+        const deltaY = tasksDrawerTouchStartY.current - currentY;
+        // Invert deltaY: positive deltaY (drag up) = negative translateY (move drawer up)
+        const newTranslateY = -deltaY;
+        
+        const maxHeight = window.innerHeight - 200;
+        const minHeight = 95;
+        
+        if (isTasksOpen) {
+          const maxTranslate = maxHeight - minHeight;
+          const minTranslate = 0;
+          setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+        } else {
+          const maxTranslate = 0;
+          const minTranslate = -(maxHeight - minHeight);
+          setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+        }
+      }
+      
+      if (isStatusUpdatesDrawerDragging && statusUpdatesDrawerTouchStartY.current !== null) {
+        const currentY = e.clientY;
+        const deltaY = statusUpdatesDrawerTouchStartY.current - currentY;
+        // Invert deltaY: positive deltaY (drag up) = negative translateY (move drawer up)
+        const newTranslateY = -deltaY;
+        
+        const maxHeight = window.innerHeight - 200;
+        const minHeight = 68;
+        
+        if (isStatusUpdatesOpen) {
+          const maxTranslate = maxHeight - minHeight;
+          const minTranslate = 0;
+          setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+        } else {
+          const maxTranslate = 0;
+          const minTranslate = -(maxHeight - minHeight);
+          setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+        }
+      }
+    };
+
+    const handleGlobalMouseUp = (e: MouseEvent) => {
+      if (isTasksDrawerDragging && tasksDrawerTouchStartY.current !== null) {
+        const endY = e.clientY;
+        const deltaY = tasksDrawerTouchStartY.current - endY;
+        
+        const maxHeight = window.innerHeight - 200;
+        const minHeight = 95;
+        const threshold = (maxHeight - minHeight) / 2;
+        
+        // Invert logic: positive deltaY (drag up) should open, negative (drag down) should close
+        if (Math.abs(deltaY) > SWIPE_THRESHOLD || Math.abs(tasksDrawerTranslateY) > threshold) {
+          if (isTasksOpen) {
+            // If open and dragged down significantly, close
+            if (deltaY < 0 || tasksDrawerTranslateY > threshold) {
+              setIsTasksOpen(false);
+            } else {
+              setIsTasksOpen(true);
+            }
+          } else {
+            // If closed and dragged up significantly, open
+            if (deltaY > 0 || tasksDrawerTranslateY < -threshold) {
+              setIsTasksOpen(true);
+            } else {
+              setIsTasksOpen(false);
+            }
+          }
+        } else {
+          setIsTasksOpen(isTasksOpen);
+        }
+        
+        setIsTasksDrawerDragging(false);
+        setTasksDrawerTranslateY(0);
+        tasksDrawerTouchStartY.current = null;
+      }
+      
+      if (isStatusUpdatesDrawerDragging && statusUpdatesDrawerTouchStartY.current !== null) {
+        const endY = e.clientY;
+        const deltaY = statusUpdatesDrawerTouchStartY.current - endY;
+        
+        const maxHeight = window.innerHeight - 200;
+        const minHeight = 68;
+        const threshold = (maxHeight - minHeight) / 2;
+        
+        // Invert logic: positive deltaY (drag up) should open, negative (drag down) should close
+        if (Math.abs(deltaY) > SWIPE_THRESHOLD || Math.abs(statusUpdatesDrawerTranslateY) > threshold) {
+          if (isStatusUpdatesOpen) {
+            // If open and dragged down significantly, close
+            if (deltaY < 0 || statusUpdatesDrawerTranslateY > threshold) {
+              setIsStatusUpdatesOpen(false);
+            } else {
+              setIsStatusUpdatesOpen(true);
+            }
+          } else {
+            // If closed and dragged up significantly, open
+            if (deltaY > 0 || statusUpdatesDrawerTranslateY < -threshold) {
+              setIsStatusUpdatesOpen(true);
+            } else {
+              setIsStatusUpdatesOpen(false);
+            }
+          }
+        } else {
+          setIsStatusUpdatesOpen(isStatusUpdatesOpen);
+        }
+        
+        setIsStatusUpdatesDrawerDragging(false);
+        setStatusUpdatesDrawerTranslateY(0);
+        statusUpdatesDrawerTouchStartY.current = null;
+      }
+    };
+
+    if (isTasksDrawerDragging || isStatusUpdatesDrawerDragging) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isTasksDrawerDragging, isStatusUpdatesDrawerDragging, isTasksOpen, isStatusUpdatesOpen, tasksDrawerTranslateY, statusUpdatesDrawerTranslateY]);
 
   // Update theme-color for iOS compatibility (iOS doesn't always respect viewport exports)
   useThemeColor('#4D58D8');
@@ -1353,9 +1501,17 @@ export default function ParticipantsPage() {
       // 3. Starting from top area when drawer is open (to close it)
       if (isHandle) {
         tasksDrawerTouchStartY.current = e.touches[0].clientY;
+        setIsTasksDrawerDragging(true);
+        setTasksDrawerTranslateY(0);
+        const rect = drawerElement.getBoundingClientRect();
+        tasksDrawerInitialBottom.current = window.innerHeight - rect.bottom;
       } else if (isContent && !isTasksOpen) {
         // Drawer is closed - allow swipe from anywhere to open
         tasksDrawerTouchStartY.current = e.touches[0].clientY;
+        setIsTasksDrawerDragging(true);
+        setTasksDrawerTranslateY(0);
+        const rect = drawerElement.getBoundingClientRect();
+        tasksDrawerInitialBottom.current = window.innerHeight - rect.bottom;
       } else if (isContent && isTasksOpen) {
         // Drawer is open - only allow swipe from top area to close
         const rect = drawerElement.getBoundingClientRect();
@@ -1363,59 +1519,169 @@ export default function ParticipantsPage() {
         const relativeY = touchY - rect.top;
         if (relativeY < 150) {
           tasksDrawerTouchStartY.current = e.touches[0].clientY;
+          setIsTasksDrawerDragging(true);
+          setTasksDrawerTranslateY(0);
+          tasksDrawerInitialBottom.current = window.innerHeight - rect.bottom;
         }
       }
     }
   };
 
   const handleTasksDrawerTouchMove = (e: React.TouchEvent) => {
-    if (tasksDrawerTouchStartY.current === null) return;
+    if (tasksDrawerTouchStartY.current === null || !isTasksDrawerDragging) return;
     
     const currentY = e.touches[0].clientY;
     const deltaY = tasksDrawerTouchStartY.current - currentY;
     
-    // Prevent default scrolling only if swiping vertically in handle/top area
+    // Calculate new translateY position
+    // Positive deltaY (swipe up) = move drawer up (negative translateY)
+    // Negative deltaY (swipe down) = move drawer down (positive translateY)
+    const newTranslateY = -deltaY;
+    
+    // Limit the movement based on drawer state
+    const maxHeight = window.innerHeight - 200; // Max drawer height
+    const minHeight = 95; // Handle height when closed
+    
+    if (isTasksOpen) {
+      // When open, can only drag down (positive translateY)
+      const maxTranslate = maxHeight - minHeight;
+      const minTranslate = 0;
+      setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    } else {
+      // When closed, can only drag up (negative translateY)
+      const maxTranslate = 0;
+      const minTranslate = -(maxHeight - minHeight);
+      setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    }
+    
+    // Prevent default scrolling
     if (Math.abs(deltaY) > 10) {
-      const target = e.target as HTMLElement;
-      const drawerElement = target.closest(`.${styles.tasksDrawer}`);
-      if (drawerElement) {
-        const isHandle = target.closest(`.${styles.tasksHandle}`) !== null;
-        if (isHandle) {
-          e.preventDefault();
-        } else if (isTasksOpen) {
-          // When drawer is open, only prevent default in top area
-          const rect = drawerElement.getBoundingClientRect();
-          const touchY = e.touches[0].clientY;
-          const relativeY = touchY - rect.top;
-          if (relativeY < 150) {
-            e.preventDefault();
-          }
-        } else {
-          // When drawer is closed, prevent default to allow swipe up
-          e.preventDefault();
-        }
-      }
+      e.preventDefault();
     }
   };
 
   const handleTasksDrawerTouchEnd = (e: React.TouchEvent) => {
-    if (tasksDrawerTouchStartY.current === null) return;
+    if (tasksDrawerTouchStartY.current === null) {
+      setIsTasksDrawerDragging(false);
+      return;
+    }
     
     const endY = e.changedTouches[0].clientY;
     const deltaY = tasksDrawerTouchStartY.current - endY;
     
-    // Swipe up (negative deltaY) = open drawer
-    // Swipe down (positive deltaY) = close drawer
-    if (Math.abs(deltaY) > SWIPE_THRESHOLD) {
-      if (deltaY > 0) {
-        // Swipe down - close drawer
-        setIsTasksOpen(false);
+    // Determine if should open or close based on position and movement
+    const maxHeight = window.innerHeight - 200;
+    const minHeight = 95;
+    const threshold = (maxHeight - minHeight) / 2; // Halfway point
+    
+    // Positive deltaY (swipe up) should open, negative (swipe down) should close
+    if (Math.abs(deltaY) > SWIPE_THRESHOLD || Math.abs(tasksDrawerTranslateY) > threshold) {
+      if (isTasksOpen) {
+        // If open and dragged down significantly, close
+        if (deltaY < 0 || tasksDrawerTranslateY > threshold) {
+          setIsTasksOpen(false);
+        } else {
+          // Otherwise keep open
+          setIsTasksOpen(true);
+        }
       } else {
-        // Swipe up - open drawer
-        setIsTasksOpen(true);
+        // If closed and dragged up significantly, open
+        if (deltaY > 0 || tasksDrawerTranslateY < -threshold) {
+          setIsTasksOpen(true);
+        } else {
+          // Otherwise keep closed
+          setIsTasksOpen(false);
+        }
       }
+    } else {
+      // Small movement - revert to original state
+      setIsTasksOpen(isTasksOpen);
     }
     
+    // Reset dragging state
+    setIsTasksDrawerDragging(false);
+    setTasksDrawerTranslateY(0);
+    tasksDrawerTouchStartY.current = null;
+  };
+
+  // Mouse handlers for desktop dragging
+  const handleTasksDrawerMouseDown = (e: React.MouseEvent) => {
+    // Only allow dragging from handle on desktop
+    const target = e.target as HTMLElement;
+    const isHandle = target.closest(`.${styles.tasksHandle}`) !== null;
+    if (!isHandle) return;
+    
+    e.preventDefault();
+    const drawerElement = target.closest(`.${styles.tasksDrawer}`);
+    if (drawerElement) {
+      tasksDrawerTouchStartY.current = e.clientY;
+      setIsTasksDrawerDragging(true);
+      setTasksDrawerTranslateY(0);
+      const rect = drawerElement.getBoundingClientRect();
+      tasksDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+    }
+  };
+
+  const handleTasksDrawerMouseMove = (e: React.MouseEvent) => {
+    if (tasksDrawerTouchStartY.current === null || !isTasksDrawerDragging) return;
+    
+    const currentY = e.clientY;
+    const deltaY = tasksDrawerTouchStartY.current - currentY;
+    // Invert deltaY: positive deltaY (drag up) = negative translateY (move drawer up)
+    const newTranslateY = -deltaY;
+    
+    const maxHeight = window.innerHeight - 200;
+    const minHeight = 95;
+    
+    if (isTasksOpen) {
+      // When open, can only drag down (positive translateY)
+      const maxTranslate = maxHeight - minHeight;
+      const minTranslate = 0;
+      setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    } else {
+      // When closed, can only drag up (negative translateY)
+      const maxTranslate = 0;
+      const minTranslate = -(maxHeight - minHeight);
+      setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    }
+  };
+
+  const handleTasksDrawerMouseUp = (e: React.MouseEvent) => {
+    if (tasksDrawerTouchStartY.current === null) {
+      setIsTasksDrawerDragging(false);
+      return;
+    }
+    
+    const endY = e.clientY;
+    const deltaY = tasksDrawerTouchStartY.current - endY;
+    
+    const maxHeight = window.innerHeight - 200;
+    const minHeight = 95;
+    const threshold = (maxHeight - minHeight) / 2;
+    
+    // Invert logic: positive deltaY (drag up) should open, negative (drag down) should close
+    if (Math.abs(deltaY) > SWIPE_THRESHOLD || Math.abs(tasksDrawerTranslateY) > threshold) {
+      if (isTasksOpen) {
+        // If open and dragged down significantly, close
+        if (deltaY < 0 || tasksDrawerTranslateY > threshold) {
+          setIsTasksOpen(false);
+        } else {
+          setIsTasksOpen(true);
+        }
+      } else {
+        // If closed and dragged up significantly, open
+        if (deltaY > 0 || tasksDrawerTranslateY < -threshold) {
+          setIsTasksOpen(true);
+        } else {
+          setIsTasksOpen(false);
+        }
+      }
+    } else {
+      setIsTasksOpen(isTasksOpen);
+    }
+    
+    setIsTasksDrawerDragging(false);
+    setTasksDrawerTranslateY(0);
     tasksDrawerTouchStartY.current = null;
   };
 
@@ -1433,9 +1699,17 @@ export default function ParticipantsPage() {
       // 3. Starting from top area when drawer is open (to close it)
       if (isHandle) {
         statusUpdatesDrawerTouchStartY.current = e.touches[0].clientY;
+        setIsStatusUpdatesDrawerDragging(true);
+        setStatusUpdatesDrawerTranslateY(0);
+        const rect = drawerElement.getBoundingClientRect();
+        statusUpdatesDrawerInitialBottom.current = window.innerHeight - rect.bottom;
       } else if (isContent && !isStatusUpdatesOpen) {
         // Drawer is closed - allow swipe from anywhere to open
         statusUpdatesDrawerTouchStartY.current = e.touches[0].clientY;
+        setIsStatusUpdatesDrawerDragging(true);
+        setStatusUpdatesDrawerTranslateY(0);
+        const rect = drawerElement.getBoundingClientRect();
+        statusUpdatesDrawerInitialBottom.current = window.innerHeight - rect.bottom;
       } else if (isContent && isStatusUpdatesOpen) {
         // Drawer is open - only allow swipe from top area to close
         const rect = drawerElement.getBoundingClientRect();
@@ -1443,59 +1717,169 @@ export default function ParticipantsPage() {
         const relativeY = touchY - rect.top;
         if (relativeY < 150) {
           statusUpdatesDrawerTouchStartY.current = e.touches[0].clientY;
+          setIsStatusUpdatesDrawerDragging(true);
+          setStatusUpdatesDrawerTranslateY(0);
+          statusUpdatesDrawerInitialBottom.current = window.innerHeight - rect.bottom;
         }
       }
     }
   };
 
   const handleStatusUpdatesDrawerTouchMove = (e: React.TouchEvent) => {
-    if (statusUpdatesDrawerTouchStartY.current === null) return;
+    if (statusUpdatesDrawerTouchStartY.current === null || !isStatusUpdatesDrawerDragging) return;
     
     const currentY = e.touches[0].clientY;
     const deltaY = statusUpdatesDrawerTouchStartY.current - currentY;
     
-    // Prevent default scrolling only if swiping vertically in handle/top area
+    // Calculate new translateY position
+    // Positive deltaY (swipe up) = move drawer up (negative translateY)
+    // Negative deltaY (swipe down) = move drawer down (positive translateY)
+    const newTranslateY = -deltaY;
+    
+    // Limit the movement based on drawer state
+    const maxHeight = window.innerHeight - 200; // Max drawer height
+    const minHeight = 68; // Handle height when closed (4.25rem)
+    
+    if (isStatusUpdatesOpen) {
+      // When open, can only drag down (positive translateY)
+      const maxTranslate = maxHeight - minHeight;
+      const minTranslate = 0;
+      setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    } else {
+      // When closed, can only drag up (negative translateY)
+      const maxTranslate = 0;
+      const minTranslate = -(maxHeight - minHeight);
+      setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    }
+    
+    // Prevent default scrolling
     if (Math.abs(deltaY) > 10) {
-      const target = e.target as HTMLElement;
-      const drawerElement = target.closest(`.${styles.statusUpdatesDrawer}`);
-      if (drawerElement) {
-        const isHandle = target.closest(`.${styles.tasksHandle}`) !== null;
-        if (isHandle) {
-          e.preventDefault();
-        } else if (isStatusUpdatesOpen) {
-          // When drawer is open, only prevent default in top area
-          const rect = drawerElement.getBoundingClientRect();
-          const touchY = e.touches[0].clientY;
-          const relativeY = touchY - rect.top;
-          if (relativeY < 150) {
-            e.preventDefault();
-          }
-        } else {
-          // When drawer is closed, prevent default to allow swipe up
-          e.preventDefault();
-        }
-      }
+      e.preventDefault();
     }
   };
 
   const handleStatusUpdatesDrawerTouchEnd = (e: React.TouchEvent) => {
-    if (statusUpdatesDrawerTouchStartY.current === null) return;
+    if (statusUpdatesDrawerTouchStartY.current === null) {
+      setIsStatusUpdatesDrawerDragging(false);
+      return;
+    }
     
     const endY = e.changedTouches[0].clientY;
     const deltaY = statusUpdatesDrawerTouchStartY.current - endY;
     
-    // Swipe up (negative deltaY) = open drawer
-    // Swipe down (positive deltaY) = close drawer
-    if (Math.abs(deltaY) > SWIPE_THRESHOLD) {
-      if (deltaY > 0) {
-        // Swipe down - close drawer
-        setIsStatusUpdatesOpen(false);
+    // Determine if should open or close based on position and movement
+    const maxHeight = window.innerHeight - 200;
+    const minHeight = 68; // 4.25rem
+    const threshold = (maxHeight - minHeight) / 2; // Halfway point
+    
+    // Positive deltaY (swipe up) should open, negative (swipe down) should close
+    if (Math.abs(deltaY) > SWIPE_THRESHOLD || Math.abs(statusUpdatesDrawerTranslateY) > threshold) {
+      if (isStatusUpdatesOpen) {
+        // If open and dragged down significantly, close
+        if (deltaY < 0 || statusUpdatesDrawerTranslateY > threshold) {
+          setIsStatusUpdatesOpen(false);
+        } else {
+          // Otherwise keep open
+          setIsStatusUpdatesOpen(true);
+        }
       } else {
-        // Swipe up - open drawer
-        setIsStatusUpdatesOpen(true);
+        // If closed and dragged up significantly, open
+        if (deltaY > 0 || statusUpdatesDrawerTranslateY < -threshold) {
+          setIsStatusUpdatesOpen(true);
+        } else {
+          // Otherwise keep closed
+          setIsStatusUpdatesOpen(false);
+        }
       }
+    } else {
+      // Small movement - revert to original state
+      setIsStatusUpdatesOpen(isStatusUpdatesOpen);
     }
     
+    // Reset dragging state
+    setIsStatusUpdatesDrawerDragging(false);
+    setStatusUpdatesDrawerTranslateY(0);
+    statusUpdatesDrawerTouchStartY.current = null;
+  };
+
+  // Mouse handlers for desktop dragging - status updates
+  const handleStatusUpdatesDrawerMouseDown = (e: React.MouseEvent) => {
+    // Only allow dragging from handle on desktop
+    const target = e.target as HTMLElement;
+    const isHandle = target.closest(`.${styles.tasksHandle}`) !== null;
+    if (!isHandle) return;
+    
+    e.preventDefault();
+    const drawerElement = target.closest(`.${styles.statusUpdatesDrawer}`);
+    if (drawerElement) {
+      statusUpdatesDrawerTouchStartY.current = e.clientY;
+      setIsStatusUpdatesDrawerDragging(true);
+      setStatusUpdatesDrawerTranslateY(0);
+      const rect = drawerElement.getBoundingClientRect();
+      statusUpdatesDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+    }
+  };
+
+  const handleStatusUpdatesDrawerMouseMove = (e: React.MouseEvent) => {
+    if (statusUpdatesDrawerTouchStartY.current === null || !isStatusUpdatesDrawerDragging) return;
+    
+    const currentY = e.clientY;
+    const deltaY = statusUpdatesDrawerTouchStartY.current - currentY;
+    // Invert deltaY: positive deltaY (drag up) = negative translateY (move drawer up)
+    const newTranslateY = -deltaY;
+    
+    const maxHeight = window.innerHeight - 200;
+    const minHeight = 68;
+    
+    if (isStatusUpdatesOpen) {
+      // When open, can only drag down (positive translateY)
+      const maxTranslate = maxHeight - minHeight;
+      const minTranslate = 0;
+      setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    } else {
+      // When closed, can only drag up (negative translateY)
+      const maxTranslate = 0;
+      const minTranslate = -(maxHeight - minHeight);
+      setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
+    }
+  };
+
+  const handleStatusUpdatesDrawerMouseUp = (e: React.MouseEvent) => {
+    if (statusUpdatesDrawerTouchStartY.current === null) {
+      setIsStatusUpdatesDrawerDragging(false);
+      return;
+    }
+    
+    const endY = e.clientY;
+    const deltaY = statusUpdatesDrawerTouchStartY.current - endY;
+    
+    const maxHeight = window.innerHeight - 200;
+    const minHeight = 68;
+    const threshold = (maxHeight - minHeight) / 2;
+    
+    // Invert logic: positive deltaY (drag up) should open, negative (drag down) should close
+    if (Math.abs(deltaY) > SWIPE_THRESHOLD || Math.abs(statusUpdatesDrawerTranslateY) > threshold) {
+      if (isStatusUpdatesOpen) {
+        // If open and dragged down significantly, close
+        if (deltaY < 0 || statusUpdatesDrawerTranslateY > threshold) {
+          setIsStatusUpdatesOpen(false);
+        } else {
+          setIsStatusUpdatesOpen(true);
+        }
+      } else {
+        // If closed and dragged up significantly, open
+        if (deltaY > 0 || statusUpdatesDrawerTranslateY < -threshold) {
+          setIsStatusUpdatesOpen(true);
+        } else {
+          setIsStatusUpdatesOpen(false);
+        }
+      }
+    } else {
+      setIsStatusUpdatesOpen(isStatusUpdatesOpen);
+    }
+    
+    setIsStatusUpdatesDrawerDragging(false);
+    setStatusUpdatesDrawerTranslateY(0);
     statusUpdatesDrawerTouchStartY.current = null;
   };
 
@@ -1984,9 +2368,15 @@ export default function ParticipantsPage() {
       {!isSearchActive && isManager() && statusUpdatesReady && (!isFirstLoginRef.current || isInitialDataReady) && (
         <div 
           className={`${styles.statusUpdatesDrawer} ${isStatusUpdatesOpen ? styles.open : styles.closed} ${isTasksOpen ? styles.hidden : ''}`}
+          style={{
+            transform: `translateY(${statusUpdatesDrawerTranslateY}px)`,
+            transition: isStatusUpdatesDrawerDragging ? 'none' : 'transform 0.3s ease-in-out',
+            cursor: isStatusUpdatesDrawerDragging ? 'grabbing' : 'grab'
+          }}
           onTouchStart={handleStatusUpdatesDrawerTouchStart}
           onTouchMove={handleStatusUpdatesDrawerTouchMove}
           onTouchEnd={handleStatusUpdatesDrawerTouchEnd}
+          onMouseDown={handleStatusUpdatesDrawerMouseDown}
         >
           <div className={styles.tasksLine}>
             <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
@@ -2185,9 +2575,15 @@ export default function ParticipantsPage() {
       {!isSearchActive && (!isFirstLoginRef.current || isInitialDataReady) && isTasksReady && (
         <div 
           className={`${styles.tasksDrawer} ${isTasksOpen ? styles.open : styles.closed} ${isStatusUpdatesOpen ? styles.hidden : ''}`}
+          style={{
+            transform: `translateY(${tasksDrawerTranslateY}px)`,
+            transition: isTasksDrawerDragging ? 'none' : 'transform 0.3s ease-in-out',
+            cursor: isTasksDrawerDragging ? 'grabbing' : 'grab'
+          }}
           onTouchStart={handleTasksDrawerTouchStart}
           onTouchMove={handleTasksDrawerTouchMove}
           onTouchEnd={handleTasksDrawerTouchEnd}
+          onMouseDown={handleTasksDrawerMouseDown}
         >
           <div className={styles.tasksLine}>
             <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
