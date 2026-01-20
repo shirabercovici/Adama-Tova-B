@@ -8,6 +8,7 @@ import SearchBarWithAdd from "@/lib/components/SearchBarWithAdd";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
 import { logActivity } from "@/lib/activity-logger";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function ParticipantsPage() {
   const router = useRouter();
@@ -89,6 +90,9 @@ export default function ParticipantsPage() {
       document.body.classList.remove('participants-page');
     };
   }, []);
+
+  // Update theme-color for iOS compatibility (iOS doesn't always respect viewport exports)
+  useThemeColor('#4D58D8');
 
   // Mark as hydrated and load initials from localStorage
   useEffect(() => {
