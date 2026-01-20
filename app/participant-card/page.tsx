@@ -1103,22 +1103,20 @@ export default function ParticipantCardPage() {
                   let actionName = "";
                   let details = "";
                   let iconSrc = "";
-                  let useFilter = true;
 
                   switch (activityType) {
                     case 'attendance_marked':
                       actionName = "נוכחות";
                       iconSrc = "/icons/attendance_marked_blue.svg";
-                      useFilter = false;
                       break;
                     case 'phone_call':
                       actionName = "שיחת טלפון";
-                      iconSrc = "/icons/phone_call.svg";
+                      iconSrc = "/icons/phone_call_blue.svg";
                       break;
                     case 'status_update':
                     default:
                       actionName = "עדכון סטטוס";
-                      iconSrc = "/icons/status_update.svg";
+                      iconSrc = "/icons/status_update_blue.svg";
                       // Logic for details
                       if (activity.update_content) {
                         details = activity.update_content;
@@ -1215,9 +1213,7 @@ export default function ParticipantCardPage() {
                               alt={activityType}
                               fill
                               style={{
-                                objectFit: 'contain',
-                                // Filter to convert black to #4D58D8 only if needed
-                                filter: useFilter ? 'brightness(0) saturate(100%) invert(32%) sepia(50%) saturate(3007%) hue-rotate(224deg) brightness(90%) contrast(92%)' : 'none'
+                                objectFit: 'contain'
                               }}
                             />
                           </div>
