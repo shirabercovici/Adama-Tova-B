@@ -104,9 +104,13 @@ export default function ParticipantsPage() {
   useEffect(() => {
     document.body.classList.add('participants-page');
     
-    // Prevent background scrolling when touching header area on mobile
+    // Prevent background scrolling when touching header area or dragging drawers on mobile
     const handleTouchMove = (e: TouchEvent) => {
       const target = e.target as HTMLElement;
+      
+      // Check if dragging a drawer by checking refs (more reliable than state)
+      const isDraggingDrawer = tasksDrawerTouchStartY.current !== null || statusUpdatesDrawerTouchStartY.current !== null;
+      
       // Check if target is inside purpleHeader by traversing up the DOM
       let element: HTMLElement | null = target;
       let isInHeader = false;
@@ -118,12 +122,42 @@ export default function ParticipantsPage() {
         element = element.parentElement;
       }
       
+      // Check if target is inside a drawer
+      let isInDrawer = false;
+      element = target;
+      while (element && element !== document.body) {
+        if (element.classList && (
+          Array.from(element.classList).some(cls => cls.includes('tasksDrawer')) ||
+          Array.from(element.classList).some(cls => cls.includes('statusUpdatesDrawer'))
+        )) {
+          isInDrawer = true;
+          break;
+        }
+        element = element.parentElement;
+      }
+      
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
       const isButton = target.tagName === 'BUTTON' || target.closest('button') !== null;
       
-      // Prevent background scroll when touching header (except inputs/buttons)
-      if (isInHeader && !isInput && !isButton) {
+      // Prevent background scroll when:
+      // 1. Dragging a drawer
+      // 2. Touching header (except inputs/buttons)
+      // 3. Touching drawer area (except inputs/buttons and when scrolling content)
+      if (isDraggingDrawer || (isInHeader && !isInput && !isButton)) {
         e.preventDefault();
+      } else if (isInDrawer && !isInput && !isButton) {
+        // Check if we're scrolling drawer content - if at boundaries, prevent background scroll
+        const drawerContent = target.closest('[class*="tasksContent"]');
+        if (drawerContent) {
+          const isScrollable = drawerContent.scrollHeight > drawerContent.clientHeight;
+          const isAtTop = drawerContent.scrollTop === 0;
+          const isAtBottom = drawerContent.scrollTop + drawerContent.clientHeight >= drawerContent.scrollHeight - 1;
+          
+          // Prevent background scroll when at scroll boundaries
+          if (isScrollable && (isAtTop || isAtBottom)) {
+            e.preventDefault();
+          }
+        }
       }
     };
     
@@ -1588,11 +1622,9 @@ export default function ParticipantsPage() {
       setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
     }
     
-    // Prevent default scrolling and background scroll
-    if (Math.abs(deltaY) > 10) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+    // Always prevent default scrolling and background scroll when dragging drawer
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   const handleTasksDrawerTouchEnd = (e: React.TouchEvent) => {
@@ -1793,11 +1825,9 @@ export default function ParticipantsPage() {
       setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
     }
     
-    // Prevent default scrolling and background scroll
-    if (Math.abs(deltaY) > 10) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+    // Always prevent default scrolling and background scroll when dragging drawer
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   const handleStatusUpdatesDrawerTouchEnd = (e: React.TouchEvent) => {
