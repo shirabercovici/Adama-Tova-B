@@ -274,9 +274,14 @@ export default function ParticipantCardPage() {
     return null;
   };
 
-  const cachedParticipant = getCachedParticipant();
-  const [participant, setParticipant] = useState<Participant | null>(cachedParticipant);
-  const [activities, setActivities] = useState<any[]>(() => {
+const cachedParticipant = useMemo(() => {
+    if (typeof window === 'undefined' || !id) return null;
+    const cached = localStorage.getItem(`participant_${id}`);
+    return cached ? JSON.parse(cached).participant : null;
+}, [id]);
+
+const [participant, setParticipant] = useState<Participant | null>(cachedParticipant);
+ const [activities, setActivities] = useState<any[]>(() => {
     if (cachedParticipant) {
       try {
         const parsedUpdates = cachedParticipant.updates ? JSON.parse(cachedParticipant.updates) : [];
@@ -289,17 +294,17 @@ export default function ParticipantCardPage() {
   });
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [newUpdateText, setNewUpdateText] = useState('');
-  const [loading, setLoading] = useState(!cachedParticipant);
+const [loading, setLoading] = useState(!cachedParticipant);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({
-    full_name: '',
-    bereavement_detail: '',
-    bereavement_circle: '',
-    email: '',
-    phone: '',
-    general_notes: ''
-  });
+const [editForm, setEditForm] = useState({
+  full_name: cachedParticipant?.full_name || urlName || '',
+  bereavement_detail: cachedParticipant?.bereavement_detail || '',
+  bereavement_circle: cachedParticipant?.bereavement_circle || '',
+  email: cachedParticipant?.email || '',
+  phone: cachedParticipant?.phone || '',
+  general_notes: cachedParticipant?.general_notes || ''
+});
   const [activeTab, setActiveTab] = useState('תיק פונה');
   const [isFocused, setIsFocused] = useState(false);
 
@@ -365,53 +370,33 @@ export default function ParticipantCardPage() {
 
 
 
-  const fetchParticipant = useCallback(async () => {
+const fetchParticipant = useCallback(async () => {
     if (!id) return;
-    // Only show loading if we don't have cached data
-    if (!cachedParticipant) {
-      setLoading(true);
-    }
+    
+    // אם כבר יש לנו מידע ב-Cache, אנחנו לא מראים מסך טעינה (loading נשאר false)
+    // אבל אם אין מידע, נוודא שהטעינה דולקת
+    if (!cachedParticipant) setLoading(true);
+
     try {
-      const { data, error } = await supabase
-        .from('participants')
-        .select('*')
-        .eq('id', id)
-        .single();
+        const { data, error } = await supabase
+            .from('participants')
+            .select('*')
+            .eq('id', id)
+            .single();
 
-      if (error) throw error;
-
-      if (data) {
-        setParticipant(data);
-        setEditForm({
-          full_name: data.full_name || '',
-          bereavement_detail: data.bereavement_detail || '',
-          bereavement_circle: data.bereavement_circle || '',
-          email: data.email || '',
-          phone: data.phone || '',
-          general_notes: data.general_notes || ''
-        });
-
-        // Fetch activities from the new table
-        fetchActivities();
-
-        // Cache participant data for next time
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem(`participant_${id}`, JSON.stringify({
-              participant: data,
-              timestamp: Date.now()
-            }));
-          } catch (e) {
-            // Ignore cache errors
-          }
+        if (data) {
+            setParticipant(data);
+            // ... שאר העדכונים של ה-Form וה-Activities ...
+            
+            // עדכון ה-Cache לשימוש עתידי
+            localStorage.setItem(`participant_${id}`, JSON.stringify({ participant: data }));
         }
-      }
     } catch (err) {
-      console.error('Error fetching participant:', err);
+        console.error('Error:', err);
     } finally {
-      setLoading(false);
+        setLoading(false); // ברגע שהמידע הגיע (או נכשל), מפסיקים טעינה
     }
-  }, [id, supabase, cachedParticipant, fetchActivities]);
+}, [id, supabase, cachedParticipant]);
 
   useEffect(() => {
     if (id) fetchParticipant();
@@ -636,6 +621,14 @@ export default function ParticipantCardPage() {
   }, [activities, participant?.last_attendance, participant?.last_phone_call]);
   const displayName = isEditing ? editForm.full_name : (participant ? participant.full_name : urlName);
 
+// אם המידע עדיין נמשך מ-Supabase, נציג את מסך הטעינה
+if (loading) {
+    return (
+        <div style={{ /* עיצוב מסך הטעינה שלך */ }}>
+            <p>טוען נתונים...</p>
+        </div>
+    );
+}
   return (
     <div style={containerStyle}>
       <style jsx global>{`
