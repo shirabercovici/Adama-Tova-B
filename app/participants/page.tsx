@@ -111,8 +111,19 @@ export default function ParticipantsPage() {
       // Check if dragging a drawer by checking refs (more reliable than state)
       const isDraggingDrawer = tasksDrawerTouchStartY.current !== null || statusUpdatesDrawerTouchStartY.current !== null;
       
-      // Check if target is inside purpleHeader by traversing up the DOM
+      // Check if target is inside tasksContent or statusUpdatesContent (scrolling inside drawer)
       let element: HTMLElement | null = target;
+      let isInDrawerContent = false;
+      while (element && element !== document.body) {
+        if (element.classList && Array.from(element.classList).some(cls => cls.includes('tasksContent'))) {
+          isInDrawerContent = true;
+          break;
+        }
+        element = element.parentElement;
+      }
+      
+      // Check if target is inside purpleHeader by traversing up the DOM
+      element = target;
       let isInHeader = false;
       while (element && element !== document.body) {
         if (element.classList && Array.from(element.classList).some(cls => cls.includes('purpleHeader'))) {
@@ -122,15 +133,12 @@ export default function ParticipantsPage() {
         element = element.parentElement;
       }
       
-      // Check if target is inside a drawer
-      let isInDrawer = false;
+      // Check if target is inside a drawer handle (not content)
+      let isInDrawerHandle = false;
       element = target;
       while (element && element !== document.body) {
-        if (element.classList && (
-          Array.from(element.classList).some(cls => cls.includes('tasksDrawer')) ||
-          Array.from(element.classList).some(cls => cls.includes('statusUpdatesDrawer'))
-        )) {
-          isInDrawer = true;
+        if (element.classList && Array.from(element.classList).some(cls => cls.includes('tasksHandle'))) {
+          isInDrawerHandle = true;
           break;
         }
         element = element.parentElement;
@@ -140,25 +148,14 @@ export default function ParticipantsPage() {
       const isButton = target.tagName === 'BUTTON' || target.closest('button') !== null;
       
       // Prevent background scroll when:
-      // 1. Dragging a drawer
+      // 1. Dragging a drawer handle
       // 2. Touching header (except inputs/buttons)
-      // 3. Touching drawer area (except inputs/buttons and when scrolling content)
-      if (isDraggingDrawer || (isInHeader && !isInput && !isButton)) {
+      // 3. NOT when scrolling inside drawer content (allow that to work)
+      // Only prevent if NOT scrolling inside drawer content
+      if (!isInDrawerContent && (isDraggingDrawer || (isInHeader && !isInput && !isButton) || (isInDrawerHandle && !isInput && !isButton))) {
         e.preventDefault();
-      } else if (isInDrawer && !isInput && !isButton) {
-        // Check if we're scrolling drawer content - if at boundaries, prevent background scroll
-        const drawerContent = target.closest('[class*="tasksContent"]');
-        if (drawerContent) {
-          const isScrollable = drawerContent.scrollHeight > drawerContent.clientHeight;
-          const isAtTop = drawerContent.scrollTop === 0;
-          const isAtBottom = drawerContent.scrollTop + drawerContent.clientHeight >= drawerContent.scrollHeight - 1;
-          
-          // Prevent background scroll when at scroll boundaries
-          if (isScrollable && (isAtTop || isAtBottom)) {
-            e.preventDefault();
-          }
-        }
       }
+      // Don't prevent when scrolling inside drawer content - let that scroll naturally
     };
     
     // Use passive: false to allow preventDefault
@@ -1957,18 +1954,20 @@ export default function ParticipantsPage() {
 
   // Prevent background scrolling when scrolling inside drawer content
   const handleTasksContentTouchMove = (e: React.TouchEvent) => {
-    // Only prevent if not dragging the drawer itself
+    // Only prevent background scroll if not dragging the drawer itself
     if (!isTasksDrawerDragging) {
-      // Always stop propagation to prevent background scroll when scrolling inside drawer
+      // Stop propagation to prevent background scroll, but allow content scrolling
       e.stopPropagation();
+      // Don't prevent default - allow scrolling inside drawer content
     }
   };
 
   const handleStatusUpdatesContentTouchMove = (e: React.TouchEvent) => {
-    // Only prevent if not dragging the drawer itself
+    // Only prevent background scroll if not dragging the drawer itself
     if (!isStatusUpdatesDrawerDragging) {
-      // Always stop propagation to prevent background scroll when scrolling inside drawer
+      // Stop propagation to prevent background scroll, but allow content scrolling
       e.stopPropagation();
+      // Don't prevent default - allow scrolling inside drawer content
     }
   };
 
