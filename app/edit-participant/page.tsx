@@ -179,7 +179,7 @@ const [description, setDescription] = useState(getCachedValue('description'));
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
                             </svg>
                         </button>
-                        <h1 style={{ fontSize: '1.875rem', fontWeight: 'normal', color: '#4D58D8', margin: 0 }}>עריכת פרטי פונה</h1>
+                        <h1 style={{ fontSize: '1.875rem', fontWeight: 'normal', color: '#4D58D8', margin: 0, marginRight:'0.625rem', flex: 1 }}>{originalData?.full_name || 'עריכת פרטי פונה'}</h1>
                         <div onClick={() => setIsChecked(!isChecked)} style={{
                             width: '24px', height: '24px', border: '1.5px solid #4D58D8', borderRadius: '4px',
                             display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer',
