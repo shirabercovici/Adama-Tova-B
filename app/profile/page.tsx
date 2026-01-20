@@ -50,7 +50,7 @@ export default function ProfilePage() {
     // Always verify the cached user matches the authenticated user
     if (!hasFetchedProfileRef.current) {
       hasFetchedProfileRef.current = true;
-      
+
       const getProfile = async () => {
         try {
           // Get authenticated user
@@ -87,11 +87,11 @@ export default function ProfilePage() {
             .single();
 
           const finalUserData = (!error && dbUser) ? dbUser : authUser;
-          
+
           // Update state immediately
           setUserData(finalUserData);
           setLoading(false); // Mark as loaded
-          
+
           // Save to localStorage for next time
           if (typeof window !== 'undefined') {
             localStorage.setItem('userProfileData', JSON.stringify(finalUserData));
@@ -148,7 +148,7 @@ export default function ProfilePage() {
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         // User has signed in or switched accounts, refresh profile data
         const { data: { user: authUser } } = await supabase.auth.getUser();
-        
+
         if (authUser) {
           // Clear old cache
           if (typeof window !== 'undefined') {
@@ -167,7 +167,7 @@ export default function ProfilePage() {
 
           const finalUserData = (!error && dbUser) ? dbUser : authUser;
           setUserData(finalUserData);
-          
+
           if (typeof window !== 'undefined') {
             localStorage.setItem('userProfileData', JSON.stringify(finalUserData));
           }
@@ -444,7 +444,7 @@ export default function ProfilePage() {
                           updateDetails = activity.description.substring(colonIndex + 1).trim();
                         }
                       }
-                      
+
                       // Add participant_name to the main description for status updates
                       if (activity.participant_name) {
                         mainDescription = `${mainDescription} ${activity.participant_name}`;
@@ -459,8 +459,8 @@ export default function ProfilePage() {
                     };
 
                     return (
-                      <div 
-                        key={activity.id || index} 
+                      <div
+                        key={activity.id || index}
                         className={styles.activityItem}
                         onClick={handleActivityClick}
                         style={activity.participant_id ? { cursor: 'pointer' } : {}}
