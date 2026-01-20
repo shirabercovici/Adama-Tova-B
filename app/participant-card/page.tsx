@@ -804,7 +804,7 @@ export default function ParticipantCardPage() {
         </div>
       </div>
 
-      <div className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: '220px', width: '100%' }}>
+      <div className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: activeTab === 'היסטוריה' ? '20px' : '220px', width: '100%' }}>
         {activeTab === 'תיק פונה' && (
           <>
             <div style={{
@@ -1067,7 +1067,7 @@ export default function ParticipantCardPage() {
           </>
         )}
         {activeTab === 'היסטוריה' && (
-          <div style={{ width: '100%', padding: '1.25rem', display: 'flex', flexDirection: 'column', backgroundColor: '#FFFCE5', minHeight: '100vh', paddingBottom: '8rem' }}>
+          <div style={{ width: '100%', padding: '1.25rem', display: 'flex', flexDirection: 'column', backgroundColor: '#FFFCE5', minHeight: 'fit-content' }}>
             {loading ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: '#4D58D8' }}>טוען...</div>
             ) : activities.length === 0 ? (
