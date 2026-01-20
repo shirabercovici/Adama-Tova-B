@@ -679,7 +679,7 @@ export default function ParticipantCardPage() {
             margin: '0 auto'
           }}>
 
-            <div style={{ color: 'white', marginLeft:"0"}}>
+            <div style={{ color: 'white', marginLeft: "0" }}>
               <BackButton />
             </div>
 
@@ -804,7 +804,7 @@ export default function ParticipantCardPage() {
         </div>
       </div>
 
-      <div className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: activeTab === 'היסטוריה' ? '20px' : '220px', width: '100%' }}>
+      <div className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: '20px', width: '100%' }}>
         {activeTab === 'תיק פונה' && (
           <>
             <div style={{
