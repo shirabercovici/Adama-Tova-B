@@ -40,6 +40,7 @@ const [email, setEmail] = useState(getCachedValue('email'));
 const [circle, setCircle] = useState<string>(getCachedValue('circle'));
 const [fullName, setFullName] = useState(getCachedValue('fullName')); // שדה "קשר"
 const [description, setDescription] = useState(getCachedValue('description'));
+const [headerName, setHeaderName] = useState(getCachedValue('name'));
  // שדה "תיאור"
     // States לניהול המסך
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -57,26 +58,19 @@ const [description, setDescription] = useState(getCachedValue('description'));
 
     
     // שליפת המידע המקורי
-    useEffect(() => {
-        const fetchParticipantData = async () => {
-            if (!id) return;
-            const { data, error } = await supabase.from('participants').select('*').eq('id', id).single();
-            if (error) {
-                setError('לא הצלחנו למצוא את פרטי הפונה');
-                return;
-            }
-            if (data) {
-                setName(data.full_name || '');
-                setFullName(data.bereavement_detail || '');
-                setCircle(data.bereavement_circle || '');
-                setEmail(data.email || '');
-                setPhone(data.phone || '');
-                setDescription(data.general_notes || '');
-                setOriginalData(data); // שומרים להשוואה
-            }
-        };
-        fetchParticipantData();
-    }, [id, supabase]);
+useEffect(() => {
+    const fetchParticipantData = async () => {
+        if (!id) return;
+        const { data, error } = await supabase.from('participants').select('*').eq('id', id).single();
+        if (data) {
+            // ... שאר העדכונים שלך
+            setName(data.full_name || '');
+            setHeaderName(data.full_name || ''); // עדכון השם הסופי מה-DB
+            setOriginalData(data);
+        }
+    };
+    fetchParticipantData();
+}, [id, supabase]);
 
     // סגירת מודאל הצלחה ומעבר כרטיס
     useEffect(() => {
@@ -179,7 +173,7 @@ const [description, setDescription] = useState(getCachedValue('description'));
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
                             </svg>
                         </button>
-                        <h1 style={{ fontSize: '1.875rem', fontWeight: 'normal', color: '#4D58D8', margin: 0, marginRight:'0.625rem', flex: 1 }}>{originalData?.full_name || 'עריכת פרטי פונה'}</h1>
+                        <h1 style={{ fontSize: '1.875rem', fontWeight: 'normal', color: '#4D58D8', margin: 0, marginRight:'0.625rem', flex: 1 }}>{headerName}</h1>
                         <div onClick={() => setIsChecked(!isChecked)} style={{
                             width: '24px', height: '24px', border: '1.5px solid #4D58D8', borderRadius: '4px',
                             display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer',
