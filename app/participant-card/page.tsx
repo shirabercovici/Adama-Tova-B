@@ -657,7 +657,7 @@ export default function ParticipantCardPage() {
         }
       `}</style>
       {/* --- Header ثابت --- */}
-      <div style={{ flexShrink: 0, zIndex: 10, width: '100%', flex: 1 }}>
+      <div style={{ flexShrink: 0, zIndex: 10, width: '100%' }}>
         <div style={{
           backgroundColor: participant?.is_archived ? '#949ADD' : '#4D58D8',
           padding: '1.25rem 1.875rem',
