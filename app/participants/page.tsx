@@ -103,8 +103,36 @@ export default function ParticipantsPage() {
   // Add class to body to hide navbar and make full width
   useEffect(() => {
     document.body.classList.add('participants-page');
+    
+    // Prevent background scrolling when touching header area on mobile
+    const handleTouchMove = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      // Check if target is inside purpleHeader by traversing up the DOM
+      let element: HTMLElement | null = target;
+      let isInHeader = false;
+      while (element && element !== document.body) {
+        if (element.classList && Array.from(element.classList).some(cls => cls.includes('purpleHeader'))) {
+          isInHeader = true;
+          break;
+        }
+        element = element.parentElement;
+      }
+      
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+      const isButton = target.tagName === 'BUTTON' || target.closest('button') !== null;
+      
+      // Prevent background scroll when touching header (except inputs/buttons)
+      if (isInHeader && !isInput && !isButton) {
+        e.preventDefault();
+      }
+    };
+    
+    // Use passive: false to allow preventDefault
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    
     return () => {
       document.body.classList.remove('participants-page');
+      document.removeEventListener('touchmove', handleTouchMove);
     };
   }, []);
 
@@ -2166,7 +2194,19 @@ export default function ParticipantsPage() {
         {/* <Navbar /> */}
       </div>
       {/* Purple Header */}
-      <div className={styles.purpleHeader}>
+      <div 
+        className={styles.purpleHeader}
+        onTouchMove={(e) => {
+          // Prevent scrolling of header area on mobile
+          const target = e.target as HTMLElement;
+          const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+          const isButton = target.tagName === 'BUTTON' || target.closest('button') !== null;
+          // Only prevent if not interacting with input/button elements
+          if (!isInput && !isButton) {
+            e.stopPropagation();
+          }
+        }}
+      >
         <div className={styles.headerTop}>
           <div
             className={styles.headerButton}
