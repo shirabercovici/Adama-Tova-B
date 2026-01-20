@@ -2,7 +2,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 // --- קומפוננטות עזר לניקוי הכפילויות ---
 
@@ -51,7 +50,6 @@ export default function EditParticipantPage() {
     const [errors, setErrors] = useState<Record<string, boolean>>({});
 
     const supabase = useMemo(() => createClient(), []);
-    useThemeColor('#FFFCE5');
 
     // שליפת המידע (זהה למקור)
     useEffect(() => {

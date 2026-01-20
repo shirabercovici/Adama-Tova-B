@@ -2,10 +2,7 @@ import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
   appleWebApp: {
-    statusBarStyle: "black-translucent",
-  },
-  other: {
-    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    statusBarStyle: "default",
   },
 };
 

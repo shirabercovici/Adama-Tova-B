@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import styles from './page.module.css';
-import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function NewParticipantPage() {
     const router = useRouter();
@@ -32,9 +31,6 @@ export default function NewParticipantPage() {
             return () => clearTimeout(timer);
         }
     }, [showSuccessModal, createdId, router]);
-
-    // Use custom hook for theme color
-    useThemeColor('#FFFCE5');
 
     const hasUnsavedChanges = () => {
         return name.trim() !== '' ||

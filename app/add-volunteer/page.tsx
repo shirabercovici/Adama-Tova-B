@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
-import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function AddVolunteerPage() {
     const router = useRouter();
@@ -19,9 +18,6 @@ export default function AddVolunteerPage() {
             document.body.classList.remove('profile-page');
         };
     }, []);
-
-    // Update theme-color to match cream header background (#FFFCE5)
-    useThemeColor('#FFFCE5');
 
     // Auto-dismiss success modal after 2.5 seconds
     useEffect(() => {
