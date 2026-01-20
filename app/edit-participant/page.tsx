@@ -209,7 +209,7 @@ const [description, setDescription] = useState(getCachedValue('description'));
                                     onChange={(e) => field.setter(e.target.value)}
                                     className={field.err ? 'input-error' : ''}
                                     placeholder={field.placeholder}
-                                    style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', fontSize: '1.25rem', textAlign: 'right', color: '#4D58D8' }}
+                                    style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', borderRadius: 0, backgroundColor: 'transparent', outline: 'none', fontSize: '1.25rem', textAlign: 'right', color: '#4D58D8' }}
                                 />
                             </div>
                         ))}
@@ -245,12 +245,12 @@ const [description, setDescription] = useState(getCachedValue('description'));
                         {/* קשר ותיאור */}
                         <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                             <label style={{ fontSize: '1.5rem', color: '#4D58D8', textAlign: 'right' }}>קשר</label>
-                            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="הוסף קשר" style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', fontSize: '1.25rem', textAlign: 'right', color: '#4D58D8' }} />
+                            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="הוסף קשר" style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8',borderRadius: 0, backgroundColor: 'transparent', outline: 'none', fontSize: '1.25rem', textAlign: 'right', color: '#4D58D8' }} />
                         </div>
 
                         <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                             <label style={{ fontSize: '1.5rem', color: '#4D58D8', textAlign: 'right' }}>תיאור</label>
-                            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="הוסף תיאור" style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8', backgroundColor: 'transparent', outline: 'none', fontSize: '1.25rem', textAlign: 'right', color: '#4D58D8', resize: 'none', minHeight: '60px' }} />
+                            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="הוסף תיאור" style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.0625rem solid #4D58D8',borderRadius: 0, backgroundColor: 'transparent', outline: 'none', fontSize: '1.25rem', textAlign: 'right', color: '#4D58D8', resize: 'none', minHeight: '60px' }} />
                             <div style={{ textAlign: 'left', fontSize: '1rem', color: '#949ADD', fontStyle: 'italic' }}>עד 50 מילים</div>
                         </div>
                     </div>
