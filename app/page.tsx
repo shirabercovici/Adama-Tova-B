@@ -5,11 +5,15 @@ import Image from "next/image";
 import GoogleLoginButton from "./login/GoogleLoginButton";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function Home() {
   const [showSplash, setShowSplash] = useState(true);
   const router = useRouter();
   const supabase = createClient();
+
+  // Update theme-color for iOS compatibility (iOS doesn't always respect viewport exports)
+  useThemeColor('#FFFCE5');
 
   useEffect(() => {
     const checkSession = async () => {

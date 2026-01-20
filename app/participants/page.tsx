@@ -8,6 +8,7 @@ import SearchBarWithAdd from "@/lib/components/SearchBarWithAdd";
 import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
 import { logActivity } from "@/lib/activity-logger";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function ParticipantsPage() {
   const router = useRouter();
@@ -80,6 +81,13 @@ export default function ParticipantsPage() {
   const [isInitialDataReady, setIsInitialDataReady] = useState(false);
   // Track if we've already set isInitialDataReady to true - prevent double updates
   const hasSetInitialDataReadyRef = useRef(false);
+  // Track pending checkbox states for immediate visual feedback before sorting
+  const [pendingTaskStates, setPendingTaskStates] = useState<Record<string, "open" | "done">>({});
+  const [pendingStatusUpdateStates, setPendingStatusUpdateStates] = useState<Record<string, boolean>>({});
+  // Track swipe gestures for drawers
+  const tasksDrawerTouchStartY = useRef<number | null>(null);
+  const statusUpdatesDrawerTouchStartY = useRef<number | null>(null);
+  const SWIPE_THRESHOLD = 50; // Minimum distance in pixels to trigger swipe
 
   // Add class to body to hide navbar and make full width
   // Add class to body to hide navbar and make full width
@@ -89,6 +97,9 @@ export default function ParticipantsPage() {
       document.body.classList.remove('participants-page');
     };
   }, []);
+
+  // Update theme-color for iOS compatibility (iOS doesn't always respect viewport exports)
+  useThemeColor('#4D58D8');
 
   // Mark as hydrated and load initials from localStorage
   useEffect(() => {
@@ -776,14 +787,31 @@ export default function ParticipantsPage() {
       return;
     }
 
-    // Optimistic update
-    setStatusUpdates((prev) =>
-      prev.map((update) =>
-        update.id === updateId
-          ? { ...update, is_read: isRead }
-          : update
-      )
-    );
+    // Update pending state immediately for visual feedback
+    setPendingStatusUpdateStates((prev) => ({
+      ...prev,
+      [updateId]: isRead
+    }));
+
+    // Delay the actual state update that causes sorting/movement
+    // This allows the checkbox to fill first, then the item moves down
+    setTimeout(() => {
+      // Optimistic update
+      setStatusUpdates((prev) =>
+        prev.map((update) =>
+          update.id === updateId
+            ? { ...update, is_read: isRead }
+            : update
+        )
+      );
+      
+      // Clear pending state after update
+      setPendingStatusUpdateStates((prev) => {
+        const newPending = { ...prev };
+        delete newPending[updateId];
+        return newPending;
+      });
+    }, 300); // 300ms delay to allow checkbox to fill first
 
     try {
       const response = await fetch("/api/activities", {
@@ -800,6 +828,12 @@ export default function ParticipantsPage() {
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Error updating read status:", errorData);
+        // Revert pending state on error
+        setPendingStatusUpdateStates((prev) => {
+          const newPending = { ...prev };
+          delete newPending[updateId];
+          return newPending;
+        });
         // Revert optimistic update on error
         setStatusUpdates((prev) =>
           prev.map((update) =>
@@ -811,6 +845,12 @@ export default function ParticipantsPage() {
       }
     } catch (err) {
       console.error("Error updating read status:", err);
+      // Revert pending state on error
+      setPendingStatusUpdateStates((prev) => {
+        const newPending = { ...prev };
+        delete newPending[updateId];
+        return newPending;
+      });
       // Revert optimistic update on error
       setStatusUpdates((prev) =>
         prev.map((update) =>
@@ -1289,6 +1329,166 @@ export default function ParticipantsPage() {
     }
   }, [search]);
 
+  // Handle swipe gestures for tasks drawer
+  const handleTasksDrawerTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    const drawerElement = target.closest(`.${styles.tasksDrawer}`);
+    if (drawerElement) {
+      const isHandle = target.closest(`.${styles.tasksHandle}`) !== null;
+      const isContent = target.closest(`.${styles.tasksContent}`) !== null;
+      
+      // Track swipe if:
+      // 1. Starting from handle (always)
+      // 2. Starting from top area when drawer is closed (to open it)
+      // 3. Starting from top area when drawer is open (to close it)
+      if (isHandle) {
+        tasksDrawerTouchStartY.current = e.touches[0].clientY;
+      } else if (isContent && !isTasksOpen) {
+        // Drawer is closed - allow swipe from anywhere to open
+        tasksDrawerTouchStartY.current = e.touches[0].clientY;
+      } else if (isContent && isTasksOpen) {
+        // Drawer is open - only allow swipe from top area to close
+        const rect = drawerElement.getBoundingClientRect();
+        const touchY = e.touches[0].clientY;
+        const relativeY = touchY - rect.top;
+        if (relativeY < 150) {
+          tasksDrawerTouchStartY.current = e.touches[0].clientY;
+        }
+      }
+    }
+  };
+
+  const handleTasksDrawerTouchMove = (e: React.TouchEvent) => {
+    if (tasksDrawerTouchStartY.current === null) return;
+    
+    const currentY = e.touches[0].clientY;
+    const deltaY = tasksDrawerTouchStartY.current - currentY;
+    
+    // Prevent default scrolling only if swiping vertically in handle/top area
+    if (Math.abs(deltaY) > 10) {
+      const target = e.target as HTMLElement;
+      const drawerElement = target.closest(`.${styles.tasksDrawer}`);
+      if (drawerElement) {
+        const isHandle = target.closest(`.${styles.tasksHandle}`) !== null;
+        if (isHandle) {
+          e.preventDefault();
+        } else if (isTasksOpen) {
+          // When drawer is open, only prevent default in top area
+          const rect = drawerElement.getBoundingClientRect();
+          const touchY = e.touches[0].clientY;
+          const relativeY = touchY - rect.top;
+          if (relativeY < 150) {
+            e.preventDefault();
+          }
+        } else {
+          // When drawer is closed, prevent default to allow swipe up
+          e.preventDefault();
+        }
+      }
+    }
+  };
+
+  const handleTasksDrawerTouchEnd = (e: React.TouchEvent) => {
+    if (tasksDrawerTouchStartY.current === null) return;
+    
+    const endY = e.changedTouches[0].clientY;
+    const deltaY = tasksDrawerTouchStartY.current - endY;
+    
+    // Swipe up (negative deltaY) = open drawer
+    // Swipe down (positive deltaY) = close drawer
+    if (Math.abs(deltaY) > SWIPE_THRESHOLD) {
+      if (deltaY > 0) {
+        // Swipe down - close drawer
+        setIsTasksOpen(false);
+      } else {
+        // Swipe up - open drawer
+        setIsTasksOpen(true);
+      }
+    }
+    
+    tasksDrawerTouchStartY.current = null;
+  };
+
+  // Handle swipe gestures for status updates drawer
+  const handleStatusUpdatesDrawerTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement;
+    const drawerElement = target.closest(`.${styles.statusUpdatesDrawer}`);
+    if (drawerElement) {
+      const isHandle = target.closest(`.${styles.tasksHandle}`) !== null;
+      const isContent = target.closest(`.${styles.tasksContent}`) !== null;
+      
+      // Track swipe if:
+      // 1. Starting from handle (always)
+      // 2. Starting from top area when drawer is closed (to open it)
+      // 3. Starting from top area when drawer is open (to close it)
+      if (isHandle) {
+        statusUpdatesDrawerTouchStartY.current = e.touches[0].clientY;
+      } else if (isContent && !isStatusUpdatesOpen) {
+        // Drawer is closed - allow swipe from anywhere to open
+        statusUpdatesDrawerTouchStartY.current = e.touches[0].clientY;
+      } else if (isContent && isStatusUpdatesOpen) {
+        // Drawer is open - only allow swipe from top area to close
+        const rect = drawerElement.getBoundingClientRect();
+        const touchY = e.touches[0].clientY;
+        const relativeY = touchY - rect.top;
+        if (relativeY < 150) {
+          statusUpdatesDrawerTouchStartY.current = e.touches[0].clientY;
+        }
+      }
+    }
+  };
+
+  const handleStatusUpdatesDrawerTouchMove = (e: React.TouchEvent) => {
+    if (statusUpdatesDrawerTouchStartY.current === null) return;
+    
+    const currentY = e.touches[0].clientY;
+    const deltaY = statusUpdatesDrawerTouchStartY.current - currentY;
+    
+    // Prevent default scrolling only if swiping vertically in handle/top area
+    if (Math.abs(deltaY) > 10) {
+      const target = e.target as HTMLElement;
+      const drawerElement = target.closest(`.${styles.statusUpdatesDrawer}`);
+      if (drawerElement) {
+        const isHandle = target.closest(`.${styles.tasksHandle}`) !== null;
+        if (isHandle) {
+          e.preventDefault();
+        } else if (isStatusUpdatesOpen) {
+          // When drawer is open, only prevent default in top area
+          const rect = drawerElement.getBoundingClientRect();
+          const touchY = e.touches[0].clientY;
+          const relativeY = touchY - rect.top;
+          if (relativeY < 150) {
+            e.preventDefault();
+          }
+        } else {
+          // When drawer is closed, prevent default to allow swipe up
+          e.preventDefault();
+        }
+      }
+    }
+  };
+
+  const handleStatusUpdatesDrawerTouchEnd = (e: React.TouchEvent) => {
+    if (statusUpdatesDrawerTouchStartY.current === null) return;
+    
+    const endY = e.changedTouches[0].clientY;
+    const deltaY = statusUpdatesDrawerTouchStartY.current - endY;
+    
+    // Swipe up (negative deltaY) = open drawer
+    // Swipe down (positive deltaY) = close drawer
+    if (Math.abs(deltaY) > SWIPE_THRESHOLD) {
+      if (deltaY > 0) {
+        // Swipe down - close drawer
+        setIsStatusUpdatesOpen(false);
+      } else {
+        // Swipe up - open drawer
+        setIsStatusUpdatesOpen(true);
+      }
+    }
+    
+    statusUpdatesDrawerTouchStartY.current = null;
+  };
+
   const handleTaskToggle = async (task: Task) => {
     // Prevent multiple simultaneous toggles
     if (isFetchingTasksRef.current) {
@@ -1298,6 +1498,12 @@ export default function ParticipantsPage() {
     try {
       // Optimistic update
       const newStatus: "open" | "done" = task.status === 'done' ? 'open' : 'done';
+
+      // Update pending state immediately for visual feedback
+      setPendingTaskStates((prev) => ({
+        ...prev,
+        [task.id]: newStatus
+      }));
 
       // Get current user info for optimistic update
       let userId: string | null = null;
@@ -1329,30 +1535,42 @@ export default function ParticipantsPage() {
         }
       }
 
-      // Optimistic update with done_by_user info
-      const updatedTasks = tasks.map((t) => {
-        if (t.id === task.id) {
-          if (newStatus === 'done') {
-            return {
-              ...t,
-              status: newStatus,
-              done_by: userId,
-              done_by_user: doneByUser,
-              done_at: new Date().toISOString() // Set done_at for sorting
-            };
-          } else {
-            return {
-              ...t,
-              status: newStatus,
-              done_by: null,
-              done_by_user: null,
-              done_at: null
-            };
-          }
-        }
-        return t;
-      });
-      setTasks(updatedTasks);
+      // Delay the actual state update that causes sorting/movement
+      // This allows the checkbox to fill first, then the item moves down
+      setTimeout(() => {
+        // Optimistic update with done_by_user info - use functional update to get latest state
+        setTasks((currentTasks) => {
+          return currentTasks.map((t) => {
+            if (t.id === task.id) {
+              if (newStatus === 'done') {
+                return {
+                  ...t,
+                  status: newStatus,
+                  done_by: userId,
+                  done_by_user: doneByUser,
+                  done_at: new Date().toISOString() // Set done_at for sorting
+                };
+              } else {
+                return {
+                  ...t,
+                  status: newStatus,
+                  done_by: null,
+                  done_by_user: null,
+                  done_at: null
+                };
+              }
+            }
+            return t;
+          });
+        });
+        
+        // Clear pending state after update
+        setPendingTaskStates((prev) => {
+          const newPending = { ...prev };
+          delete newPending[task.id];
+          return newPending;
+        });
+      }, 300); // 300ms delay to allow checkbox to fill first
 
       const response = await fetch("/tasks/api", {
         method: "PATCH",
@@ -1374,6 +1592,12 @@ export default function ParticipantsPage() {
       // Data will be refreshed on next manual refresh or when opening tasks next time
     } catch (err) {
       console.error("Error toggling task:", err);
+      // Revert pending state on error
+      setPendingTaskStates((prev) => {
+        const newPending = { ...prev };
+        delete newPending[task.id];
+        return newPending;
+      });
       // Revert optimistic update by re-fetching (only if not already fetching)
       if (!isFetchingTasksRef.current) {
         fetchTasks(true); // Force refresh on error to revert changes
@@ -1748,7 +1972,12 @@ export default function ParticipantsPage() {
       {/* Status Updates Drawer - Only render if user is manager and not first login or ALL data is ready */}
       {/* CRITICAL: Never render this component until we know the role - no hiding, no CSS tricks */}
       {!isSearchActive && isManager() && statusUpdatesReady && (!isFirstLoginRef.current || isInitialDataReady) && (
-        <div className={`${styles.statusUpdatesDrawer} ${isStatusUpdatesOpen ? styles.open : styles.closed} ${isTasksOpen ? styles.hidden : ''}`}>
+        <div 
+          className={`${styles.statusUpdatesDrawer} ${isStatusUpdatesOpen ? styles.open : styles.closed} ${isTasksOpen ? styles.hidden : ''}`}
+          onTouchStart={handleStatusUpdatesDrawerTouchStart}
+          onTouchMove={handleStatusUpdatesDrawerTouchMove}
+          onTouchEnd={handleStatusUpdatesDrawerTouchEnd}
+        >
           <div className={styles.tasksLine}>
             <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
               <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round" />
@@ -1767,7 +1996,10 @@ export default function ParticipantsPage() {
                 <>
                   {/* Active (unread) status updates */}
                   {(() => {
-                    const unreadUpdates = statusUpdates.filter(update => !update.is_read);
+                    const unreadUpdates = statusUpdates.filter(update => {
+                      // Filter uses actual state only - item stays in list until real state changes
+                      return !(update.is_read || false);
+                    });
                     return unreadUpdates.map((update, index) => {
                       const participantName = update.participant_name || '';
                       const updateText = update.update_content || '';
@@ -1776,7 +2008,11 @@ export default function ParticipantsPage() {
                       const userDisplayName = update.user_display_name || update.user_name || '';
                       const isPublic = update.is_public === true;
                       const updateId = update.id;
-                      const isRead = update.is_read || false;
+                      // Checkbox uses pending state for immediate visual feedback
+                      const pendingIsRead = pendingStatusUpdateStates[updateId];
+                      const checkboxChecked = pendingIsRead !== undefined 
+                        ? pendingIsRead 
+                        : (update.is_read || false);
                       const isLastUnread = index === unreadUpdates.length - 1;
 
                       if (!updateId) return null; // Skip if no ID
@@ -1798,7 +2034,7 @@ export default function ParticipantsPage() {
                                 <input
                                   type="checkbox"
                                   className={styles.taskCheckbox}
-                                  checked={isRead}
+                                  checked={checkboxChecked}
                                   onChange={(e) => {
                                     if (updateId) {
                                       updateStatusUpdateReadStatus(updateId, e.target.checked);
@@ -1819,7 +2055,10 @@ export default function ParticipantsPage() {
                   })()}
 
                   {/* Full width line before done section */}
-                  {statusUpdates.filter(update => update.is_read).length > 0 && (
+                  {statusUpdates.filter(update => {
+                    // Filter uses actual state only
+                    return update.is_read || false;
+                  }).length > 0 && (
                     <li className={styles.statusUpdateItem} style={{ borderBottom: 'none', padding: 0 }}>
                       <div className={styles.tasksFullWidthLine}>
                         <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
@@ -1833,7 +2072,10 @@ export default function ParticipantsPage() {
                   <div className={styles.doneSection}>
                     <ul className={`${styles.taskList} ${styles.doneTasksList}`}>
                       {statusUpdates
-                        .filter(update => update.is_read)
+                        .filter(update => {
+                          // Filter uses actual state only - item appears in read list only when real state changes
+                          return update.is_read || false;
+                        })
                         .sort((a, b) => {
                           const aTime = new Date(a.created_at).getTime();
                           const bTime = new Date(b.created_at).getTime();
@@ -1847,7 +2089,11 @@ export default function ParticipantsPage() {
                           const userDisplayName = update.user_display_name || update.user_name || '';
                           const isPublic = update.is_public === true;
                           const updateId = update.id;
-                          const isRead = update.is_read || false;
+                          // Checkbox uses pending state for immediate visual feedback
+                          const pendingIsRead = pendingStatusUpdateStates[updateId];
+                          const checkboxChecked = pendingIsRead !== undefined 
+                            ? pendingIsRead 
+                            : (update.is_read || false);
 
                           if (!updateId) return null; // Skip if no ID
 
@@ -1868,7 +2114,7 @@ export default function ParticipantsPage() {
                                     <input
                                       type="checkbox"
                                       className={styles.taskCheckbox}
-                                      checked={isRead}
+                                      checked={checkboxChecked}
                                       onChange={(e) => {
                                         if (updateId) {
                                           updateStatusUpdateReadStatus(updateId, e.target.checked);
@@ -1894,8 +2140,14 @@ export default function ParticipantsPage() {
                     </ul>
                   </div>
 
-                  {statusUpdates.filter(update => !update.is_read).length === 0 &&
-                    statusUpdates.filter(update => update.is_read).length === 0 && (
+                  {statusUpdates.filter(update => {
+                    // Filter uses actual state only
+                    return !(update.is_read || false);
+                  }).length === 0 &&
+                    statusUpdates.filter(update => {
+                      // Filter uses actual state only
+                      return update.is_read || false;
+                    }).length === 0 && (
                       <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
                         <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין עדכוני סטטוס</span>
                       </li>
@@ -1916,7 +2168,12 @@ export default function ParticipantsPage() {
       {/* For volunteers, show tasks immediately after statusUpdatesReady (which happens after role is determined) */}
       {/* For managers, show tasks after statusUpdatesReady (which happens after status updates are loaded) */}
       {!isSearchActive && (!isFirstLoginRef.current || isInitialDataReady) && isTasksReady && (
-        <div className={`${styles.tasksDrawer} ${isTasksOpen ? styles.open : styles.closed} ${isStatusUpdatesOpen ? styles.hidden : ''}`}>
+        <div 
+          className={`${styles.tasksDrawer} ${isTasksOpen ? styles.open : styles.closed} ${isStatusUpdatesOpen ? styles.hidden : ''}`}
+          onTouchStart={handleTasksDrawerTouchStart}
+          onTouchMove={handleTasksDrawerTouchMove}
+          onTouchEnd={handleTasksDrawerTouchEnd}
+        >
           <div className={styles.tasksLine}>
             <svg width="100%" height="1" viewBox="0 0 440 1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
               <path d="M440 0.5L-4.76837e-06 0.5" stroke="#4D58D8" strokeWidth="1" strokeLinecap="round" />
@@ -1933,13 +2190,22 @@ export default function ParticipantsPage() {
           )}
           <div className={styles.tasksContent}>
             <ul className={styles.taskList}>
-              {tasks.filter(t => t.status !== 'done').map(task => (
+              {tasks.filter(t => {
+                // Filter uses actual state only - item stays in list until real state changes
+                return t.status !== 'done';
+              }).map(task => {
+                // Checkbox uses pending state for immediate visual feedback
+                const pendingStatus = pendingTaskStates[task.id];
+                const checkboxChecked = pendingStatus !== undefined 
+                  ? pendingStatus === 'done' 
+                  : task.status === 'done';
+                return (
                 <li key={task.id} className={styles.taskItem}>
                   <div className={styles.taskItemContent}>
                     <input
                       type="checkbox"
                       className={styles.taskCheckbox}
-                      checked={task.status === 'done'}
+                      checked={checkboxChecked}
                       onChange={(e) => {
                         e.stopPropagation();
                         handleTaskToggle(task);
@@ -2030,7 +2296,8 @@ export default function ParticipantsPage() {
                     </svg>
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
 
             {/* Spacing */}
@@ -2040,7 +2307,10 @@ export default function ParticipantsPage() {
             <div className={styles.doneSection}>
               {/* Done tasks list */}
               <ul className={`${styles.taskList} ${styles.doneTasksList}`}>
-                {tasks.filter(t => t.status === 'done')
+                {tasks.filter(t => {
+                  // Filter uses actual state only - item appears in done list only when real state changes
+                  return t.status === 'done';
+                })
                   .sort((a, b) => {
                     // Sort by done_at descending (most recent first), fallback to due_date if done_at is null
                     const aTime = a.done_at ? new Date(a.done_at).getTime() : (a.due_date ? new Date(a.due_date).getTime() : 0);
@@ -2048,6 +2318,11 @@ export default function ParticipantsPage() {
                     return bTime - aTime; // Descending order (newest first)
                   })
                   .map(task => {
+                    // Checkbox uses pending state for immediate visual feedback
+                    const pendingStatus = pendingTaskStates[task.id];
+                    const checkboxChecked = pendingStatus !== undefined 
+                      ? pendingStatus === 'done' 
+                      : task.status === 'done';
                     let doneByName = null;
                     let doneByRole = null;
                     if (task.done_by_user) {
@@ -2064,7 +2339,7 @@ export default function ParticipantsPage() {
                           <input
                             type="checkbox"
                             className={styles.taskCheckbox}
-                            checked={task.status === 'done'}
+                            checked={checkboxChecked}
                             onChange={(e) => {
                               e.stopPropagation();
                               handleTaskToggle(task);
@@ -2122,7 +2397,10 @@ export default function ParticipantsPage() {
                       </li>
                     );
                   })}
-                {tasks.filter(t => t.status === 'done').length === 0 && (
+                {tasks.filter(t => {
+                  // Filter uses actual state only
+                  return t.status === 'done';
+                }).length === 0 && (
                   <li className={styles.taskItem} style={{ borderBottom: 'none', justifyContent: 'center' }}>
                     <span className={styles.taskText} style={{ fontSize: '0.9rem', opacity: 0.5 }}>אין משימות שבוצעו</span>
                   </li>

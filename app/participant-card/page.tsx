@@ -804,7 +804,7 @@ export default function ParticipantCardPage() {
         </div>
       </div>
 
-      <div className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: '220px', width: '100%' }}>
+      <div className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: activeTab === 'היסטוריה' ? '20px' : '220px', width: '100%' }}>
         {activeTab === 'תיק פונה' && (
           <>
             <div style={{
@@ -1067,7 +1067,7 @@ export default function ParticipantCardPage() {
           </>
         )}
         {activeTab === 'היסטוריה' && (
-          <div style={{ width: '100%', padding: '1.25rem', display: 'flex', flexDirection: 'column', backgroundColor: '#FFFCE5', minHeight: '100vh', paddingBottom: '8rem' }}>
+          <div style={{ width: '100%', padding: '1.25rem', display: 'flex', flexDirection: 'column', backgroundColor: '#FFFCE5', minHeight: 'fit-content' }}>
             {loading ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: '#4D58D8' }}>טוען...</div>
             ) : activities.length === 0 ? (
@@ -1101,22 +1101,20 @@ export default function ParticipantCardPage() {
                   let actionName = "";
                   let details = "";
                   let iconSrc = "";
-                  let useFilter = true;
 
                   switch (activityType) {
                     case 'attendance_marked':
                       actionName = "נוכחות";
                       iconSrc = "/icons/attendance_marked_blue.svg";
-                      useFilter = false;
                       break;
                     case 'phone_call':
                       actionName = "שיחת טלפון";
-                      iconSrc = "/icons/phone_call.svg";
+                      iconSrc = "/icons/phone_call_blue.svg";
                       break;
                     case 'status_update':
                     default:
                       actionName = "עדכון סטטוס";
-                      iconSrc = "/icons/status_update.svg";
+                      iconSrc = "/icons/status_update_blue.svg";
                       // Logic for details
                       if (activity.update_content) {
                         details = activity.update_content;
@@ -1151,16 +1149,19 @@ export default function ParticipantCardPage() {
                       <div style={{
                         width: '3.75rem',
                         display: 'flex',
-                        justifyContent: 'center',
+                        justifyContent: 'flex-start',
                         paddingTop: '0.2rem', // Align with text baseline
+                        paddingRight: '0.5rem',
                         flexShrink: 0
                       }}>
                         <span style={{
-                          fontSize: '1.25rem',
                           color: '#4D58D8',
+                          textAlign: 'right',
                           fontFamily: 'EditorSans_PRO',
-                          fontWeight: '400',
-
+                          fontSize: '1.25rem',
+                          fontStyle: 'italic',
+                          fontWeight: 300,
+                          lineHeight: '98%'
                         }}>
                           {formattedDate}
                         </span>
@@ -1169,7 +1170,7 @@ export default function ParticipantCardPage() {
                       {/* Vertical Blue Line */}
                       <div style={{
                         position: 'absolute',
-                        right: '4.25rem',
+                        right: '4.375rem',
                         top: 0,
                         bottom: 0,
                         width: '1px',
@@ -1190,10 +1191,9 @@ export default function ParticipantCardPage() {
                         <div style={{
                           display: 'flex',
                           flexDirection: 'row',
-                          alignItems: 'baseline', // Align text baselines
+                          alignItems: 'flex-start', // Align to top
                           width: '100%',
-                          gap: '0.5rem',
-                          flexWrap: 'wrap'
+                          gap: '0.5rem'
                         }}>
                           {/* Icon (Rightmost in RTL) */}
                           <div style={{
@@ -1204,16 +1204,14 @@ export default function ParticipantCardPage() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            alignSelf: 'center' // Center icon vertically relative to line
+                            marginTop: '0.25rem' // Center closely with the first text line (1.5rem height)
                           }}>
                             <Image
                               src={iconSrc}
                               alt={activityType}
                               fill
                               style={{
-                                objectFit: 'contain',
-                                // Filter to convert black to #4D58D8 only if needed
-                                filter: useFilter ? 'brightness(0) saturate(100%) invert(32%) sepia(50%) saturate(3007%) hue-rotate(224deg) brightness(90%) contrast(92%)' : 'none'
+                                objectFit: 'contain'
                               }}
                             />
                           </div>
@@ -1223,7 +1221,9 @@ export default function ParticipantCardPage() {
                             display: 'flex',
                             flexWrap: 'wrap',
                             gap: '0.3rem',
-                            alignItems: 'baseline'
+                            alignItems: 'baseline',
+                            flex: 1,
+                            minWidth: 0
                           }}>
                             <span style={{
                               color: '#4D58D8',
@@ -1232,6 +1232,8 @@ export default function ParticipantCardPage() {
                               fontStyle: 'italic',
                               fontWeight: 400,
                               lineHeight: '98%',
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0
                             }}>{actionName}</span>
 
                             <span style={{
@@ -1240,7 +1242,7 @@ export default function ParticipantCardPage() {
                               fontSize: '1.25rem',
                               fontStyle: 'italic',
                               fontWeight: 300,
-                              lineHeight: '98%',
+                              lineHeight: '98%'
                             }}>- {performerString}</span>
                           </div>
                         </div>

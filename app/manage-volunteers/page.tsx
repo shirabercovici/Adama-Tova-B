@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import SearchBarWithAdd from "@/lib/components/SearchBarWithAdd";
 import styles from "./page.module.css";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 interface User {
     id: string;
@@ -59,6 +60,9 @@ export default function ManageVolunteersPage() {
             document.body.classList.remove('profile-page');
         };
     }, []);
+
+    // Update theme-color for iOS compatibility (iOS doesn't always respect viewport exports)
+    useThemeColor('#4D58D8');
 
     const fetchUsers = async () => {
         try {
