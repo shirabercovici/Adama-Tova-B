@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import ThemeColorSetter from "@/lib/components/ThemeColorSetter";
 
 export const metadata: Metadata = {
   appleWebApp: {
@@ -18,5 +19,10 @@ export default function LoginLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <>
+      <ThemeColorSetter color="#FFFCE5" />
+      {children}
+    </>
+  );
 }
