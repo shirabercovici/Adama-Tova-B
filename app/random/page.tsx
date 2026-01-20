@@ -7,6 +7,7 @@ import Message from "./components/Message";
 import { getCurrentComponent } from "./utils";
 import { useData } from "./hooks";
 import { AssignedTeam } from "./types";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function App() {
   return (
@@ -23,6 +24,9 @@ function RandomApp() {
   const [teams, setTeams] = useState<AssignedTeam[]>([]);
   const [assignedStudents, setAssignedStudents] = useState<number[]>([]);
   const [currentTeamMembers, setCurrentTeamMembers] = useState<number[]>([]);
+
+  // Update theme-color for iOS compatibility (dark background for random page)
+  useThemeColor('#1d1d1d');
 
   if (!SUPABASE_ENABLED)
     return <Message content="Missing Supabase environment variables" />;
