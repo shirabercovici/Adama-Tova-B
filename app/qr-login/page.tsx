@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function QRLoginPage() {
     const router = useRouter();
     const supabase = createClient();
     const [debugError, setDebugError] = useState<string | null>(null);
+
+    // Update theme-color for iOS compatibility (iOS doesn't always respect viewport exports)
+    useThemeColor('#FFFCE5');
 
     useEffect(() => {
         const handleLoginProcedure = async () => {

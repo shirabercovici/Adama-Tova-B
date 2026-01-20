@@ -42,9 +42,8 @@ export function useThemeColor(color: string) {
     // Always update to the new color
     metaThemeColor.setAttribute("content", color);
 
-    // Also update body background color to match (for iOS safe areas/home indicator)
-    document.body.style.backgroundColor = color;
-    document.documentElement.style.backgroundColor = color;
+    // Note: We don't set body background color here to avoid conflicts with page designs
+    // The theme-color meta tag is sufficient for status bar styling
 
     // Cleanup: revert to the previous color
     return () => {
