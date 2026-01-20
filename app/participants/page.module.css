@@ -943,6 +943,7 @@
   position: relative;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y; /* Allow vertical scrolling inside drawer content */
 }
 
 
