@@ -1505,6 +1505,8 @@ export default function ParticipantsPage() {
         setTasksDrawerTranslateY(0);
         const rect = drawerElement.getBoundingClientRect();
         tasksDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+        // Prevent background scroll when dragging drawer
+        e.stopPropagation();
       } else if (isContent && !isTasksOpen) {
         // Drawer is closed - allow swipe from anywhere to open
         tasksDrawerTouchStartY.current = e.touches[0].clientY;
@@ -1512,6 +1514,8 @@ export default function ParticipantsPage() {
         setTasksDrawerTranslateY(0);
         const rect = drawerElement.getBoundingClientRect();
         tasksDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+        // Prevent background scroll when dragging drawer
+        e.stopPropagation();
       } else if (isContent && isTasksOpen) {
         // Drawer is open - only allow swipe from top area to close
         const rect = drawerElement.getBoundingClientRect();
@@ -1522,6 +1526,8 @@ export default function ParticipantsPage() {
           setIsTasksDrawerDragging(true);
           setTasksDrawerTranslateY(0);
           tasksDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+          // Prevent background scroll when dragging drawer
+          e.stopPropagation();
         }
       }
     }
@@ -1554,9 +1560,10 @@ export default function ParticipantsPage() {
       setTasksDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
     }
     
-    // Prevent default scrolling
+    // Prevent default scrolling and background scroll
     if (Math.abs(deltaY) > 10) {
       e.preventDefault();
+      e.stopPropagation();
     }
   };
 
@@ -1703,6 +1710,8 @@ export default function ParticipantsPage() {
         setStatusUpdatesDrawerTranslateY(0);
         const rect = drawerElement.getBoundingClientRect();
         statusUpdatesDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+        // Prevent background scroll when dragging drawer
+        e.stopPropagation();
       } else if (isContent && !isStatusUpdatesOpen) {
         // Drawer is closed - allow swipe from anywhere to open
         statusUpdatesDrawerTouchStartY.current = e.touches[0].clientY;
@@ -1710,6 +1719,8 @@ export default function ParticipantsPage() {
         setStatusUpdatesDrawerTranslateY(0);
         const rect = drawerElement.getBoundingClientRect();
         statusUpdatesDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+        // Prevent background scroll when dragging drawer
+        e.stopPropagation();
       } else if (isContent && isStatusUpdatesOpen) {
         // Drawer is open - only allow swipe from top area to close
         const rect = drawerElement.getBoundingClientRect();
@@ -1720,6 +1731,8 @@ export default function ParticipantsPage() {
           setIsStatusUpdatesDrawerDragging(true);
           setStatusUpdatesDrawerTranslateY(0);
           statusUpdatesDrawerInitialBottom.current = window.innerHeight - rect.bottom;
+          // Prevent background scroll when dragging drawer
+          e.stopPropagation();
         }
       }
     }
@@ -1752,9 +1765,10 @@ export default function ParticipantsPage() {
       setStatusUpdatesDrawerTranslateY(Math.max(minTranslate, Math.min(maxTranslate, newTranslateY)));
     }
     
-    // Prevent default scrolling
+    // Prevent default scrolling and background scroll
     if (Math.abs(deltaY) > 10) {
       e.preventDefault();
+      e.stopPropagation();
     }
   };
 
