@@ -1,4 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
+
+// Use layout effect on the client to avoid a visible "flash" of the previous page's theme-color.
+// Fall back to useEffect during SSR.
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 /**
  * A hook to dynamically set the theme-color meta tag.
@@ -7,7 +12,7 @@ import { useEffect } from 'react';
  * @param color The color to set the theme-color to (e.g., "#FFFCE5")
  */
 export function useThemeColor(color: string) {
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     // Check if the meta tag exists
     let metaThemeColor = document.querySelector("meta[name='theme-color']");
 
