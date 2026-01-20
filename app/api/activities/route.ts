@@ -160,11 +160,38 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Parse metadata JSON strings
-      const activities = (activitiesData || []).map((activity: any) => ({
-        ...activity,
-        metadata: activity.metadata ? JSON.parse(activity.metadata as string) : null,
-      }));
+      // Fetch user names separately
+      const userIds = Array.from(new Set((activitiesData || []).map((a: any) => a.user_id).filter(Boolean)));
+      const usersMap: Record<string, any> = {};
+
+      if (userIds.length > 0) {
+        const { data: usersData, error: usersError } = await databaseClient
+          .from("users")
+          .select("id, first_name, last_name, role")
+          .in("id", userIds);
+
+        if (!usersError && usersData) {
+          usersData.forEach((user: any) => {
+            usersMap[user.id] = user;
+          });
+        }
+      }
+
+      // Parse metadata JSON strings and attach user info
+      const activities = (activitiesData || []).map((activity: any) => {
+        const user = usersMap[activity.user_id];
+        const firstName = user?.first_name || '';
+        const userRole = user?.role || '';
+        const userDisplayName = firstName ? `${firstName}` : ''; // Keep it simple like Profile
+
+        return {
+          ...activity,
+          metadata: activity.metadata ? JSON.parse(activity.metadata as string) : null,
+          user_name: firstName,
+          user_display_name: userDisplayName,
+          user_role: userRole
+        };
+      });
 
       return Response.json({ activities });
     }
