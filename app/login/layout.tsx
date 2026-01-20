@@ -3,10 +3,10 @@ import ThemeColorSetter from "@/lib/components/ThemeColorSetter";
 
 export const metadata: Metadata = {
   appleWebApp: {
-    statusBarStyle: "default", // Remove blue status bar on iOS
+    statusBarStyle: "black-translucent",
   },
   other: {
-    "apple-mobile-web-app-status-bar-style": "default",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
   },
 };
 

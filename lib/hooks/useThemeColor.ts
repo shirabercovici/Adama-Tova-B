@@ -15,107 +15,20 @@ const useIsomorphicLayoutEffect =
 export function useThemeColor(color?: string | null) {
   useIsomorphicLayoutEffect(() => {
     const computeFinalColor = () => {
-      // If we are running as an installed PWA (standalone), force a consistent status bar color.
-      // This avoids device/browser-specific caching quirks where theme-color can get "stuck".
-      const isStandalonePwa =
-        (typeof window !== "undefined" &&
-          window.matchMedia?.("(display-mode: standalone)")?.matches) ||
-        // iOS Safari "Add to Home Screen" legacy flag
-        (typeof window !== "undefined" && (window.navigator as any)?.standalone === true);
-
-      if (isStandalonePwa) {
-        // Prefer the design system background color.
-        const cssVar = window
+      // FORCE status bar color to always use --color-background in ALL modes.
+      // Ignore any page-provided colors and ignore auto-detection logic.
+      let cssVar = "";
+      try {
+        cssVar = window
           .getComputedStyle(document.documentElement)
           .getPropertyValue("--color-background")
           .trim();
-        return cssVar || "#FFFCE5";
+      } catch {
+        // ignore
       }
+      // Default to the value defined in global.css
+      return cssVar || "#FFFCE5";
 
-      // If a color is explicitly provided by the page, treat it as authoritative.
-      // Auto-detection is useful when the page doesn't know its final header color,
-      // but it can pick the wrong element (especially with fixed overlays).
-      if (color) return color;
-
-      // Always try to detect the header's background color first (most accurate)
-      // Use passed color only as fallback if detection fails
-      let finalColor: string | null = null;
-
-      // Try to find the header element at the top of the page and get its background color
-      // Priority: elements with inline backgroundColor style > .header class > header tag > elements near top
-      const candidates: HTMLElement[] = [];
-
-      // 1. Check for elements with inline backgroundColor (like participant-card)
-      document
-        .querySelectorAll('[style*="backgroundColor"], [style*="background-color"]')
-        .forEach((el) => {
-          const htmlEl = el as HTMLElement;
-          const rect = htmlEl.getBoundingClientRect();
-          // Check if it's near the top (likely a header)
-          if (rect.top <= 100 && rect.height > 20) {
-            candidates.push(htmlEl);
-          }
-        });
-
-      // 2. Check for .header class elements
-      document
-        .querySelectorAll(".header, [class*='header'], [class*='Header']")
-        .forEach((el) => {
-          const htmlEl = el as HTMLElement;
-          const rect = htmlEl.getBoundingClientRect();
-          if (rect.top <= 100 && rect.height > 20) {
-            candidates.push(htmlEl);
-          }
-        });
-
-      // 3. Check for header tag
-      document.querySelectorAll("header").forEach((el) => {
-        const htmlEl = el as HTMLElement;
-        const rect = htmlEl.getBoundingClientRect();
-        if (rect.top <= 100 && rect.height > 20) {
-          candidates.push(htmlEl);
-        }
-      });
-
-      // Sort by top position (closest to top wins)
-      candidates.sort(
-        (a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top
-      );
-
-      // Get background color from the topmost candidate
-      for (const headerElement of candidates) {
-        const bgColor = window.getComputedStyle(headerElement).backgroundColor;
-        // Check if it's not transparent and not the default
-        if (
-          bgColor &&
-          bgColor !== "rgba(0, 0, 0, 0)" &&
-          bgColor !== "transparent" &&
-          bgColor !== "rgb(255, 255, 255)"
-        ) {
-          // Convert rgb/rgba to hex if needed
-          if (bgColor.startsWith("rgb")) {
-            const rgb = bgColor.match(/\d+/g);
-            if (rgb && rgb.length >= 3) {
-              const r = parseInt(rgb[0]);
-              const g = parseInt(rgb[1]);
-              const b = parseInt(rgb[2]);
-              finalColor = `#${[r, g, b]
-                .map((x) => {
-                  const hex = x.toString(16);
-                  return hex.length === 1 ? "0" + hex : hex;
-                })
-                .join("")}`;
-              break;
-            }
-          } else if (bgColor.startsWith("#")) {
-            finalColor = bgColor;
-            break;
-          }
-        }
-      }
-
-      // Fallback to a neutral dark gray (so it doesn't look like a bug)
-      return finalColor || "#111827"; // slate-900
     };
 
     const applyThemeColor = (finalColor: string) => {
@@ -191,5 +104,5 @@ export function useThemeColor(color?: string | null) {
       window.cancelAnimationFrame(raf);
       window.clearTimeout(t);
     };
-  }, [color]);
+  }, []);
 }

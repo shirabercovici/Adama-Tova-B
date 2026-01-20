@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#4D58D8", // Blue color for status bar
+  themeColor: "#FFFCE5",
 };
 
 export default function HomepageLayout({
@@ -21,7 +21,7 @@ export default function HomepageLayout({
 }) {
   return (
     <>
-      <ThemeColorSetter color="#4D58D8" />
+      <ThemeColorSetter color="#FFFCE5" />
       {children}
     </>
   );
