@@ -8,6 +8,7 @@ import Image from "next/image";
 import { Participant } from '@/app/participants/types';
 import { logActivity } from '@/lib/activity-logger';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import { useDelayedTrue } from "@/lib/hooks/useDelayedTrue";
 
 
 const InfoRow = ({ label, value, children, isArchived }: { label: string, value: any, children?: React.ReactNode, isArchived?: boolean }) => (
@@ -417,7 +418,8 @@ const fetchParticipant = useCallback(async () => {
   }, [id, activeTab, fetchActivities]);
 
   // Dynamically update the theme-color meta tag for mobile browsers
-  useThemeColor(participant?.is_archived ? "#949ADD" : "#4D58D8");
+  // Use cream color during loading to match loading screen, otherwise use participant's color
+  useThemeColor(loading ? "#FFFCE5" : (participant?.is_archived ? "#949ADD" : "#4D58D8"));
 
   const handleAddUpdate = async () => {
     if (newUpdateText.trim() === '') return;
@@ -635,7 +637,25 @@ const fetchParticipant = useCallback(async () => {
   }, [activities, participant?.last_attendance, participant?.last_phone_call]);
   const displayName = isEditing ? editForm.full_name : (participant ? participant.full_name : urlName);
 
-// אם המידע עדיין נמשך מ-Supabase, נציג את מסך הטעינה
+// אם המידע עדיין נמשך מ-Supabase, נציג את מסך הטעינה (עם דיליי קטן למניעת "פלאש")
+const showLoadingOverlay = useDelayedTrue(loading, 250);
+
+// Avoid purple/blank flash on fast loads: show stable cream background briefly
+if (loading && !showLoadingOverlay) {
+    return (
+        <div style={{
+            width: '100%',
+            height: '100vh',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            background: '#FFFCE5',
+            zIndex: 9999
+        }} />
+    );
+}
+
 if (loading) {
     return (
         <div style={{
