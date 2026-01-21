@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import styles from "./page.module.css";
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import { useDelayedTrue } from "@/lib/hooks/useDelayedTrue";
 
 export default function ProfilePage() {
   // Initialize with cached data immediately (synchronous)
@@ -283,7 +284,15 @@ export default function ProfilePage() {
   // This useEffect is kept for cases where we need to refresh from cache
 
   // Show loading screen while loading userData
-  if (loading || !userData) {
+  const loadingCondition = loading || !userData;
+  const showLoadingOverlay = useDelayedTrue(loadingCondition, 250);
+
+  if (loadingCondition && !showLoadingOverlay) {
+    // Avoid flashing the loading UI for fast loads: keep a stable background briefly
+    return <div className={styles.loadingContainer} />;
+  }
+
+  if (loadingCondition) {
     return (
       <div className={styles.loadingContainer}>
         <div style={{

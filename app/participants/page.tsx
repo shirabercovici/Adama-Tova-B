@@ -9,6 +9,7 @@ import styles from "./page.module.css";
 import type { Participant, ParticipantsResponse, Task } from "./types";
 import { logActivity } from "@/lib/activity-logger";
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
+import { useDelayedTrue } from "@/lib/hooks/useDelayedTrue";
 
 export default function ParticipantsPage() {
   const router = useRouter();
@@ -84,6 +85,9 @@ export default function ParticipantsPage() {
   const hasSetInitialDataReadyRef = useRef(false);
   // Track pending checkbox states for immediate visual feedback before sorting
   const [pendingTaskStates, setPendingTaskStates] = useState<Record<string, "open" | "done">>({});
+  // Delayed loading overlay to prevent flash on fast loads when navigating back
+  const loadingCondition = isFirstLoginRef.current && !isInitialDataReady;
+  const showLoadingOverlay = useDelayedTrue(loadingCondition, 250);
   const [pendingStatusUpdateStates, setPendingStatusUpdateStates] = useState<Record<string, boolean>>({});
   // Track swipe gestures for drawers
   const tasksDrawerTouchStartY = useRef<number | null>(null);
@@ -2407,7 +2411,12 @@ export default function ParticipantsPage() {
       {/* Loading - show loading screen ONLY on first login (no cached data) */}
       {/* After first login, show content immediately from cache */}
       {/* CRITICAL: On first login, stay on loading screen until ALL data is ready: participants, role, status updates, tasks */}
-      {isFirstLoginRef.current && !isInitialDataReady ? (
+      {/* Use delayed loading to prevent flash on fast loads when navigating back */}
+      {loadingCondition && !showLoadingOverlay ? (
+        // Avoid flashing loading UI for fast loads: show stable background briefly
+        <div className={styles.loadingContainer} />
+      ) : loadingCondition ? (
+        // Show full loading screen only if condition persists for 150ms+
         <div className={styles.loadingContainer}>
           <div style={{
             position: 'relative',
