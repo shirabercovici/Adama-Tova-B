@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import SearchBarWithAdd from "@/lib/components/SearchBarWithAdd";
 import styles from "./page.module.css";
@@ -62,7 +63,8 @@ export default function ManageVolunteersPage() {
     }, []);
 
     // Update theme-color for iOS compatibility (iOS doesn't always respect viewport exports)
-    useThemeColor('#4D58D8');
+    // Use cream color during loading to match loading screen, otherwise use purple
+    useThemeColor(isLoading && users.length === 0 ? '#FFFCE5' : '#4D58D8');
 
     const fetchUsers = async () => {
         try {
@@ -106,9 +108,23 @@ export default function ManageVolunteersPage() {
         (user) => user.role === "מנהל.ת" || user.role === "מנהל" || user.role === "מנהלת" || (user.role && user.role.includes("מנהל"))
     ).length;
 
-    // Don't render anything until data is loaded (either from cache or fetch)
+    // Show loading screen when loading and no cached data
     if (isLoading && users.length === 0) {
-        return null;
+        return (
+            <div className={styles.loadingContainer}>
+                <div className={styles.loadingImageWrapper}>
+                    <Image
+                        src="/icons/loading.png"
+                        alt="טוען..."
+                        width={200}
+                        height={200}
+                        className={styles.loadingImage}
+                        priority
+                    />
+                </div>
+                <div className={styles.loadingText}>רק רגע...</div>
+            </div>
+        );
     }
 
     return (

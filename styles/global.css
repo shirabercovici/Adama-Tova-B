@@ -1,7 +1,7 @@
 @import url("reset.css");
 @import url("fonts.css");
-/* This is a custom font from google fonts - using font-display swap for better performance */
-@import url("https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap");
+/* This is a custom font from google fonts - using font-display block to wait for fonts before showing text */
+@import url("https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=block");
 
 /* what is :root? https://developer.mozilla.org/en-US/docs/Web/CSS/:root */
 :root {
