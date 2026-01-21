@@ -402,6 +402,20 @@ const fetchParticipant = useCallback(async () => {
     if (id) fetchParticipant();
   }, [id, fetchParticipant]);
 
+  // Fetch activities when component mounts
+  useEffect(() => {
+    if (id) {
+      fetchActivities();
+    }
+  }, [id, fetchActivities]);
+
+  // Refresh activities when switching to history tab
+  useEffect(() => {
+    if (id && activeTab === 'היסטוריה') {
+      fetchActivities();
+    }
+  }, [id, activeTab, fetchActivities]);
+
   // Dynamically update the theme-color meta tag for mobile browsers
   useThemeColor(participant?.is_archived ? "#949ADD" : "#4D58D8");
 
@@ -624,8 +638,47 @@ const fetchParticipant = useCallback(async () => {
 // אם המידע עדיין נמשך מ-Supabase, נציג את מסך הטעינה
 if (loading) {
     return (
-        <div style={{ /* עיצוב מסך הטעינה שלך */ }}>
-            <p>טוען נתונים...</p>
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100vh',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            background: '#FFFCE5',
+            gap: '1rem',
+            zIndex: 9999
+        }}>
+            <div style={{
+                position: 'relative',
+                width: '20.375rem',
+                height: '17.375rem',
+                flexShrink: 0,
+                aspectRatio: '163/139'
+            }}>
+                <Image
+                    src="/icons/loading.png"
+                    alt="טוען..."
+                    fill
+                    style={{ objectFit: 'contain' }}
+                    priority
+                />
+            </div>
+            <div style={{
+                color: 'var(--Blue-Adamami, #4D58D8)',
+                textAlign: 'center',
+                fontFamily: 'EditorSans_PRO',
+                fontSize: '1.875rem',
+                fontStyle: 'normal',
+                fontWeight: 400,
+                lineHeight: '98%'
+            }}>
+                רק רגע...
+            </div>
         </div>
     );
 }
@@ -1060,9 +1113,7 @@ if (loading) {
         )}
         {activeTab === 'היסטוריה' && (
           <div style={{ width: '100%', padding: '1.25rem', display: 'flex', flexDirection: 'column', backgroundColor: '#FFFCE5', minHeight: 'fit-content' }}>
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#4D58D8' }}>טוען...</div>
-            ) : activities.length === 0 ? (
+            {activities.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: '#949ADD' }}>אין פעילויות עדיין</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
