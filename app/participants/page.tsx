@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import SearchBarWithAdd from "@/lib/components/SearchBarWithAdd";
@@ -12,6 +12,7 @@ import { useThemeColor } from '@/lib/hooks/useThemeColor';
 
 export default function ParticipantsPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = useMemo(() => createClient(), []);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true); // Start with true, will be set to false if cache is found
@@ -764,13 +765,15 @@ export default function ParticipantsPage() {
 
       // Load participants from cache FIRST for instant display (most important feature)
       // This MUST be synchronous and happen immediately - no delays
-      // Always use cache if available - don't reload every time
+      // Only use cache if it's from 'active' filter (not from search)
+      // If cache is from search, we'll fetch fresh data instead
       let hasCachedParticipants = false;
       try {
         const cachedParticipants = localStorage.getItem('participants_cache');
         if (cachedParticipants) {
           const { participants: cachedParticipantsData, filterType } = JSON.parse(cachedParticipants);
-          // Always use cache if available - better than loading every time
+          // Only use cache if it's from 'active' filter (not from search)
+          // This prevents showing search results when returning to the page
           if (cachedParticipantsData && Array.isArray(cachedParticipantsData) &&
             filterType === 'active') {
             // Set immediately - no async, no delays
@@ -778,6 +781,13 @@ export default function ParticipantsPage() {
             setLoading(false); // We have cached data, no loading needed
             hasLoadedFromCacheRef.current = true;
             hasCachedParticipants = true;
+          } else if (filterType === 'search') {
+            // Cache is from search - don't use it, will fetch fresh data
+            // Reset search state to ensure clean state
+            setSearch("");
+            setDebouncedSearch("");
+            setIsSearchActive(false);
+            lastFetchedSearchRef.current = "";
           }
         }
       } catch (e) {
@@ -1239,6 +1249,15 @@ export default function ParticipantsPage() {
             timestamp: Date.now(),
             filterType: filterType
           }));
+          
+          // Also save a backup cache for 'active' participants
+          // This allows us to show data immediately when returning from search
+          if (filterType === 'active') {
+            localStorage.setItem('participants_cache_active_backup', JSON.stringify({
+              participants: fetchedParticipants,
+              timestamp: Date.now()
+            }));
+          }
         } catch (e) {
           // Ignore cache errors (e.g., quota exceeded)
         }
@@ -1297,10 +1316,119 @@ export default function ParticipantsPage() {
     };
   }, [debouncedSearch, fetchParticipantsDebounced, participants.length]);
 
+  // Track if we've already handled the search reset on this page load
+  const hasHandledSearchResetRef = useRef(false);
+  
+  // Check and reset search when returning to this page
+  // This handles the case when user searches, goes to participant card, and comes back
+  useEffect(() => {
+    // Only run when we're on the participants page and haven't handled it yet
+    if (pathname !== '/participants' || hasHandledSearchResetRef.current) return;
+    
+    // Check if cache is from search - if so, reset search and reload
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedParticipants = localStorage.getItem('participants_cache');
+        if (cachedParticipants) {
+          const { filterType, participants: cachedParticipantsData } = JSON.parse(cachedParticipants);
+          // If cache is from search, reset search and reload full list
+          if (filterType === 'search') {
+            // Mark as handled to prevent running again
+            hasHandledSearchResetRef.current = true;
+            
+            // Reset search state
+            setSearch("");
+            setDebouncedSearch("");
+            setIsSearchActive(false);
+            lastFetchedSearchRef.current = "";
+            
+            // Try to find a previous cache of 'active' participants
+            // Check if we have a backup cache key for active participants
+            let hasActiveCache = false;
+            try {
+              // Look for a backup cache with active participants
+              const activeCacheKey = 'participants_cache_active_backup';
+              const activeCache = localStorage.getItem(activeCacheKey);
+              if (activeCache) {
+                const { participants: activeParticipants } = JSON.parse(activeCache);
+                if (activeParticipants && Array.isArray(activeParticipants) && activeParticipants.length > 0) {
+                  // Use the backup cache to show data immediately
+                  setParticipants(activeParticipants);
+                  setLoading(false);
+                  hasActiveCache = true;
+                }
+              }
+            } catch (e) {
+              // Ignore cache errors
+            }
+            
+            // If no backup cache, keep showing search results until new data arrives
+            // This prevents the "no results" flash
+            if (!hasActiveCache && cachedParticipantsData && Array.isArray(cachedParticipantsData) && cachedParticipantsData.length > 0) {
+              // Keep showing search results temporarily
+              setParticipants(cachedParticipantsData);
+              setLoading(false);
+            }
+            
+            // Fetch full list immediately
+            fetchParticipantsDebounced();
+          }
+        }
+      } catch (e) {
+        // Ignore cache errors
+      }
+    }
+  }, [pathname, fetchParticipantsDebounced]); // Run when pathname changes (returning to page)
+  
+  // Reset the ref when pathname changes away from participants page
+  useEffect(() => {
+    if (pathname !== '/participants') {
+      hasHandledSearchResetRef.current = false;
+    }
+  }, [pathname]);
+
   // Refresh data when page becomes visible (user returns from another page)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        // User returned to the page - check if cache is from search
+        let shouldResetSearch = false;
+        if (typeof window !== 'undefined') {
+          try {
+            const cachedParticipants = localStorage.getItem('participants_cache');
+            if (cachedParticipants) {
+              const { filterType } = JSON.parse(cachedParticipants);
+              // If cache is from search, we need to reset search and reload
+              if (filterType === 'search') {
+                shouldResetSearch = true;
+              }
+            }
+          } catch (e) {
+            // Ignore cache errors
+          }
+        }
+        
+        // If there's an active search OR cache is from search, reset it first
+        // This prevents showing "no results" when returning from participant card
+        if (search.trim() !== "" || isSearchActive || shouldResetSearch) {
+          setSearch("");
+          setDebouncedSearch("");
+          setIsSearchActive(false);
+          // Reset lastFetchedSearchRef to trigger refetch
+          lastFetchedSearchRef.current = "";
+          
+          // If cache was from search, don't clear participants - keep showing current data
+          // This prevents the "no results" flash while loading
+          if (shouldResetSearch) {
+            // Don't clear participants - keep showing current data while loading
+            // Force immediate fetch of full list
+            setTimeout(() => {
+              fetchParticipantsDebounced();
+            }, 0);
+            return; // Don't continue with normal refresh logic
+          }
+        }
+        
         // User returned to the page - refresh data to see latest changes
         // Only refresh if cache is older than 30 seconds to avoid too many requests
         if (typeof window !== 'undefined') {
@@ -1336,7 +1464,7 @@ export default function ParticipantsPage() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [fetchParticipantsDebounced]);
+  }, [fetchParticipantsDebounced, search, isSearchActive]);
 
   // Fetch status updates when userRole is loaded and user is a manager
   // This is a fallback for cases where userRole wasn't in cache or loaded later
@@ -1376,7 +1504,7 @@ export default function ParticipantsPage() {
       // Only clear if we haven't already loaded from cache
       setStatusUpdates([]);
     }
-  }, [userRole, isManager, fetchStatusUpdates, isTasksReady, fetchTasks]);
+  }, [userRole, isManager, fetchStatusUpdates, isTasksReady, fetchTasks, statusUpdatesReady]);
 
   // On first login, mark initial data as ready when ALL data is loaded: participants, role, status updates, tasks
   // CRITICAL: This useEffect is the ONLY place that sets isInitialDataReady to true on first login
