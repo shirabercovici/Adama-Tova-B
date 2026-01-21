@@ -243,6 +243,7 @@ export default function ParticipantCardPage() {
   const id = searchParams.get('id');
   const urlName = searchParams.get('name') || ''; // הוספת השורה הזו
   const [updateTarget, setUpdateTarget] = useState('כולם');
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
 
@@ -323,7 +324,7 @@ const [editForm, setEditForm] = useState({
     }
   }, [id]);
 
-  const triggerLog = useCallback(async (type: any, description: string, updateContent?: string) => {
+  const triggerLog = useCallback(async (type: any, description: string, updateContent?: string, isPublic: boolean = true) => {
     if (!id || !participant || !participant.full_name) return;
 
     try {
@@ -356,7 +357,7 @@ const [editForm, setEditForm] = useState({
           participant_name: participant.full_name,
           description: description,
           update_content: updateContent,
-          is_public: true,
+          is_public: isPublic,
         });
 
         console.log("Activity logged successfully by:", fullName);
@@ -402,6 +403,54 @@ const fetchParticipant = useCallback(async () => {
   useEffect(() => {
     if (id) fetchParticipant();
   }, [id, fetchParticipant]);
+
+  // Fetch user role on component mount
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          // Check cache first
+          if (typeof window !== 'undefined') {
+            const cachedRoleData = localStorage.getItem('userRoleData');
+            if (cachedRoleData) {
+              try {
+                const { role: cachedRole, email: cachedEmail } = JSON.parse(cachedRoleData);
+                if (cachedEmail === authUser.email && cachedRole) {
+                  setUserRole(cachedRole);
+                  return;
+                }
+              } catch (e) {
+                // Invalid cache, continue to fetch
+              }
+            }
+          }
+
+          // Fetch from server
+          const { data: dbUser } = await supabase
+            .from('users')
+            .select('role')
+            .eq('email', authUser.email)
+            .single();
+
+          if (dbUser?.role) {
+            setUserRole(dbUser.role);
+            // Cache the role
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('userRoleData', JSON.stringify({
+                role: dbUser.role,
+                email: authUser.email
+              }));
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch user role:", err);
+      }
+    };
+
+    fetchUserRole();
+  }, [supabase]);
 
   // Fetch activities when component mounts
   useEffect(() => {
@@ -449,8 +498,14 @@ const fetchParticipant = useCallback(async () => {
         setIsSuccessMessageOpen(true);
         // ----------------------------------
 
+        // Determine if update should be public based on updateTarget
+        const isPublic = updateTarget === 'כולם';
+        
         // קריאה לפונקציית הלוג שהיא המקום המרכזי עכשיו
-        await triggerLog('status_update' as any, `עדכון סטטוס`, newUpdateText);
+        await triggerLog('status_update' as any, `עדכון סטטוס`, newUpdateText, isPublic);
+        
+        // Reset updateTarget to default after sending
+        setUpdateTarget('כולם');
 
         // Cache update is less relevant for activities now that we fetch live,
         // but we keep participant cache for basic info
@@ -1133,11 +1188,29 @@ if (loading) {
         )}
         {activeTab === 'היסטוריה' && (
           <div style={{ width: '100%', padding: '1.25rem', display: 'flex', flexDirection: 'column', backgroundColor: '#FFFCE5', minHeight: 'fit-content' }}>
-            {activities.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#949ADD' }}>אין פעילויות עדיין</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {filterAttendancePairs(activities).map((activity, index) => {
+            {(() => {
+              // Filter activities based on visibility and user role
+              const isManager = userRole && (userRole === "מנהל.ת" || userRole === "מנהל" || userRole === "מנהלת" || userRole.includes("מנהל"));
+              const filteredActivities = filterAttendancePairs(activities).filter((activity) => {
+                // If activity is public, show to everyone
+                if (activity.is_public === true) {
+                  return true;
+                }
+                // If activity is not public (managers only), only show to managers
+                if (activity.is_public === false) {
+                  return isManager === true;
+                }
+                // Default: if is_public is null/undefined, treat as public for backward compatibility
+                return true;
+              });
+
+              if (filteredActivities.length === 0) {
+                return <div style={{ textAlign: 'center', padding: '2rem', color: '#949ADD' }}>אין פעילויות עדיין</div>;
+              }
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {filteredActivities.map((activity, index) => {
                   // Parsing Date
                   let dateObj = new Date();
                   let formattedDate = "";
@@ -1336,9 +1409,10 @@ if (loading) {
 
                     </div>
                   );
-                })}
-              </div>
-            )}
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}{/* פופ-אפ אישור שליחה - מעוצב בדיוק כמו הארכיון */}
         {/* פופ-אפ אישור שליחה - מעוצב בדיוק כמו הארכיון עם התמונה המבוקשת */}
