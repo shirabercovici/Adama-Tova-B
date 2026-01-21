@@ -239,14 +239,36 @@
 
 .loadingContainer {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  min-height: 60vh;
+  height: 100vh;
+  width: 100vw;
+  background-color: #FFFCE5;
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  gap: 20px;
+}
+
+.loadingImageWrapper {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
+.loadingImage {
+  object-fit: contain;
 }
 
 .loadingText {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 1.25rem;
+  font-family: var(--font-body);
+  font-size: 1.2rem;
+  color: var(--color-primary);
+  text-align: center;
 }
 
 .emptyState {

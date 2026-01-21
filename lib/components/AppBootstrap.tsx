@@ -12,6 +12,7 @@ interface AppBootstrapProps {
 
 export default function AppBootstrap({ children }: AppBootstrapProps) {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [fontsLoaded, setFontsLoaded] = useState(false);
   const supabase = createClient();
   const router = useRouter();
   const pathname = usePathname();
@@ -20,10 +21,44 @@ export default function AppBootstrap({ children }: AppBootstrapProps) {
   // Skip bootstrap for login/auth pages
   const isAuthPage = pathname === '/' || pathname === '/login' || pathname === '/qr-login' || pathname?.startsWith('/auth/');
 
+  // Wait for fonts to load before showing any content
   useEffect(() => {
-    // Skip bootstrap for auth pages - just render children
+    if (typeof window === 'undefined') {
+      setFontsLoaded(true);
+      return;
+    }
+
+    // Check if Font Loading API is available
+    if ('fonts' in document) {
+      // Wait for all fonts to be ready
+      document.fonts.ready.then(() => {
+        setFontsLoaded(true);
+      }).catch(() => {
+        // If fonts fail to load, still show content after a timeout
+        setTimeout(() => {
+          setFontsLoaded(true);
+        }, 3000); // 3 second fallback
+      });
+    } else {
+      // Fallback for browsers without Font Loading API
+      // Wait a bit for fonts to load
+      setTimeout(() => {
+        setFontsLoaded(true);
+      }, 1000);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Skip bootstrap for auth pages - just render children (but still wait for fonts)
     if (isAuthPage) {
-      setIsBootstrapping(false);
+      if (fontsLoaded) {
+        setIsBootstrapping(false);
+      }
+      return;
+    }
+    
+    // Don't start bootstrap until fonts are loaded
+    if (!fontsLoaded) {
       return;
     }
     
@@ -242,7 +277,7 @@ export default function AppBootstrap({ children }: AppBootstrapProps) {
     };
 
     bootstrap();
-  }, [supabase, router, isAuthPage]);
+  }, [supabase, router, isAuthPage, fontsLoaded]);
 
   // Show loading screen during bootstrap
   if (isBootstrapping) {
