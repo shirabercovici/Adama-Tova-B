@@ -1,98 +1,176 @@
-# Starter Kit
+# אדממי (Adamami)
 
-This is a Starter Kit for the Digital Product Jam course. It provides a
-configuration of the [Next.js](https://nextjs.org/) framework, and a number of
-examples of common patterns and components.
+A modern participant and volunteer management system built with Next.js and Supabase. This application helps organizations manage participants, volunteers, activities, and tasks with an intuitive Hebrew-language interface.
 
-## How to use the Starter Kit
+## Features
 
-First up, you should be using GitHub's template functionality to create your own
-code repository using this repository as a starting point.
-[See ther GitHub documentation on creating a repository from a template](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template).
+- 🔐 **Google Authentication** - Secure login with Google OAuth
+- 👥 **Participant Management** - Add, edit, view, and archive participants
+- 🤝 **Volunteer Management** - Manage volunteer accounts and roles
+- 📋 **Task Management** - Create and track tasks for participants
+- 📊 **Activity Logging** - Track phone calls, attendance, and status updates
+- 📱 **Responsive Design** - Optimized for mobile and desktop
+- 🌐 **RTL Support** - Full right-to-left support for Hebrew interface
+- 🎨 **Modern UI** - Beautiful, accessible interface with custom styling
 
-Once you have created your own repository from this template, you can use Git to
-clone the repository to your local machine.
+## Tech Stack
 
-When you have a local copy of your repository, you can proceed with the next
-steps in this document.
+- **Framework**: [Next.js 14](https://nextjs.org/) (React 18)
+- **Database & Auth**: [Supabase](https://supabase.com/)
+- **Styling**: CSS Modules, Custom CSS
+- **Data Fetching**: SWR
+- **Charts**: Recharts
+- **Animations**: Framer Motion
+- **Email**: Nodemailer
+- **Language**: TypeScript
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- Node.js 18+ installed
+- npm or yarn package manager
+- A Supabase account and project
+- Google OAuth credentials (for authentication)
 
 ## Getting Started
 
-Ensure you have a local copy of the repository, and, in your terminal, navigate
-to the root of the repository.
+### 1. Clone the Repository
 
-### Install the dependencies
+```bash
+git clone <your-repository-url>
+cd Adama-Tova-B
+```
 
-The codebase has libraries it depends on to run - these are refered to as
-"dependencies". You need to install these dependencies before you can run the
-codebase. To install the dependencies, run the following command in your
-terminal:
+### 2. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### Configure local environment variables
+### 3. Environment Variables
 
-Run the command from the root of the project:
+Create a `.env.local` file in the root directory with the following variables:
 
-```bash
-cp .env.local.template .env.local
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+PRIVATE_SUPABASE_SERVICE_KEY=your_supabase_service_role_key
+
+# Google OAuth
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
+
+# Email Configuration (Optional)
+EMAIL_ADDRESS=your_email@example.com
+EMAIL_PASSWORD=your_email_password
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+
+# Optional Features
+DEMOS_ENABLED=false
+NASA_API_KEY=your_nasa_api_key
 ```
 
-Environment variables provide a way to pass configuration to your application
-without including configuration values directly in the codebase. This is useful
-for things like API keys and other sensitive information that you don't want to
-be publicly available.
+### 4. Database Setup
 
-In VS Code, open the `.env.local` file that was created. You can update the
-values with real data as described in the file.
+Run the Supabase migration files to set up your database schema:
 
-### Run the development server
+1. Execute `supabase_migration.sql` in your Supabase SQL editor
+2. Execute `supabase_migration_add_read_at.sql` if needed
 
-The codebase uses a development server to run the code. This is a server that
-runs on your local machine, and allows you to view the code in your browser. To
-run the development server, run the following command in your terminal:
+### 5. Run the Development Server
 
 ```bash
 npm run dev
 ```
 
-## View the application in your browser
+Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
-Once the server is running, you can view the application in your browser. To do
-this, open Chrome (or Chromium), and type the following into the address bar:
+## Available Scripts
 
-```bash
-http://localhost:3000
+- `npm run dev` - Start the development server
+- `npm run build` - Create a production build
+- `npm run start` - Run the production server
+- `npm run lint` - Run ESLint to check for code issues
+- `npm run info` - Display Next.js system information
+
+## Project Structure
+
+```
+├── app/                    # Next.js app directory
+│   ├── participants/      # Participant management pages
+│   ├── participant-card/  # Individual participant view
+│   ├── manage-volunteers/ # Volunteer management
+│   ├── add-volunteer/     # Add new volunteers
+│   ├── new-participant/   # Add new participants
+│   ├── edit-participant/  # Edit participant details
+│   ├── login/             # Authentication pages
+│   ├── profile/           # User profile
+│   ├── api/               # API routes
+│   └── ...
+├── components/            # Reusable React components
+├── lib/                   # Utility functions and helpers
+│   ├── supabase/         # Supabase client configuration
+│   ├── components/       # Shared components
+│   ├── hooks/            # Custom React hooks
+│   └── ...
+├── public/                # Static assets (images, fonts, etc.)
+├── styles/               # Global styles
+└── ...
 ```
 
-## Other commands you can run
+## Key Features Explained
 
-The codebase is set up with a number of commands you can run. These are defined
-in the `package.json` file, in the `scripts` section. The following are
-available:
+### Participant Management
+- View all participants in a searchable list
+- Create new participant profiles
+- Edit participant information
+- Archive/unarchive participants
+- View detailed participant cards with activity history
 
-**Lint your code to detect style and some syntax errors**
+### Volunteer Management
+- Manage volunteer accounts
+- Assign roles and permissions
+- Search and filter volunteers
 
-```bash
-npm run lint
-```
+### Activity Logging
+- Track phone calls with participants
+- Mark attendance
+- Log status updates
+- View activity history
 
-**Compile a production build of your app**
+### Task Management
+- Create tasks for participants
+- Mark tasks as complete
+- Filter by task status
 
-```bash
-npm run build
-```
+## Database Schema
 
-**Run the compiled production build of the server**
+The application uses Supabase with the following main tables:
+- `participants` - Participant information
+- `users` - Volunteer/user accounts
+- `activities` - Activity logs
+- `tasks` - Task management
 
-```bash
-npm run start
-```
+Refer to the migration files for the complete schema.
 
-**Print out some system info related to your server**
+## Contributing
 
-```bash
-npm run info
-```
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is part of the Digital Product Jam 2025 course.
+
+## Credits
+
+Developed as part of the Product Jam 2025 course.
+
+---
+
+For questions or support, please open an issue in the repository.
