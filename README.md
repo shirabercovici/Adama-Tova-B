@@ -1,7 +1,8 @@
 # אדממי (Adamami)
 
 A modern participant and volunteer management system built with Next.js and Supabase. This application helps organizations manage participants, volunteers, activities, and tasks with an intuitive Hebrew-language interface.
-Link to the app for approved users: https://adamami.vercel.app/
+
+Link to the app: https://adamami.vercel.app/ (Note: Access is limited to approved users)
 
 ## Features
 
